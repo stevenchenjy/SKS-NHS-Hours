@@ -166,7 +166,7 @@ export async function listMemberRequests(
   let query = supabase
     .from("hour_requests")
     .select(
-      "*,categoryAssignment:school_year_categories!hour_requests_category_year_fkey(service_categories!school_year_categories_category_id_fkey(id,name)),memberMembership:school_year_memberships!hour_requests_member_year_fkey(id,profile_id,profiles(id,full_name,email)),requestedApproverMembership:school_year_memberships!hour_requests_requested_approver_year_fkey(id,profile_id,profiles(id,full_name)),actualReviewerMembership:school_year_memberships!hour_requests_actual_reviewer_year_fkey(id,profile_id,profiles(id,full_name))",
+      "*,categoryAssignment:school_year_categories!hour_requests_category_year_fkey(service_categories!school_year_categories_category_id_fkey(id,name)),memberMembership:school_year_memberships!hour_requests_member_year_fkey(id,profile_id,profiles!school_year_memberships_profile_id_fkey(id,full_name,email)),requestedApproverMembership:school_year_memberships!hour_requests_requested_approver_year_fkey(id,profile_id,profiles!school_year_memberships_profile_id_fkey(id,full_name)),actualReviewerMembership:school_year_memberships!hour_requests_actual_reviewer_year_fkey(id,profile_id,profiles!school_year_memberships_profile_id_fkey(id,full_name))",
     )
     .in("member_membership_id", membershipIds)
     .order("service_date", { ascending: false })
@@ -183,7 +183,7 @@ export async function getHourRequest(requestId: string): Promise<HourRequest> {
   const { data, error } = await supabase
     .from("hour_requests")
     .select(
-      "*,categoryAssignment:school_year_categories!hour_requests_category_year_fkey(service_categories!school_year_categories_category_id_fkey(id,name)),memberMembership:school_year_memberships!hour_requests_member_year_fkey(id,profile_id,profiles(id,full_name,email)),requestedApproverMembership:school_year_memberships!hour_requests_requested_approver_year_fkey(id,profile_id,profiles(id,full_name)),actualReviewerMembership:school_year_memberships!hour_requests_actual_reviewer_year_fkey(id,profile_id,profiles(id,full_name)),reviews:hour_reviews(*)",
+      "*,categoryAssignment:school_year_categories!hour_requests_category_year_fkey(service_categories!school_year_categories_category_id_fkey(id,name)),memberMembership:school_year_memberships!hour_requests_member_year_fkey(id,profile_id,profiles!school_year_memberships_profile_id_fkey(id,full_name,email)),requestedApproverMembership:school_year_memberships!hour_requests_requested_approver_year_fkey(id,profile_id,profiles!school_year_memberships_profile_id_fkey(id,full_name)),actualReviewerMembership:school_year_memberships!hour_requests_actual_reviewer_year_fkey(id,profile_id,profiles!school_year_memberships_profile_id_fkey(id,full_name)),reviews:hour_reviews(*)",
     )
     .eq("id", requestId)
     .single();
@@ -307,7 +307,7 @@ export async function listAccountDirectory(
   const { data, error } = await supabase
     .from("school_year_memberships")
     .select(
-      "id,profile_id,school_year_id,status,expiration_date,target_hours_override,renewed_from_membership_id,created_at,profiles!inner(id,email,full_name,status,deactivated_at,created_at,updated_at),school_years!inner(id,label,start_date,end_date,default_target_hours,status,created_at,closed_at)",
+      "id,profile_id,school_year_id,status,expiration_date,target_hours_override,renewed_from_membership_id,created_at,profiles!school_year_memberships_profile_id_fkey!inner(id,email,full_name,status,deactivated_at,created_at,updated_at),school_years!school_year_memberships_school_year_id_fkey!inner(id,label,start_date,end_date,default_target_hours,status,created_at,closed_at)",
     )
     .eq("school_year_id", schoolYearId)
     .order("created_at", { ascending: false });

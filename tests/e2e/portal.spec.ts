@@ -6,6 +6,7 @@ test.describe.configure({ mode: "serial" });
 const password = process.env.E2E_PASSWORD ?? "LocalOnly123!";
 const assignedTitle = `E2E Park Inventory ${Date.now()}`;
 const openQueueTitle = `E2E Food Drive ${Date.now()}`;
+const concurrentReviewTitle = `E2E Concurrent Review ${Date.now()}`;
 const selfReviewTitle = `E2E Leader Service ${Date.now()}`;
 const rolloverLabel = "2027-2028";
 
@@ -85,6 +86,58 @@ test("a different eligible leader processes a request from all pending", async (
   await expect(page.getByText(openQueueTitle)).toBeVisible();
   await page.getByRole("button", { name: "Approve request" }).click();
   await page.waitForURL(/decision-recorded/);
+});
+
+test("simultaneous reviewers serialize to one decision", async ({ browser, baseURL, page }) => {
+  if (!baseURL) throw new Error("Playwright baseURL is required for the review race test.");
+
+  await login(page, "member@example.edu");
+  await submitRequest(page, concurrentReviewTitle);
+  const requestId = new URL(page.url()).pathname.split("/").at(-1);
+  if (!requestId) throw new Error("Submitted request URL did not contain a request ID.");
+  const requestPath = `/admin/requests/${requestId}`;
+
+  const reviewerContext = await browser.newContext({ baseURL });
+  const leaderContext = await browser.newContext({ baseURL });
+  try {
+    const reviewerPage = await reviewerContext.newPage();
+    const leaderPage = await leaderContext.newPage();
+    await Promise.all([
+      login(reviewerPage, "reviewer@example.edu"),
+      login(leaderPage, "vice-president@example.edu"),
+    ]);
+    await Promise.all([reviewerPage.goto(requestPath), leaderPage.goto(requestPath)]);
+    await Promise.all([
+      expect(reviewerPage.getByText(concurrentReviewTitle)).toBeVisible(),
+      expect(leaderPage.getByText(concurrentReviewTitle)).toBeVisible(),
+    ]);
+
+    await Promise.all([
+      reviewerPage.getByRole("button", { name: "Approve request" }).click(),
+      leaderPage.getByRole("button", { name: "Approve request" }).click(),
+    ]);
+
+    const pages = [reviewerPage, leaderPage];
+    await expect
+      .poll(() => pages.filter((candidate) => candidate.url().includes("decision-recorded")).length)
+      .toBe(1);
+    await expect
+      .poll(async () => {
+        const conflicts = await Promise.all(
+          pages.map((candidate) =>
+            candidate
+              .getByRole("alert")
+              .filter({ hasText: "This request is no longer pending" })
+              .isVisible()
+              .catch(() => false),
+          ),
+        );
+        return conflicts.filter(Boolean).length;
+      })
+      .toBe(1);
+  } finally {
+    await Promise.all([reviewerContext.close(), leaderContext.close()]);
+  }
 });
 
 test("self-review controls are denied for a leader's own request", async ({ page }) => {
