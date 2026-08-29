@@ -46,6 +46,7 @@ supabase status
 supabase db reset --local
 supabase test db
 pnpm check
+pnpm test:e2e:prepare
 pnpm test:e2e
 ```
 
@@ -122,7 +123,7 @@ supabase db push --linked --dry-run
 supabase db push --linked
 ```
 
-Review every filename in the dry run and confirm the project twice. Never use `--include-seed` in Preview or Production. The committed seed contains local synthetic accounts and a shared local-only password.
+Review every filename in the dry run and confirm the project twice. Never use `--include-seed` in Preview or Production. The committed seed contains local synthetic relational fixtures; login credentials are assigned only by the loopback-restricted E2E Auth preparer.
 
 After the push, verify:
 

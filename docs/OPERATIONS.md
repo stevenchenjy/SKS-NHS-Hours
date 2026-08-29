@@ -78,17 +78,18 @@ Recreate the database from migrations and the deterministic seed:
 ```bash
 supabase db reset --local
 supabase test db
+pnpm test:e2e:prepare
 pnpm test
 pnpm dev
 ```
 
 Open the application at `http://localhost:3000`. Local Supabase Studio is at `http://127.0.0.1:54323`, and captured development email is at `http://127.0.0.1:54324`, as configured in `supabase/config.toml`. Stop the stack with `supabase stop` when finished.
 
-The seed is for local development only. Do not pass `--include-seed` when pushing production migrations, and do not reuse seed passwords outside the local stack.
+The seed and synthetic E2E credentials are for local development only. Do not pass `--include-seed` when pushing production migrations, and do not reuse the synthetic password outside the local stack.
 
 ### Synthetic local accounts
 
-After `supabase db reset --local`, `supabase/seed.sql` creates these fictional accounts. They all use the local-only password `LocalOnly123!` and the `example.edu` domain. Set local `ALLOWED_EMAIL_DOMAINS=example.edu`; none of these identities may be copied to Preview or Production.
+After `supabase db reset --local`, `supabase/seed.sql` creates these fictional relational fixtures. Run `pnpm test:e2e:prepare` to have the loopback-only Auth admin preparer assign their local-only password `LocalOnly123!`; raw SQL seed hashes are not treated as login credentials. They use the `example.edu` domain. Set local `ALLOWED_EMAIL_DOMAINS=example.edu`; none of these identities may be copied to Preview or Production.
 
 | Email                          | Membership/roles                               | Purpose                      |
 | ------------------------------ | ---------------------------------------------- | ---------------------------- |
@@ -290,6 +291,7 @@ Run the complete local checks first:
 supabase db reset --local
 supabase test db
 pnpm check
+pnpm test:e2e:prepare
 pnpm test:e2e
 ```
 

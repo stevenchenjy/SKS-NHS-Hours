@@ -14,7 +14,18 @@ async function login(page: Page, email: string) {
   await page.getByLabel("School email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/(dashboard|account-expired)/);
+  await Promise.race([
+    page.waitForURL(/\/(dashboard|account-expired)/),
+    page
+      .getByRole("alert")
+      .waitFor({ state: "visible" })
+      .then(async () => {
+        const message = await page.getByRole("alert").textContent();
+        throw new Error(
+          `Synthetic sign-in failed for ${email}: ${message?.trim() || "unknown error"}`,
+        );
+      }),
+  ]);
 }
 
 async function choose(page: Page, label: string, option: RegExp | string) {

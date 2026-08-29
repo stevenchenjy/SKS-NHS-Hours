@@ -171,7 +171,7 @@ Do not use this table for secrets. New settings need explicit schema validation,
 
 `supabase/seed.sql` creates eight synthetic Auth/profile/membership personas covering every role, combined roles, an expired ordinary member, and an expired former leader. It also installs the five required active categories in display order: Green Team, Peer Tutoring, Concessions, Fundraising & Events, and Community Service, maps them into the synthetic `2026-2027` year, and creates representative draft/pending/changes-requested/approved history.
 
-The seed uses fixed UUIDs and a shared, clearly local-only password so database and browser tests can refer to stable actors. It is recreateable, contains no real student data, and must never be pushed with `supabase db push --include-seed` to a hosted environment. Local login details are documented in `docs/OPERATIONS.md`.
+The seed uses fixed UUIDs so database and browser tests can refer to stable actors. It contains no login-capable password hash: the loopback-restricted E2E preparer assigns the shared synthetic password through the running Auth admin API. The fixture is recreateable, contains no real student data, and must never be pushed with `supabase db push --include-seed` to a hosted environment. Local login details are documented in `docs/OPERATIONS.md`.
 
 ## State and lifecycle model
 

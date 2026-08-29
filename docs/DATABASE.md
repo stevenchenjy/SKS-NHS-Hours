@@ -105,7 +105,7 @@ supabase db reset --local
 supabase test db
 ```
 
-`supabase db reset --local` destroys and recreates only the linked local database, applies the ordered migration chain, and then loads `supabase/seed.sql`. Never run a destructive reset against a hosted environment. The seed contains fictional `example.edu` personas and the intentionally local-only password documented in `docs/OPERATIONS.md`; never deploy it with `--include-seed`.
+`supabase db reset --local` destroys and recreates only the linked local database, applies the ordered migration chain, and then loads `supabase/seed.sql`. Never run a destructive reset against a hosted environment. The seed contains fictional `example.edu` relational fixtures; the loopback-only `pnpm test:e2e:prepare` command creates their login credentials through the running Auth service. Never deploy the seed with `--include-seed`.
 
 The database suite currently lives in:
 

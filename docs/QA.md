@@ -39,6 +39,7 @@ Start and reset the local database:
 ```bash
 supabase start
 supabase db reset --local
+pnpm test:e2e:prepare
 ```
 
 Run the application checks:
@@ -49,6 +50,7 @@ pnpm typecheck
 pnpm test
 supabase test db
 pnpm build
+pnpm test:e2e:prepare
 pnpm test:e2e
 ```
 

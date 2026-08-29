@@ -36,9 +36,10 @@ Reset to deterministic test data before database/browser runs:
 ```bash
 supabase db reset --local
 supabase test db
+pnpm test:e2e:prepare
 ```
 
-`supabase/seed.sql` supplies eight fictional personas, five categories, requests in representative statuses, and the shared local-only password documented in `docs/OPERATIONS.md`. It must never be pushed to a hosted environment.
+`supabase/seed.sql` supplies eight fictional personas, five categories, and requests in representative statuses. After every reset, `pnpm test:e2e:prepare` uses the local Auth admin API to set the shared synthetic password documented in `docs/OPERATIONS.md`; this keeps login-capable fixture creation aligned with the running Auth service instead of relying on raw SQL password hashes. It must never be pointed at a hosted environment or used with real accounts, and the seed must never be pushed to a hosted environment.
 
 ## Unit tests
 
@@ -109,6 +110,7 @@ Install Chromium once, reset the database, and run:
 ```bash
 pnpm exec playwright install chromium
 supabase db reset --local
+pnpm test:e2e:prepare
 pnpm test:e2e
 ```
 
@@ -163,7 +165,7 @@ A placeholder build proves compilation only. It does not prove connectivity, Aut
 
 - **application:** install, format, lint, typecheck, unit, audit, and production build on Node 22;
 - **database:** start Supabase and run pgTAP; and
-- **browser:** wait for application/database jobs, start/reset the local Supabase stack, export local keys to job environment, install Chromium, and run Playwright.
+- **browser:** wait for application/database jobs, start/reset the local Supabase stack, export local keys to job environment, prepare login-capable synthetic users through the local Auth admin API, install Chromium, and run Playwright. Failed runs retain synthetic Playwright artifacts for seven days.
 
 Require the relevant checks through branch protection. A workflow definition in Git is not a passing run; inspect job output from the exact commit. Do not print exported Supabase environment files or secret values.
 

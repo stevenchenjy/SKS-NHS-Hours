@@ -39,6 +39,7 @@ Put the local Supabase URL and keys from `supabase status` into `.env.local`; ge
 ```bash
 supabase db reset --local
 supabase test db
+pnpm test:e2e:prepare
 pnpm dev
 ```
 
@@ -52,6 +53,7 @@ pnpm typecheck
 pnpm test
 supabase test db
 pnpm build
+pnpm test:e2e:prepare
 pnpm test:e2e
 pnpm audit --audit-level=high
 ```
