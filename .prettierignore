@@ -1,0 +1,12 @@
+.next
+node_modules
+coverage
+playwright-report
+test-results
+output
+pnpm-lock.yaml
+supabase/migrations
+supabase/.temp
+supabase/tests
+supabase/seed.sql
+docs/design

@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: example-anon-key-that-is-long-enough-for-build
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      ALLOWED_EMAIL_DOMAINS: example.edu
+      NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "false"
+      NHS_DESIGN_PREVIEW: "false"
+      PASSWORD_UPDATE_CONTEXT_SECRET: ci-only-password-context-secret-000000000000000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm audit --audit-level=high
+      - run: pnpm build
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase start
+      - run: supabase db reset --local
+      - run: supabase test db
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [application, database]
+    env:
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      ALLOWED_EMAIL_DOMAINS: example.edu
+      NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "false"
+      NHS_DESIGN_PREVIEW: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: pnpm install --frozen-lockfile
+      - run: supabase start
+      - run: supabase db reset --local
+      - name: Export local Supabase environment
+        shell: bash
+        run: |
+          supabase status -o env > /tmp/nhs-supabase.env
+          source /tmp/nhs-supabase.env
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e

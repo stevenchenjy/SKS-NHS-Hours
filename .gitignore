@@ -1,2 +1,33 @@
-.env.local
-.env.*.local
+# Local environment and secret files (at any directory depth)
+.env
+.env.*
+.envrc
+
+# Safe, commit-ready environment templates
+!.env.example
+!.env.*.example
+!.env.sample
+!.env.template
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Next.js build output
+.next/
+out/
+
+# Production and test output
+build/
+coverage/
+playwright-report/
+test-results/
+output/playwright/
+
+# Local tooling and operating-system files
+.DS_Store
+*.pem
+*.log
+.vercel/
+tsconfig.tsbuildinfo

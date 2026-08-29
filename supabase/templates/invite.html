@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <body style="margin: 0; background: #f4f7f8; color: #0b1736; font-family: Arial, sans-serif">
+    <div style="margin: 0 auto; max-width: 560px; padding: 40px 20px">
+      <div
+        style="border: 1px solid #d8dee4; border-radius: 12px; background: #ffffff; padding: 32px"
+      >
+        <p style="margin: 0 0 12px; color: #075b3a; font-size: 13px; font-weight: 700">
+          NHS SERVICE HOURS
+        </p>
+        <h1 style="margin: 0; font-size: 26px; line-height: 1.2">Finish setting up your account</h1>
+        <p style="margin: 18px 0; color: #526071; font-size: 16px; line-height: 1.6">
+          A teacher administrator invited you to the NHS Service Hours Portal. Accept this
+          invitation to choose a password and access your assigned school-year role.
+        </p>
+        <p style="margin: 26px 0">
+          <a
+            href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=invite"
+            style="
+              display: inline-block;
+              border-radius: 8px;
+              background: #075b3a;
+              color: #ffffff;
+              padding: 12px 18px;
+              font-weight: 700;
+              text-decoration: none;
+            "
+            >Accept invitation</a
+          >
+        </p>
+        <p style="margin: 0; color: #526071; font-size: 13px; line-height: 1.6">
+          This one-time link expires in seven days. If you did not expect this invitation, you can
+          ignore this email.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
