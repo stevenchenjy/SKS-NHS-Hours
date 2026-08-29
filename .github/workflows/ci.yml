@@ -25,7 +25,7 @@ jobs:
       NHS_DESIGN_PREVIEW: "false"
       PASSWORD_UPDATE_CONTEXT_SECRET: ci-only-password-context-secret-000000000000000
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: supabase/setup-cli@v1
         with:
           version: latest
@@ -64,7 +64,7 @@ jobs:
       NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "false"
       NHS_DESIGN_PREVIEW: "true"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
