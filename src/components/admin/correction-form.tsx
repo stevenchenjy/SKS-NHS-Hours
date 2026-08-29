@@ -26,14 +26,14 @@ export function CorrectionForm({
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="correction-title">Activity title</FieldLabel>
-          <Input id="correction-title" name="title" defaultValue={request.title} required />
+          <Input id="correction-title" name="title" defaultValue={request.title ?? ""} required />
         </Field>
         <Field>
           <FieldLabel htmlFor="correction-description">Description</FieldLabel>
           <Textarea
             id="correction-description"
             name="description"
-            defaultValue={request.description}
+            defaultValue={request.description ?? ""}
             rows={5}
             required
           />
@@ -44,7 +44,7 @@ export function CorrectionForm({
             <select
               id="correction-category"
               name="category_id"
-              defaultValue={request.category_id}
+              defaultValue={request.category_id ?? ""}
               className="h-9 rounded-lg border bg-background px-2 text-sm"
             >
               {categories.map((category) => (
@@ -60,7 +60,7 @@ export function CorrectionForm({
               id="correction-date"
               name="service_date"
               type="date"
-              defaultValue={request.service_date}
+              defaultValue={request.service_date ?? ""}
               required
             />
           </Field>
@@ -73,7 +73,7 @@ export function CorrectionForm({
               min="0.25"
               max="24"
               step="0.25"
-              defaultValue={request.hours}
+              defaultValue={request.hours ?? ""}
               required
             />
           </Field>

@@ -192,6 +192,26 @@ export async function getHourRequest(requestId: string): Promise<HourRequest> {
   );
 }
 
+export async function getHourRequestReviewerNames(requestId: string): Promise<{
+  requestedApproverName: string | null;
+  actualReviewerName: string | null;
+}> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .rpc("get_hour_request_reviewer_names", { p_request_id: requestId })
+    .maybeSingle();
+  const row = requireData(data, error, "Unable to load request reviewers") as Record<
+    string,
+    unknown
+  >;
+  return {
+    requestedApproverName:
+      typeof row.requested_approver_name === "string" ? row.requested_approver_name : null,
+    actualReviewerName:
+      typeof row.actual_reviewer_name === "string" ? row.actual_reviewer_name : null,
+  };
+}
+
 export async function listPendingQueue(
   schoolYearId: string,
   requestedApproverId?: string,
@@ -324,12 +344,13 @@ export async function listAccountDirectory(
     school_years: SchoolYear | SchoolYear[];
   }>;
   const ids = rows.map((row) => row.id);
-  const { data: assignments } = ids.length
+  const { data: assignments, error: assignmentError } = ids.length
     ? await supabase
         .from("membership_roles")
         .select("membership_id,roles!inner(role_key)")
         .in("membership_id", ids)
-    : { data: [] };
+    : { data: [], error: null };
+  if (assignmentError) throw new Error(`Unable to load account roles: ${assignmentError.message}`);
   const roles = new Map<string, RoleSlug[]>();
   for (const row of (assignments ?? []) as unknown as Array<{
     membership_id: string;

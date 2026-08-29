@@ -65,7 +65,7 @@ export default async function MemberProfilePage({
   ]);
   const approvedByCategory = new Map<string, number>();
   for (const request of requests) {
-    if (request.status !== "approved") continue;
+    if (request.status !== "approved" || request.hours == null) continue;
     const category = categoryName(request.category);
     approvedByCategory.set(
       category,
@@ -159,10 +159,14 @@ export default async function MemberProfilePage({
                   {requests.length ? (
                     requests.map((request) => (
                       <TableRow key={request.id}>
-                        <TableCell className="pl-5 font-semibold">{request.title}</TableCell>
+                        <TableCell className="pl-5 font-semibold">
+                          {request.title ?? "Untitled draft"}
+                        </TableCell>
                         <TableCell>{categoryName(request.category)}</TableCell>
-                        <TableCell>{request.service_date}</TableCell>
-                        <TableCell>{formatHours(Number(request.hours))}</TableCell>
+                        <TableCell>{request.service_date ?? "—"}</TableCell>
+                        <TableCell>
+                          {request.hours == null ? "—" : formatHours(Number(request.hours))}
+                        </TableCell>
                         <TableCell>
                           <StatusBadge status={request.status} />
                         </TableCell>

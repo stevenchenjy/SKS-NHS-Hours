@@ -61,12 +61,13 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
 
   const rawMemberships = (membershipRows ?? []) as unknown as MembershipRow[];
   const membershipIds = rawMemberships.map((membership) => membership.id);
-  const { data: roleRows } = membershipIds.length
+  const { data: roleRows, error: roleError } = membershipIds.length
     ? await supabase
         .from("membership_roles")
         .select("membership_id,roles!inner(role_key)")
         .in("membership_id", membershipIds)
-    : { data: [] };
+    : { data: [], error: null };
+  if (roleError) throw new Error(`Unable to load viewer roles: ${roleError.message}`);
 
   const roleMap = new Map<string, RoleSlug[]>();
   for (const row of (roleRows ?? []) as unknown as Array<{

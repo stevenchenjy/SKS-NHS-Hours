@@ -8,17 +8,17 @@ import { PageHeader } from "@/components/portal/page-header";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { Button } from "@/components/ui/button";
 import { requireActiveViewer } from "@/lib/dal/access";
-import { getHourRequest } from "@/lib/dal/portal";
+import { getHourRequest, getHourRequestReviewerNames } from "@/lib/dal/portal";
 import type { HourRequest } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Service request" };
 
-function nameFromMembership(
-  value: HourRequest["requestedApproverMembership"] | HourRequest["actualReviewerMembership"],
+function reviewerDisplayName(
+  membershipId: string | null,
+  fullName: string | null,
+  emptyLabel: string,
 ): string {
-  if (!value) return "Not yet assigned";
-  const profile = Array.isArray(value.profiles) ? value.profiles[0] : value.profiles;
-  return profile?.full_name ?? "School leader";
+  return membershipId ? (fullName ?? "School leader") : emptyLabel;
 }
 
 function categoryName(value: HourRequest["category"]): string {
@@ -47,8 +47,15 @@ export default async function HourRequestPage({
   const noticeValue = (await searchParams).notice;
   const notice = Array.isArray(noticeValue) ? noticeValue[0] : noticeValue;
   let request;
+  let reviewerNames: {
+    requestedApproverName: string | null;
+    actualReviewerName: string | null;
+  };
   try {
-    request = await getHourRequest(id);
+    [request, reviewerNames] = await Promise.all([
+      getHourRequest(id),
+      getHourRequestReviewerNames(id),
+    ]);
   } catch {
     notFound();
   }
@@ -69,12 +76,13 @@ export default async function HourRequestPage({
             Back to dashboard
           </Link>
         }
-        title={request.title}
+        title={request.title ?? "Untitled draft"}
         description={
           <span className="inline-flex flex-wrap items-center gap-3">
             <StatusBadge status={request.status} />
             <span>
-              {categoryName(request.category)} · {request.hours} hours
+              {categoryName(request.category)} ·{" "}
+              {request.hours == null ? "Hours not entered" : `${request.hours} hours`}
             </span>
           </span>
         }
@@ -112,7 +120,9 @@ export default async function HourRequestPage({
             <dl className="grid gap-x-8 gap-y-5 p-5 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <dt className="text-sm font-medium text-muted-foreground">Description</dt>
-                <dd className="mt-1 whitespace-pre-wrap leading-7">{request.description}</dd>
+                <dd className="mt-1 whitespace-pre-wrap leading-7">
+                  {request.description ?? "No description yet."}
+                </dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">Service date</dt>
@@ -120,18 +130,26 @@ export default async function HourRequestPage({
               </div>
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">Hours requested</dt>
-                <dd className="mt-1 font-semibold">{request.hours}</dd>
+                <dd className="mt-1 font-semibold">{request.hours ?? "—"}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">Requested approver</dt>
                 <dd className="mt-1 font-semibold">
-                  {nameFromMembership(request.requestedApproverMembership)}
+                  {reviewerDisplayName(
+                    request.requested_approver_membership_id,
+                    reviewerNames.requestedApproverName,
+                    "Not yet assigned",
+                  )}
                 </dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">Actual reviewer</dt>
                 <dd className="mt-1 font-semibold">
-                  {nameFromMembership(request.actualReviewerMembership)}
+                  {reviewerDisplayName(
+                    request.actual_reviewer_membership_id,
+                    reviewerNames.actualReviewerName,
+                    "Not yet reviewed",
+                  )}
                 </dd>
               </div>
               <div>
@@ -148,10 +166,10 @@ export default async function HourRequestPage({
           <section aria-labelledby="history-title" className="rounded-xl border">
             <div className="border-b px-5 py-4">
               <h2 id="history-title" className="text-xl font-bold">
-                Review history
+                Request history
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                These decision records cannot be edited or removed.
+                These request events cannot be edited or removed.
               </p>
             </div>
             {request.reviews?.length ? (
@@ -182,7 +200,7 @@ export default async function HourRequestPage({
             ) : (
               <div className="flex gap-3 p-5 text-sm text-muted-foreground">
                 <Clock3 className="size-4" aria-hidden="true" />
-                No review decisions have been recorded.
+                No request events have been recorded.
               </div>
             )}
           </section>

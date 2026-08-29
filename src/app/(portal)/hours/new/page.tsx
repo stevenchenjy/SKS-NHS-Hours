@@ -44,7 +44,7 @@ export default async function NewHourRequestPage() {
           </Link>
         }
         title="Log service hours"
-        description="Save a private draft or submit a complete activity for review."
+        description="Save an editable draft or submit a complete activity for review."
       />
       {categories.length === 0 || reviewers.length === 0 ? (
         <div className="rounded-xl border border-[var(--status-pending)]/30 bg-[var(--status-pending-bg)] p-5">

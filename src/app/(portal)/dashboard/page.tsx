@@ -32,12 +32,21 @@ function relationName(category: HourRequest["category"]): string {
   return Array.isArray(category) ? (category[0]?.name ?? "Uncategorized") : category.name;
 }
 
-function date(value: string): string {
+function date(value: string | null): string {
+  if (!value) return "—";
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   }).format(new Date(`${value}T12:00:00`));
+}
+
+function requestTitle(value: string | null): string {
+  return value ?? "Untitled draft";
+}
+
+function requestHours(value: number | string | null): string {
+  return value == null ? "—" : formatHours(Number(value));
 }
 
 function stringParam(value: string | string[] | undefined): string | undefined {
@@ -272,11 +281,11 @@ export default async function DashboardPage({
                   {recent.map((request) => (
                     <TableRow key={request.id}>
                       <TableCell className="max-w-[320px] truncate pl-5 font-semibold">
-                        {request.title}
+                        {requestTitle(request.title)}
                       </TableCell>
                       <TableCell>{relationName(request.category)}</TableCell>
                       <TableCell>{date(request.service_date)}</TableCell>
-                      <TableCell>{formatHours(Number(request.hours))}</TableCell>
+                      <TableCell>{requestHours(request.hours)}</TableCell>
                       <TableCell>
                         <StatusBadge status={request.status} />
                       </TableCell>
@@ -308,12 +317,16 @@ export default async function DashboardPage({
               {recent.map((request) => (
                 <Link
                   key={request.id}
-                  href={`/hours/${request.id}`}
+                  href={
+                    request.status === "draft" || request.status === "changes_requested"
+                      ? `/hours/${request.id}/edit`
+                      : `/hours/${request.id}`
+                  }
                   className="block rounded-xl border p-4 transition-colors hover:bg-muted/40"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="font-semibold">{request.title}</h3>
+                      <h3 className="font-semibold">{requestTitle(request.title)}</h3>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {relationName(request.category)} · {date(request.service_date)}
                       </p>
@@ -321,7 +334,7 @@ export default async function DashboardPage({
                     <StatusBadge status={request.status} />
                   </div>
                   <p className="mt-4 text-sm font-semibold">
-                    {formatHours(Number(request.hours))} hours
+                    {request.hours == null ? "—" : `${requestHours(request.hours)} hours`}
                   </p>
                 </Link>
               ))}

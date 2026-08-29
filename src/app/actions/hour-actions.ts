@@ -13,27 +13,61 @@ export interface HourRequestFormState {
   fieldErrors?: Record<string, string[]>;
 }
 
-const hourRequestSchema = z.object({
+const commonHourRequestSchema = z.object({
   request_id: z.uuid().optional(),
   revision: z.coerce.number().int().nonnegative().default(0),
   school_year_id: z.uuid(),
-  category_id: z.uuid("Choose a service category."),
-  requested_approver_membership_id: z.uuid("Choose a requested approver."),
-  title: z.string().trim().min(3, "Use a specific activity title.").max(120),
-  description: z
-    .string()
-    .trim()
-    .min(20, "Explain the service you performed in at least 20 characters.")
-    .max(2_000),
-  service_date: z.iso.date("Enter a valid service date."),
-  hours: z.coerce
-    .number()
-    .positive("Hours must be greater than zero.")
-    .max(24, "A single-date request cannot exceed 24 hours.")
-    .refine((value) => Number.isInteger(value * 4), "Use quarter-hour increments."),
-  client_submission_key: z.uuid(),
-  intent: z.enum(["save_draft", "submit"]),
+  client_submission_key: z.string().trim().min(8).max(200),
 });
+
+const categorySchema = z.uuid("Choose a service category.");
+const reviewerSchema = z.uuid("Choose a requested approver.");
+const titleSchema = z.string().trim().min(3, "Use a specific activity title.").max(120);
+const descriptionSchema = z
+  .string()
+  .trim()
+  .min(20, "Explain the service you performed in at least 20 characters.")
+  .max(2_000);
+const serviceDateSchema = z.iso.date("Enter a valid service date.");
+const hoursSchema = z.coerce
+  .number()
+  .positive("Hours must be greater than zero.")
+  .max(24, "A single-date request cannot exceed 24 hours.")
+  .refine((value) => Number.isInteger(value * 4), "Use quarter-hour increments.");
+
+function blankToUndefined(value: unknown): unknown {
+  return value == null || (typeof value === "string" && value.trim() === "") ? undefined : value;
+}
+
+const hourRequestSchema = z.discriminatedUnion("intent", [
+  commonHourRequestSchema.extend({
+    intent: z.literal("save_draft"),
+    category_id: z.preprocess(blankToUndefined, categorySchema.optional()),
+    requested_approver_membership_id: z.preprocess(blankToUndefined, reviewerSchema.optional()),
+    title: z.preprocess(blankToUndefined, titleSchema.optional()),
+    description: z.preprocess(blankToUndefined, descriptionSchema.optional()),
+    service_date: z.preprocess(blankToUndefined, serviceDateSchema.optional()),
+    hours: z.preprocess(blankToUndefined, hoursSchema.optional()),
+  }),
+  commonHourRequestSchema.extend({
+    intent: z.literal("submit"),
+    category_id: categorySchema,
+    requested_approver_membership_id: reviewerSchema,
+    title: titleSchema,
+    description: descriptionSchema,
+    service_date: serviceDateSchema,
+    hours: hoursSchema,
+  }),
+  commonHourRequestSchema.extend({
+    intent: z.literal("save_changes"),
+    category_id: categorySchema,
+    requested_approver_membership_id: reviewerSchema,
+    title: titleSchema,
+    description: descriptionSchema,
+    service_date: serviceDateSchema,
+    hours: hoursSchema,
+  }),
+]);
 
 function rpcError(error: { message: string; code?: string } | null): string {
   if (!error) return "The request could not be saved.";
@@ -84,7 +118,7 @@ export async function saveHourRequestAction(
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
 
   const today = new Date().toISOString().slice(0, 10);
-  if (parsed.data.service_date > today) {
+  if (parsed.data.service_date && parsed.data.service_date > today) {
     return { fieldErrors: { service_date: ["The service date cannot be in the future."] } };
   }
   if (parsed.data.school_year_id !== viewer.activeMembership.school_year_id) {
@@ -93,12 +127,12 @@ export async function saveHourRequestAction(
 
   const supabase = await createSupabaseServerClient();
   const values = {
-    p_category_id: parsed.data.category_id,
-    p_requested_approver_membership_id: parsed.data.requested_approver_membership_id,
-    p_title: parsed.data.title,
-    p_description: parsed.data.description,
-    p_service_date: parsed.data.service_date,
-    p_hours: parsed.data.hours,
+    p_category_id: parsed.data.category_id ?? null,
+    p_requested_approver_membership_id: parsed.data.requested_approver_membership_id ?? null,
+    p_title: parsed.data.title ?? null,
+    p_description: parsed.data.description ?? null,
+    p_service_date: parsed.data.service_date ?? null,
+    p_hours: parsed.data.hours ?? null,
   };
 
   const result = parsed.data.request_id
@@ -132,7 +166,9 @@ export async function saveHourRequestAction(
   redirect(
     parsed.data.intent === "submit"
       ? `/hours/${savedRequest.id}?notice=submitted`
-      : `/hours/${savedRequest.id}/edit?notice=draft-saved`,
+      : `/hours/${savedRequest.id}/edit?notice=${
+          parsed.data.intent === "save_changes" ? "changes-saved" : "draft-saved"
+        }`,
   );
 }
 

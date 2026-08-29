@@ -36,7 +36,7 @@ export function HourRequestForm({
   request?: HourRequest;
 }) {
   const [state, action, pending] = useActionState(saveHourRequestAction, initialState);
-  const currentCategory = request?.category_id;
+  const currentCategory = request?.category_id ?? undefined;
   const currentReviewer = request?.requested_approver_membership_id ?? undefined;
   const today = new Date().toISOString().slice(0, 10);
   const categoryItems = Object.fromEntries(
@@ -75,7 +75,7 @@ export function HourRequestForm({
               name="title"
               required
               maxLength={120}
-              defaultValue={request?.title}
+              defaultValue={request?.title ?? ""}
               placeholder="Example: Saturday food pantry shift"
               className="h-11"
             />
@@ -90,7 +90,7 @@ export function HourRequestForm({
               minLength={20}
               maxLength={2000}
               rows={6}
-              defaultValue={request?.description}
+              defaultValue={request?.description ?? ""}
               placeholder="Describe what you did, whom it served, and your responsibilities."
               className="min-h-36 resize-y text-base"
             />
@@ -131,7 +131,7 @@ export function HourRequestForm({
                 type="date"
                 max={today}
                 required
-                defaultValue={request?.service_date}
+                defaultValue={request?.service_date ?? ""}
                 className="h-11"
               />
               <FieldError>{state.fieldErrors?.service_date?.[0]}</FieldError>
@@ -148,7 +148,7 @@ export function HourRequestForm({
               step="0.25"
               inputMode="decimal"
               required
-              defaultValue={request?.hours}
+              defaultValue={request?.hours ?? ""}
               className="h-11 max-w-44"
             />
             <FieldDescription>Use quarter-hour increments, from 0.25 through 24.</FieldDescription>
@@ -208,8 +208,9 @@ export function HourRequestForm({
       <aside className="rounded-xl border bg-muted/45 p-5 text-sm leading-6 text-muted-foreground">
         <p className="font-semibold text-foreground">What happens next</p>
         <p className="mt-1">
-          Saving keeps the request private as a draft. Submitting locks this version while a leader
-          reviews it. Pending hours are shown separately and do not count toward the requirement.
+          {request?.status === "changes_requested"
+            ? "Saving keeps the request in changes requested so you can return later. Resubmitting locks the updated version while a leader reviews it."
+            : "Saving keeps the request editable as a draft. Submitting locks this version while a leader reviews it. Pending hours are shown separately and do not count toward the requirement."}
         </p>
       </aside>
 
@@ -217,14 +218,14 @@ export function HourRequestForm({
         <Button
           type="submit"
           name="intent"
-          value="save_draft"
+          value={request?.status === "changes_requested" ? "save_changes" : "save_draft"}
           variant="outline"
           size="lg"
           className="h-11"
           disabled={pending}
         >
           <Save data-icon="inline-start" aria-hidden="true" />
-          Save draft
+          {request?.status === "changes_requested" ? "Save changes" : "Save draft"}
         </Button>
         <Button
           type="submit"

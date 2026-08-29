@@ -93,7 +93,9 @@ export default async function ReviewRequestPage({
         title="Review request"
         description={
           <span className="inline-flex flex-wrap items-center gap-3">
-            <span className="font-semibold text-foreground">{request.title}</span>
+            <span className="font-semibold text-foreground">
+              {request.title ?? "Untitled draft"}
+            </span>
             <StatusBadge status={request.status} />
           </span>
         }
@@ -120,7 +122,9 @@ export default async function ReviewRequestPage({
               </p>
             </div>
             <div className="p-6">
-              <p className="whitespace-pre-wrap text-base leading-7">{request.description}</p>
+              <p className="whitespace-pre-wrap text-base leading-7">
+                {request.description ?? "No description yet."}
+              </p>
               <dl className="mt-7 grid gap-5 border-t pt-6 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <dt className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -138,7 +142,7 @@ export default async function ReviewRequestPage({
                   <dt className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock3 className="size-4" aria-hidden="true" /> Hours
                   </dt>
-                  <dd className="mt-1 font-semibold">{request.hours}</dd>
+                  <dd className="mt-1 font-semibold">{request.hours ?? "—"}</dd>
                 </div>
                 <div>
                   <dt className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -156,7 +160,7 @@ export default async function ReviewRequestPage({
             <div className="border-b px-6 py-5">
               <h2 id="review-history-heading" className="flex items-center gap-2 text-xl font-bold">
                 <History className="size-5" aria-hidden="true" />
-                Immutable review history
+                Immutable request history
               </h2>
             </div>
             {request.reviews?.length ? (
@@ -182,7 +186,7 @@ export default async function ReviewRequestPage({
                   ))}
               </ol>
             ) : (
-              <p className="p-6 text-sm text-muted-foreground">No prior review events.</p>
+              <p className="p-6 text-sm text-muted-foreground">No prior request events.</p>
             )}
           </section>
         </div>

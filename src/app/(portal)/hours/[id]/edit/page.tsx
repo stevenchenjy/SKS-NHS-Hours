@@ -10,9 +10,17 @@ import { getHourRequest, listActiveReviewers, listCategories } from "@/lib/dal/p
 
 export const metadata: Metadata = { title: "Edit service request" };
 
-export default async function EditHourRequestPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditHourRequestPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const viewer = await requireActiveViewer();
   const { id } = await params;
+  const noticeValue = (await searchParams).notice;
+  const notice = Array.isArray(noticeValue) ? noticeValue[0] : noticeValue;
   let request;
   try {
     request = await getHourRequest(id);
@@ -25,6 +33,9 @@ export default async function EditHourRequestPage({ params }: { params: Promise<
   ) {
     notFound();
   }
+  const latestChangeRequest = [...(request.reviews ?? [])]
+    .sort((left, right) => right.created_at.localeCompare(left.created_at))
+    .find((review) => review.action === "changes_requested" && review.comment);
 
   const [categories, allReviewers] = await Promise.all([
     listCategories(request.school_year_id),
@@ -52,9 +63,32 @@ export default async function EditHourRequestPage({ params }: { params: Promise<
         description={
           request.status === "changes_requested"
             ? "Address the reviewer’s feedback before sending the request back for a new decision."
-            : "Draft changes remain private until you submit the request."
+            : "Draft changes remain editable until you submit the request."
         }
       />
+      {notice === "draft-saved" || notice === "changes-saved" ? (
+        <p
+          role="status"
+          className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
+        >
+          {notice === "changes-saved"
+            ? "Changes saved. Resubmit when the request is ready for review."
+            : "Draft saved. You can keep editing until you submit it."}
+        </p>
+      ) : null}
+      {request.status === "changes_requested" && latestChangeRequest?.comment ? (
+        <section
+          aria-labelledby="reviewer-feedback-title"
+          className="mb-6 rounded-xl border border-[var(--status-pending)]/30 bg-[var(--status-pending-bg)] p-5"
+        >
+          <h2 id="reviewer-feedback-title" className="font-semibold">
+            Reviewer feedback
+          </h2>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
+            {latestChangeRequest.comment}
+          </p>
+        </section>
+      ) : null}
       <HourRequestForm
         schoolYearId={request.school_year_id}
         schoolYearLabel={

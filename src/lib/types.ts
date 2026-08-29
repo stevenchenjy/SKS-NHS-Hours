@@ -12,6 +12,15 @@ export type MembershipStatus = "active" | "expired" | "suspended" | "archived";
 export type SchoolYearStatus = "draft" | "active" | "closed" | "archived";
 export type HourRequestStatus =
   "draft" | "pending" | "changes_requested" | "approved" | "rejected" | "withdrawn";
+export type HourReviewAction =
+  | "submitted"
+  | "resubmitted"
+  | "approved"
+  | "changes_requested"
+  | "rejected"
+  | "reassigned"
+  | "withdrawn"
+  | "corrected";
 
 export interface Profile {
   id: string;
@@ -101,14 +110,14 @@ export interface ProgressRecord {
 }
 
 export interface HourReview {
-  id: string;
+  id: number | string;
   hour_request_id: string;
-  reviewer_membership_id: string;
+  reviewer_membership_id: string | null;
   reviewer_name?: string;
-  action: "approved" | "changes_requested" | "rejected" | "reassigned";
+  action: HourReviewAction;
   comment: string | null;
-  previous_status: HourRequestStatus;
-  new_status: HourRequestStatus;
+  previous_status: HourRequestStatus | null;
+  new_status: HourRequestStatus | null;
   created_at: string;
 }
 
@@ -116,15 +125,15 @@ export interface HourRequest {
   id: string;
   member_membership_id: string;
   school_year_id: string;
-  title: string;
-  description: string;
-  category_id: string;
-  service_date: string;
-  hours: number | string;
+  title: string | null;
+  description: string | null;
+  category_id: string | null;
+  service_date: string | null;
+  hours: number | string | null;
   requested_approver_membership_id: string | null;
   actual_reviewer_membership_id: string | null;
   status: HourRequestStatus;
-  client_submission_key?: string;
+  client_submission_key?: string | null;
   revision: number;
   created_at: string;
   submitted_at: string | null;
@@ -155,6 +164,14 @@ export interface HourRequest {
 }
 
 export interface PendingQueueItem extends HourRequest {
+  title: string;
+  description: string;
+  category_id: string;
+  service_date: string;
+  hours: number | string;
+  requested_approver_membership_id: string;
+  status: "pending";
+  submitted_at: string;
   member_profile_id: string;
   member_name: string;
   member_email?: string;
