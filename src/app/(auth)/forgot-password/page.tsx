@@ -18,7 +18,9 @@ export default function ForgotPasswordPage() {
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to sign in
         </Link>
-        <CardTitle className="text-3xl font-bold">Reset password</CardTitle>
+        <CardTitle as="h1" className="text-3xl font-bold">
+          Reset password
+        </CardTitle>
         <CardDescription className="text-base">
           We will email reset instructions when the address belongs to an invited account.
         </CardDescription>

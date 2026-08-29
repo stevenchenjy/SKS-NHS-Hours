@@ -22,7 +22,9 @@ export default async function AccountExpiredPage() {
           <span className="mb-3 flex size-11 items-center justify-center rounded-full bg-[var(--status-neutral-bg)] text-[var(--status-neutral)]">
             <Archive aria-hidden="true" className="size-5" />
           </span>
-          <CardTitle className="text-3xl font-bold">Your NHS membership is not active</CardTitle>
+          <CardTitle as="h1" className="text-3xl font-bold">
+            Your NHS membership is not active
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 px-7 py-7">
           <p className="text-base leading-7 text-muted-foreground">

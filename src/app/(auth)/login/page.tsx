@@ -53,7 +53,9 @@ export default async function LoginPage({
           </span>
           <span className="text-sm font-semibold">NHS Service Hours</span>
         </div>
-        <CardTitle className="text-3xl font-bold tracking-tight">Welcome back</CardTitle>
+        <CardTitle as="h1" className="text-3xl font-bold tracking-tight">
+          Welcome back
+        </CardTitle>
         <CardDescription className="text-base leading-6">
           Use the account from your NHS invitation. There is no public registration.
         </CardDescription>

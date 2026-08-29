@@ -28,7 +28,9 @@ export default async function UpdatePasswordPage() {
   return (
     <Card className="py-0 shadow-sm">
       <CardHeader className="border-b px-6 py-7">
-        <CardTitle className="text-3xl font-bold">Choose a new password</CardTitle>
+        <CardTitle as="h1" className="text-3xl font-bold">
+          Choose a new password
+        </CardTitle>
         <CardDescription className="text-base">
           This one-time form is available for 30 minutes after you verify an invitation or reset
           link.
