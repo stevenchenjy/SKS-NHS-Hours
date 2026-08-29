@@ -55,7 +55,7 @@ async function choose(page: Page, label: string, option: RegExp | string) {
 async function openQueueRequest(page: Page, title: string) {
   const resultRow = page.getByRole("row").filter({ hasText: title });
   await expect(resultRow).toHaveCount(1);
-  await resultRow.getByRole("link", { name: "Review", exact: true }).click();
+  await resultRow.getByRole("button", { name: "Review", exact: true }).click();
 }
 
 async function createPartialDraft(): Promise<string> {
@@ -153,7 +153,7 @@ test("member dashboard renders and edits an intentionally partial draft", async 
   await expect(draftRow.getByRole("cell").nth(2)).toHaveText("—");
   await expect(draftRow.getByRole("cell").nth(3)).toHaveText("—");
 
-  await draftRow.getByRole("link", { name: "Edit" }).click();
+  await draftRow.getByRole("button", { name: "Edit", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/hours/${draftId}/edit`));
   await expect(page.getByLabel("Activity title")).toHaveValue("");
   await expect(page.getByLabel("Service date")).toHaveValue("");
@@ -305,7 +305,7 @@ test("teacher administrator opens the full roster and member profile", async ({ 
   await login(page, "admin@example.edu");
   await page.goto("/admin/members?search=Morgan+Member");
   await expect(page.getByText("Morgan Member").first()).toBeVisible();
-  await page.getByRole("link", { name: "Open" }).click();
+  await page.getByRole("button", { name: "Open", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Morgan Member" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Complete service log" })).toBeVisible();
 
