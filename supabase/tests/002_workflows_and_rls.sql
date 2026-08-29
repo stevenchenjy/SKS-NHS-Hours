@@ -389,6 +389,15 @@ select extensions.lives_ok(
   $$,
   'review-capable member can submit their own request'
 );
+select set_config(
+  'test.leader_self_review_request_id',
+  (
+    select id::text
+    from public.hour_requests
+    where client_submission_key = 'leader-self-review'
+  ),
+  true
+);
 select extensions.throws_ok(
   $$
     select public.review_hour_request(
@@ -413,7 +422,7 @@ select set_config(
 select extensions.throws_ok(
   $$
     select public.review_hour_request(
-      (select id from public.hour_requests where client_submission_key = 'leader-self-review'),
+      current_setting('test.leader_self_review_request_id')::uuid,
       'approve'
     )
   $$,

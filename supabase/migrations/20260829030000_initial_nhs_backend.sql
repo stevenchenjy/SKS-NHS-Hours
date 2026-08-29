@@ -3106,7 +3106,7 @@ begin
     select lower(email) into caller_email from auth.users where id = auth.uid();
   end if;
   if p_invitation_id is null then
-    select count(*)::integer, min(invitation.id)
+    select count(*)::integer, min(invitation.id::text)::uuid
     into eligible_invitation_count, resolved_invitation_id
     from public.invitations invitation
     where lower(invitation.email::text) = caller_email
