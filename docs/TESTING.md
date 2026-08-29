@@ -4,16 +4,16 @@ This is the contributor-facing test guide. `docs/QA.md` contains the complete ma
 
 ## Test layers
 
-| Layer            | Command                         | What it proves                                                                        | What it does not prove                                          |
-| ---------------- | ------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Formatting       | `pnpm format:check`             | Tracked source matches repository formatting rules                                    | Correctness or accessibility                                    |
-| Lint             | `pnpm lint`                     | Static ESLint rules pass without warnings                                             | Runtime authorization                                           |
-| TypeScript       | `pnpm typecheck`                | Repository TypeScript compiles without emitting                                       | Database schema/query compatibility at runtime                  |
-| Domain unit      | `pnpm test`                     | Pure hours, dates, roles, workflow, progress, invitation, query, CSV, and audit rules | RLS, Auth, PostgREST relationships, browser behavior            |
-| Database/RLS     | `supabase test db`              | pgTAP schema, privileges, functions, workflow, reporting, and actor allow/deny cases  | Hosted configuration or true browser behavior                   |
-| Browser          | `pnpm test:e2e`                 | Real UI/server/Auth/database flows at desktop/mobile widths                           | Every manual accessibility/security case or production settings |
-| Production build | `pnpm build`                    | Next.js can compile and prerender with valid environment shape                        | Hosted runtime success                                          |
-| Dependency audit | `pnpm audit --audit-level=high` | Known advisories in the resolved lockfile at that time                                | Unknown vulnerabilities or application design flaws             |
+| Layer            | Command                         | What it proves                                                                       | What it does not prove                                           |
+| ---------------- | ------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| Formatting       | `pnpm format:check`             | Tracked source matches repository formatting rules                                   | Correctness or accessibility                                     |
+| Lint             | `pnpm lint`                     | Static ESLint rules pass without warnings                                            | Runtime authorization                                            |
+| TypeScript       | `pnpm typecheck`                | Repository TypeScript compiles without emitting                                      | Database schema/query compatibility at runtime                   |
+| Unit             | `pnpm test`                     | Domain, navigation, Auth-context, invitation-delivery, and DAL mapping behavior      | RLS, Auth provider behavior, PostgREST runtime, browser behavior |
+| Database/RLS     | `supabase test db`              | pgTAP schema, privileges, functions, workflow, reporting, and actor allow/deny cases | Hosted configuration or true browser behavior                    |
+| Browser          | `pnpm test:e2e`                 | Real UI/server/Auth/database flows at desktop/mobile widths                          | Every manual accessibility/security case or production settings  |
+| Production build | `pnpm build`                    | Next.js can compile and prerender with valid environment shape                       | Hosted runtime success                                           |
+| Dependency audit | `pnpm audit --audit-level=high` | Known advisories in the resolved lockfile at that time                               | Unknown vulnerabilities or application design flaws              |
 
 `pnpm check` runs formatting, lint, typecheck, unit tests, and production build. It intentionally excludes database and Playwright tests; run those as separate release gates.
 
@@ -61,7 +61,7 @@ The current unit suite under `src/lib/domain` covers:
 - CSV quoting, line endings, Unicode, and spreadsheet-formula neutralization; and
 - typed bounded audit event shapes.
 
-The pure domain subset contains eight files and 181 tests, including the final invitation send audit taxonomy. The repository unit run also includes nine same-origin navigation tests, four signed password-update-context tests, and five invitation-delivery coordinator tests, for a current total of eleven files and 199 tests. Record the actual count/output from the release commit rather than assuming those numbers still apply.
+The pure domain subset contains eight files and 181 tests, including the final invitation send audit taxonomy. The repository unit run also includes one file with nine same-origin navigation tests, one with four signed password-update-context tests, one with five invitation-delivery coordinator tests, and two DAL files with five mapping/guard tests. The current total is 13 files and 204 tests. Record the actual count/output from the release commit rather than assuming those numbers still apply.
 
 ## Database and RLS tests
 
@@ -71,10 +71,11 @@ The pgTAP files are:
 - `supabase/tests/002_workflows_and_rls.sql` — request lifecycle, eligibility, reviews, self-review, progress, invitations, audits, and direct caller behavior;
 - `supabase/tests/003_admin_lifecycle_and_authorization.sql` — anonymous/unprovisioned/member/reviewer/admin boundaries, different eligible reviewer, corrections, targets, renewal/rollover/history, and export visibility;
 - `supabase/tests/004_bootstrap.sql` — service-role-only one-time first-admin behavior, roles, audit, and second-call denial;
-- `supabase/tests/005_reviewer_directory.sql` — ordinary-member minimal reviewer discovery plus self/inactive/expired/suspended/non-review/other-year exclusions and anonymous/unprovisioned/expired denial; and
-- `supabase/tests/006_invitation_send_integrity.sql` — two-phase delivery privileges/state checks, provider-accepted send facts/audits, idempotent acknowledgement, resend behavior, and unauthorized denial.
+- `supabase/tests/005_reviewer_directory.sql` — ordinary-member minimal reviewer discovery plus self/inactive/expired/suspended/non-review/other-year exclusions and anonymous/unprovisioned/expired denial;
+- `supabase/tests/006_invitation_send_integrity.sql` — two-phase delivery privileges/state checks, provider-accepted send facts/audits, idempotent acknowledgement, resend behavior, and unauthorized denial; and
+- `supabase/tests/007_hour_request_reviewer_names.sql` — request-scoped requested/actual reviewer display names without direct profile or membership disclosure, including cross-member/anonymous denial and historical attribution after reviewer expiration.
 
-They currently declare 213 assertions in total (plans 54 + 51 + 32 + 8 + 20 + 48). Run them only after a clean reset:
+They currently declare 226 assertions across seven files (plans 54 + 51 + 32 + 8 + 20 + 48 + 13). Run them only after a clean reset:
 
 ```bash
 supabase db reset --local
@@ -95,11 +96,12 @@ Critical cases include:
 8. target zero and over-goal progress are exact;
 9. school-year/category/reviewer composite references cannot cross years;
 10. rollover preserves prior membership/history and does not preserve stale authority;
-11. account/role/year/category/invitation/review/correction/rollover/export actions append audit events; and
-12. invitation provider rejection cannot fabricate send facts, while accepted acknowledgements are idempotent; and
-13. authenticated policy predicates have only the exact helper privileges needed to evaluate forced RLS.
+11. account/role/year/category/invitation/review/correction/rollover/export actions append audit events;
+12. invitation provider rejection cannot fabricate send facts, while accepted acknowledgements are idempotent;
+13. authenticated policy predicates have only the exact helper privileges needed to evaluate forced RLS; and
+14. reviewer display names are available only through a request-scoped RPC to callers who can view the request, without granting direct profile/membership visibility, and remain attributable after reviewer expiration.
 
-PostgreSQL row locks are used for review concurrency, and the SQL suite checks a stale sequential second action. Before release, also run a true simultaneous two-session or two-browser-context race and prove exactly one decision persists.
+PostgreSQL row locks are used for review concurrency, and the SQL suite checks a stale sequential second action. The authenticated browser suite also runs a true simultaneous two-browser-context race and proves one success response, one conflict response, and exactly one persisted approval. Rerun both layers on the release commit.
 
 ## Playwright end-to-end tests
 
@@ -114,21 +116,25 @@ pnpm test:e2e:prepare
 pnpm test:e2e
 ```
 
-By default Playwright starts `pnpm dev` at `http://127.0.0.1:3000`. Set `PLAYWRIGHT_BASE_URL` to a safe alternate origin. Set `PLAYWRIGHT_SKIP_WEBSERVER=1` only when that exact server is already managed externally. `E2E_PASSWORD` may override the local-only fixture password; keep it in ignored/CI secret storage.
+By default Playwright starts `pnpm dev` at `http://127.0.0.1:3000`. The configuration rejects non-loopback `PLAYWRIGHT_BASE_URL` and `NEXT_PUBLIC_SUPABASE_URL` values before authenticated tests can mutate data, so a safe alternate origin means another loopback URL (`127.0.0.1`, `localhost`, or `[::1]`) only. Set `PLAYWRIGHT_SKIP_WEBSERVER=1` only when that exact loopback server is already managed externally. `E2E_PASSWORD` may override the local-only fixture password; keep it in ignored/CI secret storage.
 
-The committed browser suite covers the eleven specification workflows:
+The authenticated portal suite covers 13 workflows:
 
 1. member login/dashboard/submission/approver/pending status;
-2. requested reviewer approval and member progress;
-3. a different eligible reviewer using all-pending;
-4. self-review denial;
-5. changes requested, edit, and resubmit;
-6. actual percentage above target and over-goal text;
-7. teacher-admin roster/member history plus one serious/critical axe scan;
-8. year creation and expired-membership renewal;
-9. expired-account experience;
-10. ordinary member denied an admin route; and
-11. mobile submission and approval.
+2. rendering and editing an intentionally partial draft with nullable fields;
+3. requested reviewer approval, actual-reviewer attribution, and member progress;
+4. a different eligible reviewer using all-pending, with their actual name shown separately from the requested approver;
+5. a simultaneous two-browser-context review race with one success, one conflict, and one persisted approval;
+6. self-review denial;
+7. changes requested, `save_changes`, persisted reviewer feedback, and resubmission;
+8. actual percentage above target and over-goal text;
+9. teacher-admin roster/member history plus one serious/critical axe scan;
+10. year creation and expired-membership renewal;
+11. expired-account experience;
+12. ordinary member denial from an admin route; and
+13. mobile submission and approval.
+
+Together with the two design-preview tests described below, the full Playwright run contains 15 tests.
 
 The design-preview suite is deliberately independent of Supabase data. With `NHS_DESIGN_PREVIEW=true`, it checks all four fixture screens on desktop for horizontal overflow and serious/critical axe violations, then checks the member dashboard and hour form on mobile for visible mobile navigation, no overflow, a labeled title field, and visible Save/Submit actions. Run only that non-authenticated layer with:
 
@@ -138,7 +144,7 @@ NHS_DESIGN_PREVIEW=true pnpm exec playwright test tests/e2e/design-preview.spec.
 
 That command proves rendered fixture structure only. It cannot substitute for the seeded login/role/workflow suite or a manual screen-reader/zoom review.
 
-Add assertions for invite/reset/sign-out, callback failure, CSV completeness/authorization, hostile CSV fixtures, a true review race, keyboard-only workflows, and broader axe coverage before treating the browser layer as complete assurance.
+Add assertions for invite/reset/sign-out, callback failure, CSV completeness/authorization, hostile CSV fixtures, keyboard-only workflows, and broader axe coverage before treating the browser layer as complete assurance.
 
 Playwright traces, screenshots, videos, and HTML reports can contain page data. Retain them only for failed synthetic runs, keep them out of Git, and handle any real-record artifact as a protected student record.
 
@@ -186,4 +192,4 @@ Release blocks on any failed required check; Critical/High security issue; cross
 
 ## Current observed status
 
-Do not duplicate a stale pass/fail list here. `docs/QA.md` records time-stamped observations. At this guide's update, the targeted two-test design-preview Playwright suite and a separate four-viewport static-fixture browser smoke had been observed, but the native database suite and authenticated portal Playwright suite remained blocked by the unavailable local Supabase/PostgreSQL stack. No hosted smoke, 200% zoom, or screen-reader run was observed. Those are release gaps, not documentation gaps.
+Do not duplicate a stale pass/fail list here. `docs/QA.md` records time-stamped observations. At this guide's update, the 13-file/204-test unit suite, a clean native Supabase reset, all seven pgTAP files with 226 assertions, all 13 authenticated portal workflows, and both design-preview Playwright tests had passed locally. The portal run included the partial-draft path, requested-versus-actual reviewer attribution, persisted feedback after `save_changes`, and the simultaneous review race. No hosted smoke, 200% zoom, or screen-reader run was observed; the remaining manual groups above also stay release gates until recorded. Those are release gaps, not documentation gaps.

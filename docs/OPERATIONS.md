@@ -205,7 +205,7 @@ Open `/admin/settings/categories` to add/rename/reorder/deactivate the global ca
 - Teacher administrators use `/admin/audit` to review audit events by year/action/actor/entity and investigate unexpected account, role, review, correction, invitation, rollover, or export activity.
 - Teacher administrators use `/admin/exports` to generate only the smallest export needed for a defined school purpose. The route pages through the caller-scoped view with deterministic ordering, advances by the number of rows actually returned until an empty page, includes `latest_review_comment` in complete service/archive shapes, records the final row count, and uses private/no-store CSV headers. Verify completeness under the hosted PostgREST row cap at release, store the downloaded file only in approved school storage, and delete it when the purpose/retention period ends.
 
-Audit and export pages/routes are implemented, but production use remains gated on native RLS tests, complete-row integration checks, formula-neutralization/browser checks, and deployed private-cache/header verification; see `docs/SECURITY.md` and `docs/QA.md`.
+Audit and export pages/routes are implemented, and the native local RLS suite has passed. Production use remains gated on hosted complete-row export integration under the actual PostgREST row cap, formula-neutralization/browser checks in the school's supported spreadsheet application, and deployed private-cache/header verification; see `docs/SECURITY.md` and `docs/QA.md`.
 
 ## First teacher-administrator bootstrap
 
@@ -264,7 +264,7 @@ Before production launch:
 6. Verify both accounts can see the audit trail, then revoke any temporary Auth setup credential.
 7. Test that an authenticated ordinary account and the browser-safe anon key cannot execute `bootstrap_teacher_admin`, and that a second elevated invocation is rejected.
 
-Do not replace the RPC with ad hoc table inserts. Production launch remains blocked until the RPC's allow/deny/second-call tests pass and the protected application workflow for creating the second administrator is verified.
+Do not replace the RPC with ad hoc table inserts. The RPC's native allow, deny, and second-call tests have passed. Production launch remains blocked until the real break-glass bootstrap is performed with two school staff under dual control and the protected application workflow for provisioning and verifying a successor teacher administrator is exercised successfully.
 
 ## Supabase project and schema deployment
 

@@ -313,21 +313,19 @@ See `docs/OPERATIONS.md` for commands and rollback boundaries and `docs/QA.md` f
 
 ## Implementation reconciliation status
 
-At documentation time, the initial migration contains the core/admin functions, five views, explicit grants, and forced-RLS policies described above. `supabase/seed.sql` provides deterministic local fixtures. Six pgTAP files provide 213 authored schema, workflow, RLS, admin-lifecycle, bootstrap, reviewer-directory, and invitation-delivery-integrity assertions (plans 54 + 51 + 32 + 8 + 20 + 48):
+At documentation time, the complete two-migration chain contains the core/admin functions, five views, explicit grants, and forced-RLS policies described above. `supabase/seed.sql` provides deterministic local fixtures. Seven pgTAP files provide 226 schema, workflow, RLS, admin-lifecycle, bootstrap, reviewer-directory, invitation-delivery-integrity, and request-scoped reviewer-name assertions (plans 54 + 51 + 32 + 8 + 20 + 48 + 13):
 
 - `supabase/tests/001_schema_contract.sql`;
 - `supabase/tests/002_workflows_and_rls.sql`;
 - `supabase/tests/003_admin_lifecycle_and_authorization.sql`;
-- `supabase/tests/004_bootstrap.sql`; and
-- `supabase/tests/005_reviewer_directory.sql`; and
-- `supabase/tests/006_invitation_send_integrity.sql`.
+- `supabase/tests/004_bootstrap.sql`;
+- `supabase/tests/005_reviewer_directory.sql`;
+- `supabase/tests/006_invitation_send_integrity.sql`; and
+- `supabase/tests/007_hour_request_reviewer_names.sql`.
 
-The final migration and idempotent seed were executed twice in an isolated PGlite/PostgreSQL-compatible validation run, and SQLFluff parsed the migration and final invitation-integrity test cleanly. That evidence is useful but is not a native Supabase reset/pgTAP result. Release still requires:
+GitHub Actions CI run `33240848186` at commit `e7ae98dd01d4406ab2f282639ab8325131d094c3` completed a clean native Supabase reset of the full migration chain and seed, then passed all seven pgTAP files and 226 assertions. The local Auth/PostgREST end-to-end suite also passed, including a true simultaneous review race in two browser contexts that produced exactly one terminal decision. Release still requires:
 
-- `supabase db reset --local` followed by `supabase test db` against the complete final migration chain;
-- a true simultaneous two-session review race in addition to row-lock/conditional-update contract and stale sequential assertions;
-- live PostgREST query/RPC compatibility for composite relationship hints, expected-revision calls, views, and exact audit taxonomy;
 - the documented one-time bootstrap plus protected successor-administrator workflow; and
 - hosted Auth/invitation and complete paginated CSV integration checks.
 
-Do not claim the data boundary is complete until the native Supabase database tests and application integration gates pass from a clean environment.
+These results establish the local native database and application-integration boundary for that commit. Do not claim the production data boundary is complete until the remaining hosted and operational gates pass.

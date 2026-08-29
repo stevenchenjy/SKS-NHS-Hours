@@ -115,8 +115,9 @@ The database suite currently lives in:
 - `supabase/tests/004_bootstrap.sql`
 - `supabase/tests/005_reviewer_directory.sql`
 - `supabase/tests/006_invitation_send_integrity.sql`
+- `supabase/tests/007_hour_request_reviewer_names.sql`
 
-Together they declare 213 pgTAP assertions (plans 54 + 51 + 32 + 8 + 20 + 48). That number describes committed test intent, not an observed native pass. The verification ledger in `docs/QA.md` is the only place that records whether a clean reset and database run actually succeeded.
+Together they declare 226 pgTAP assertions (plans 54 + 51 + 32 + 8 + 20 + 48 + 13). GitHub Actions CI run `33240848186` at commit `e7ae98dd01d4406ab2f282639ab8325131d094c3` started a disposable local Supabase stack, applied the complete two-migration chain and seed from a clean reset, and passed all seven native pgTAP files. The verification ledger in `docs/QA.md` remains the authoritative release record.
 
 ## Migration procedure
 
@@ -141,4 +142,4 @@ An application rollback does not undo a database migration. Keep migrations back
 
 ## Current verification boundary
 
-At the time this guide was updated, the exact migration and seed ran twice successfully in an isolated PGlite harness, and SQLFluff parsed the migration and final invitation-integrity test cleanly. That supplemental evidence does not execute native Supabase Auth/PostgREST/pgTAP behavior. The local container stack was unavailable, so no clean-reset or native pass is claimed for the 213 assertions. A true simultaneous two-connection review race also remains a browser/integration obligation even though the SQL uses row locking and the pgTAP suite checks stale sequential decisions.
+CI run `33240848186` at commit `e7ae98dd01d4406ab2f282639ab8325131d094c3` completed a clean native Supabase reset of the full two-migration chain and passed all seven pgTAP files and 226 assertions. The local Auth/PostgREST end-to-end suite also passed, including a true simultaneous review race in two browser contexts that produced exactly one terminal decision. This local CI evidence does not replace the real first-administrator and successor-administrator procedure, hosted Auth and invitation verification, hosted paginated CSV integration checks, or other production deployment gates in `docs/QA.md` and `docs/DEPLOYMENT.md`.
