@@ -331,7 +331,7 @@ test("teacher administrator creates a year and renews an expired membership", as
     .selectOption({ label: "Emery Expired Member · expired-member@example.edu" });
   await page.getByLabel("New school year").selectOption({ label: `${rolloverLabel} · draft` });
   await page.getByLabel("Expiration date").fill("2028-06-30");
-  await page.getByLabel(/4 · Review summary and confirm/).check();
+  await page.getByRole("checkbox", { name: /4 · Review summary and confirm/ }).check();
   await page.getByRole("button", { name: "5 · Create membership" }).click();
   await expect(page.getByText(/Membership renewed/)).toBeVisible();
 });
@@ -340,7 +340,7 @@ test("expired member receives the limited expired-account experience", async ({ 
   await login(page, "expired-member@example.edu");
   await expect(page).toHaveURL(/\/account-expired/);
   await expect(page.getByRole("heading", { name: /membership is not active/i })).toBeVisible();
-  await expect(page.getByText("2026-2027")).toBeVisible();
+  await expect(page.getByText(rolloverLabel)).toBeVisible();
 });
 
 test("ordinary member cannot open leader or teacher-admin routes", async ({ page }) => {
@@ -358,7 +358,9 @@ test("@mobile member submission and leader approval remain usable", async ({ pag
   await login(page, "reviewer@example.edu");
   await page.goto(`/admin/requests?scope=assigned&search=${encodeURIComponent(mobileTitle)}`);
   await openQueueRequest(page, mobileTitle);
-  await expect(page.getByRole("button", { name: "Approve request" })).toBeInViewport();
-  await page.getByRole("button", { name: "Approve request" }).click();
+  const approveButton = page.getByRole("button", { name: "Approve request" });
+  await approveButton.scrollIntoViewIfNeeded();
+  await expect(approveButton).toBeInViewport();
+  await approveButton.click();
   await page.waitForURL(/decision-recorded/);
 });

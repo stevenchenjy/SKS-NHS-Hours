@@ -25,12 +25,12 @@ jobs:
       NHS_DESIGN_PREVIEW: "false"
       PASSWORD_UPDATE_CONTEXT_SECRET: ci-only-password-context-secret-000000000000000
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.19.0
           run_install: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -46,8 +46,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v3
         with:
           version: latest
       - run: supabase start
@@ -64,16 +64,16 @@ jobs:
       NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "false"
       NHS_DESIGN_PREVIEW: "true"
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.19.0
           run_install: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: latest
       - run: pnpm install --frozen-lockfile
@@ -92,7 +92,7 @@ jobs:
       - run: pnpm test:e2e
       - name: Upload Playwright failure artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-failure-${{ github.run_id }}
           path: |
