@@ -65,7 +65,12 @@ const { data, error: signInError } = await authClient.auth.signInWithPassword({
   password,
 });
 if (signInError || data.user?.id !== representativeUser.id) {
-  throw new Error(`Synthetic password sign-in verification failed for ${representativeUser.id}.`);
+  const failure = signInError
+    ? `${signInError.name} (${signInError.status ?? "unknown status"}, ${signInError.code ?? "unknown code"}): ${signInError.message}`
+    : `Auth returned unexpected user ${data.user?.id ?? "none"}`;
+  throw new Error(
+    `Synthetic password sign-in verification failed for ${representativeUser.id}: ${failure}`,
+  );
 }
 await authClient.auth.signOut();
 
