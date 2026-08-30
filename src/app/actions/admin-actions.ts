@@ -472,22 +472,73 @@ export async function createSchoolYearAction(
   };
 }
 
-export async function changeSchoolYearStatusAction(
-  schoolYearId: string,
-  action: "activate" | "close",
-) {
+export async function changeSchoolYearStatusAction(schoolYearId: string, action: "activate") {
   await requireTeacherAdmin();
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc(
-    action === "activate" ? "activate_school_year" : "close_school_year",
-    { p_school_year_id: schoolYearId },
-  );
+  const { error } = await supabase.rpc("activate_school_year", {
+    p_school_year_id: schoolYearId,
+  });
   if (error)
     redirect(
       `/admin/settings/school-years?notice=${encodeURIComponent(messageForDatabaseError(error.message))}`,
     );
   revalidatePath("/admin/settings/school-years");
   redirect(`/admin/settings/school-years?notice=school-year-${action}d`);
+}
+
+const schoolYearDatesSchema = z
+  .object({
+    school_year_id: z.uuid(),
+    start_date: z.string().trim().date("Use a real start date."),
+    end_date: z.string().trim().date("Use a real end date."),
+  })
+  .superRefine((value, context) => {
+    if (value.start_date >= value.end_date) {
+      context.addIssue({
+        code: "custom",
+        path: ["end_date"],
+        message: "The end date must be after the start date.",
+      });
+    }
+  });
+
+export async function updateSchoolYearDatesAction(
+  _previous: AdminFormState,
+  formData: FormData,
+): Promise<AdminFormState> {
+  await requireTeacherAdmin();
+  const parsed = schoolYearDatesSchema.safeParse({
+    school_year_id: formData.get("school_year_id"),
+    start_date: formData.get("start_date"),
+    end_date: formData.get("end_date"),
+  });
+  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("update_school_year_dates", {
+    p_school_year_id: parsed.data.school_year_id,
+    p_start_date: parsed.data.start_date,
+    p_end_date: parsed.data.end_date,
+  });
+  if (error) {
+    const normalized = error.message.toLowerCase();
+    return {
+      error: normalized.includes("after its start date")
+        ? "The end date must be after the start date."
+        : normalized.includes("match the years in its label")
+          ? "The dates must stay within the two years shown in the school-year label."
+          : normalized.includes("archived school-year")
+            ? "Archived school-year dates are read-only."
+            : normalized.includes("school year not found")
+              ? "The school-year record could not be found."
+              : messageForDatabaseError(error.message),
+    };
+  }
+
+  revalidatePath("/admin/settings/school-years");
+  revalidatePath("/admin/accounts");
+  revalidatePath("/admin/members");
+  return { message: "School-year dates updated." };
 }
 
 export async function addExistingAccountToSchoolYearAction(

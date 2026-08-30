@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Save } from "lucide-react";
 
 import {
   createSchoolYearAction,
   setSchoolYearCategoryAction,
+  updateSchoolYearDatesAction,
   upsertCategoryAction,
   type AdminFormState,
 } from "@/app/actions/admin-actions";
@@ -50,6 +51,67 @@ export function CreateSchoolYearForm() {
         <Plus data-icon="inline-start" aria-hidden="true" />
         {pending ? "Creating…" : "Create draft school year"}
       </Button>
+    </form>
+  );
+}
+
+export function SchoolYearDatesForm({
+  schoolYear,
+}: {
+  schoolYear: { id: string; label: string; start_date: string; end_date: string };
+}) {
+  const [state, action, pending] = useActionState(updateSchoolYearDatesAction, initialState);
+  const [startYear, endYear] = schoolYear.label.split("-");
+
+  return (
+    <form action={action} className="flex flex-col gap-4" noValidate>
+      <input type="hidden" name="school_year_id" value={schoolYear.id} />
+      <FieldGroup className="grid gap-4 sm:grid-cols-2">
+        <Field data-invalid={Boolean(state.fieldErrors?.start_date)}>
+          <FieldLabel htmlFor={`start-date-${schoolYear.id}`}>Start date</FieldLabel>
+          <Input
+            id={`start-date-${schoolYear.id}`}
+            name="start_date"
+            type="date"
+            defaultValue={schoolYear.start_date}
+            min={`${startYear}-01-01`}
+            max={`${startYear}-12-31`}
+            required
+            aria-invalid={Boolean(state.fieldErrors?.start_date)}
+          />
+          <FieldError>{state.fieldErrors?.start_date?.[0]}</FieldError>
+        </Field>
+        <Field data-invalid={Boolean(state.fieldErrors?.end_date)}>
+          <FieldLabel htmlFor={`end-date-${schoolYear.id}`}>End date</FieldLabel>
+          <Input
+            id={`end-date-${schoolYear.id}`}
+            name="end_date"
+            type="date"
+            defaultValue={schoolYear.end_date}
+            min={`${endYear}-01-01`}
+            max={`${endYear}-12-31`}
+            required
+            aria-invalid={Boolean(state.fieldErrors?.end_date)}
+          />
+          <FieldError>{state.fieldErrors?.end_date?.[0]}</FieldError>
+        </Field>
+      </FieldGroup>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" size="sm" variant="outline" disabled={pending}>
+          <Save data-icon="inline-start" aria-hidden="true" />
+          {pending ? "Saving…" : "Save dates"}
+        </Button>
+        {state.error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {state.error}
+          </p>
+        ) : null}
+        {state.message ? (
+          <p role="status" className="text-sm text-primary">
+            {state.message}
+          </p>
+        ) : null}
+      </div>
     </form>
   );
 }

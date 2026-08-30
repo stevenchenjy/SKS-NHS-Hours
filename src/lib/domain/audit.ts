@@ -16,6 +16,7 @@ export const AUDIT_ACTION_ENTITY = {
   "school_year.created": "school_year",
   "school_year.activated": "school_year",
   "school_year.closed": "school_year",
+  "school_year.dates_updated": "school_year",
   "category.created": "service_category",
   "category.updated": "service_category",
   "school_year.target_updated": "school_year",

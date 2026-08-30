@@ -44,6 +44,7 @@ describe("audit action taxonomy", () => {
     "membership.renewed",
     "role.assigned",
     "school_year.closed",
+    "school_year.dates_updated",
     "category.updated",
     "school_year.target_updated",
     "membership.target_updated",

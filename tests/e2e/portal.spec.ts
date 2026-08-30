@@ -430,6 +430,14 @@ test("platform owner creates a year and assigns the next leadership team", async
   await expect(
     page.getByText("Draft school year created with the fixed 20-hour member requirement."),
   ).toBeVisible();
+  const createdYear = page.getByRole("article").filter({ hasText: rolloverLabel });
+  await expect(createdYear.getByRole("button", { name: "Close year" })).toHaveCount(0);
+  await createdYear.getByLabel("Start date").fill("2027-08-01");
+  await createdYear.getByLabel("End date").fill("2028-07-31");
+  await createdYear.getByRole("button", { name: "Save dates" }).click();
+  await expect(createdYear.getByText("School-year dates updated.")).toBeVisible();
+  await expect(createdYear.getByLabel("Start date")).toHaveValue("2027-08-01");
+  await expect(createdYear.getByLabel("End date")).toHaveValue("2028-07-31");
 
   await page.goto("/admin/accounts?view=add");
   const yearSwitcher = page
