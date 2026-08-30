@@ -371,11 +371,11 @@ test("above-target member sees accurate totals while the stacked visual remains 
   await login(page, syntheticAccounts.leaderMember.email);
   await expectProgressSummary(
     page,
-    "21 of 20 approved · 0 pending · 1 approved hours over requirement",
+    "21 of 20 approved · 1.25 pending · 1 approved hours over requirement",
     100,
     0,
     105,
-    0,
+    6.25,
   );
 });
 
