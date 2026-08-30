@@ -173,7 +173,7 @@ export const reviewEligibilityInputSchema = z
     requestSchoolYearId: z.string().uuid(),
     reviewerSchoolYearId: z.string().uuid(),
     reviewerMembershipStatus: membershipStatusSchema,
-    reviewerRoles: z.array(schoolYearRoleSchema).max(5),
+    reviewerRoles: z.array(schoolYearRoleSchema).max(4),
   })
   .strict();
 
@@ -241,7 +241,7 @@ export interface RequestedApproverCandidate {
 
 export function isEligibleRequestedApprover(candidate: RequestedApproverCandidate): boolean {
   const membershipStatus = membershipStatusSchema.parse(candidate.membershipStatus);
-  const roles = z.array(schoolYearRoleSchema).max(5).parse(candidate.roles);
+  const roles = z.array(schoolYearRoleSchema).max(4).parse(candidate.roles);
   const membershipSchoolYearId = z.string().uuid().parse(candidate.membershipSchoolYearId);
   const requestSchoolYearId = z.string().uuid().parse(candidate.requestSchoolYearId);
 

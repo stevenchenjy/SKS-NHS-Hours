@@ -3,15 +3,13 @@ import { z } from "zod";
 export const SCHOOL_YEAR_ROLES = [
   "member",
   "committee_head",
-  "president",
-  "vice_president",
+  "president_vice_president",
   "teacher_admin",
 ] as const;
 
 export const REVIEW_CAPABLE_ROLES = [
   "committee_head",
-  "president",
-  "vice_president",
+  "president_vice_president",
   "teacher_admin",
 ] as const;
 
@@ -25,6 +23,13 @@ export type SchoolYearRole = z.infer<typeof schoolYearRoleSchema>;
 export type ReviewCapableRole = z.infer<typeof reviewCapableRoleSchema>;
 export type MembershipStatus = z.infer<typeof membershipStatusSchema>;
 
+const ROLE_LABELS: Record<SchoolYearRole, string> = {
+  member: "Member",
+  committee_head: "Committee head",
+  president_vice_president: "President / Vice President",
+  teacher_admin: "Teacher administrator",
+};
+
 const REVIEW_CAPABLE_ROLE_SET: ReadonlySet<SchoolYearRole> = new Set(REVIEW_CAPABLE_ROLES);
 
 export function hasReviewCapability(roles: readonly SchoolYearRole[]): boolean {
@@ -33,4 +38,8 @@ export function hasReviewCapability(roles: readonly SchoolYearRole[]): boolean {
 
 export function hasTeacherAdminCapability(roles: readonly SchoolYearRole[]): boolean {
   return roles.includes("teacher_admin");
+}
+
+export function formatRoleLabel(role: SchoolYearRole): string {
+  return ROLE_LABELS[role];
 }

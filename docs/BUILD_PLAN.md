@@ -12,9 +12,9 @@
 2. Generate coordinated desktop and mobile product concepts, extract a design system, and lock the primary information architecture before coding.
 3. Scaffold a production Next.js application and establish server-only Supabase clients, authentication/session middleware, centralized authorization, validation, security headers, and error handling.
 4. Add reproducible Supabase migrations for profiles, school years, memberships, roles, categories, requests, immutable reviews, invitations, audit events, correction records, views, transactional RPCs, indexes, grants, and deny-by-default RLS.
-5. Implement the shared login and expired-account experience; member dashboard, history, draft/submission/edit/withdraw/resubmit flows; leader queues, roster, profiles, reviews, and reassignment; and teacher-admin accounts, roles, years, targets, categories, rollover, audit, exports, CSV import, and correction workflows.
+5. Implement the shared login and expired-account experience; member dashboard, history, draft/submission/edit/withdraw/resubmit flows; leader queues, roster, profiles, reviews, and reassignment; and global-admin accounts, annual access, fixed targets, category availability, school-year transition, role preview, audit, exports, CSV import, and correction workflows.
 6. Add deterministic development seed data and tests for calculations, validation, role/date logic, CSV safety, database constraints, RLS allow/deny cases, concurrency, audits, and complete browser workflows.
-7. Complete README, architecture, database, security, administration, rollover, deployment, testing, attribution, and operational documentation.
+7. Complete README, architecture, database, security, administration, school-year transition, deployment, testing, attribution, and operational documentation.
 8. Run formatting, lint, typecheck, unit/integration/database/RLS/E2E tests, production build, dependency/security scans, and desktop/mobile browser QA; fix failures and compare rendered screens against the generated design concepts.
 9. Attempt a Vercel preview deployment and verify only the external steps permitted by available credentials. Clearly distinguish deployed, deploy-ready, and manually required work.
 

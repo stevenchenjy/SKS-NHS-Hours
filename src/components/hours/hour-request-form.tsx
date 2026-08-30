@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { formatRoleLabel } from "@/lib/domain/roles";
 import type { HourRequest, ReviewerOption, ServiceCategory } from "@/lib/types";
 
 const initialState: HourRequestFormState = {};
@@ -45,9 +46,7 @@ export function HourRequestForm({
   const reviewerItems = Object.fromEntries(
     reviewers.map((reviewer) => [
       reviewer.membershipId,
-      `${reviewer.fullName} · ${reviewer.roles
-        .map((role) => role.replaceAll("_", " "))
-        .join(", ")}`,
+      `${reviewer.fullName} · ${reviewer.roles.map(formatRoleLabel).join(", ")}`,
     ]),
   );
 
@@ -185,8 +184,7 @@ export function HourRequestForm({
               <SelectGroup>
                 {reviewers.map((reviewer) => (
                   <SelectItem key={reviewer.membershipId} value={reviewer.membershipId}>
-                    {reviewer.fullName} ·{" "}
-                    {reviewer.roles.map((role) => role.replaceAll("_", " ")).join(", ")}
+                    {reviewer.fullName} · {reviewer.roles.map(formatRoleLabel).join(", ")}
                   </SelectItem>
                 ))}
               </SelectGroup>

@@ -4,34 +4,32 @@ import { useActionState } from "react";
 import { FileUp, Send } from "lucide-react";
 
 import {
+  addExistingAccountToSchoolYearAction,
   importRosterAction,
   inviteAccountAction,
   type AdminFormState,
 } from "@/app/actions/admin-actions";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldSet,
-  FieldLegend,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import type { SchoolYear } from "@/lib/types";
+import type { AccountDirectoryRecord, SchoolYear } from "@/lib/types";
 
 const initialState: AdminFormState = {};
-const roles = [
+const memberAccessOptions = [
   ["member", "Member"],
   ["committee_head", "Committee head"],
-  ["president", "President"],
-  ["vice_president", "Vice president"],
-  ["teacher_admin", "Teacher administrator"],
+  ["president_vice_president", "President / Vice President"],
 ] as const;
 
-export function InviteAccountForm({ schoolYears }: { schoolYears: SchoolYear[] }) {
+export function InviteAccountForm({
+  schoolYears,
+  allowTeacherAdmin,
+  defaultSchoolYearId,
+}: {
+  schoolYears: SchoolYear[];
+  allowTeacherAdmin: boolean;
+  defaultSchoolYearId?: string;
+}) {
   const [state, action, pending] = useActionState(inviteAccountAction, initialState);
   return (
     <form action={action} className="space-y-5" noValidate>
@@ -53,6 +51,7 @@ export function InviteAccountForm({ schoolYears }: { schoolYears: SchoolYear[] }
           <select
             id="school_year_id"
             name="school_year_id"
+            defaultValue={defaultSchoolYearId}
             required
             className="h-11 rounded-lg border bg-background px-3 text-sm"
           >
@@ -66,28 +65,30 @@ export function InviteAccountForm({ schoolYears }: { schoolYears: SchoolYear[] }
           </select>
           <FieldError>{state.fieldErrors?.school_year_id?.[0]}</FieldError>
         </Field>
-        <FieldSet>
-          <FieldLegend variant="label">Initial roles</FieldLegend>
-          <FieldDescription>
-            The member role is always included. Leadership expires with this membership.
-          </FieldDescription>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {roles.map(([value, label]) => (
-              <Field key={value} orientation="horizontal">
-                <Checkbox
-                  id={`invite-role-${value}`}
-                  name="roles"
-                  value={value}
-                  defaultChecked={value === "member"}
-                  disabled={value === "member"}
-                />
-                {value === "member" ? <input type="hidden" name="roles" value="member" /> : null}
-                <FieldLabel htmlFor={`invite-role-${value}`}>{label}</FieldLabel>
-              </Field>
+        <Field data-invalid={Boolean(state.fieldErrors?.access_level)}>
+          <FieldLabel htmlFor="invite-access-level">Initial access</FieldLabel>
+          <select
+            id="invite-access-level"
+            name="access_level"
+            defaultValue="member"
+            required
+            className="h-11 rounded-lg border bg-background px-3 text-sm"
+          >
+            {memberAccessOptions.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
-          </div>
-          <FieldError>{state.fieldErrors?.roles?.[0]}</FieldError>
-        </FieldSet>
+            {allowTeacherAdmin ? (
+              <option value="teacher_admin">Teacher administrator</option>
+            ) : null}
+          </select>
+          <FieldDescription>
+            Choose one starting access level. Leadership follows the selected school year; teacher
+            administrator access is global and does not create a member requirement.
+          </FieldDescription>
+          <FieldError>{state.fieldErrors?.access_level?.[0]}</FieldError>
+        </Field>
       </FieldGroup>
       {state.error ? (
         <p
@@ -110,7 +111,111 @@ export function InviteAccountForm({ schoolYears }: { schoolYears: SchoolYear[] }
   );
 }
 
-export function RosterImportForm({ schoolYears }: { schoolYears: SchoolYear[] }) {
+export function AddExistingAccountForm({
+  schoolYears,
+  accounts,
+  defaultProfileId,
+  defaultSchoolYearId,
+}: {
+  schoolYears: SchoolYear[];
+  accounts: AccountDirectoryRecord[];
+  defaultProfileId?: string;
+  defaultSchoolYearId?: string;
+}) {
+  const [state, action, pending] = useActionState(
+    addExistingAccountToSchoolYearAction,
+    initialState,
+  );
+  const ordinaryAccounts = accounts.filter(
+    (account) => account.globalAccessLevel === null && account.profile.status === "active",
+  );
+
+  return (
+    <form action={action} className="space-y-5" noValidate>
+      <FieldGroup>
+        <Field data-invalid={Boolean(state.fieldErrors?.profile_id)}>
+          <FieldLabel htmlFor="existing-profile">Existing account</FieldLabel>
+          <select
+            id="existing-profile"
+            name="profile_id"
+            defaultValue={defaultProfileId ?? ""}
+            required
+            className="h-11 rounded-lg border bg-background px-3 text-sm"
+          >
+            <option value="">Choose an account</option>
+            {ordinaryAccounts.map(({ profile }) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.full_name} · {profile.email}
+              </option>
+            ))}
+          </select>
+          <FieldError>{state.fieldErrors?.profile_id?.[0]}</FieldError>
+        </Field>
+        <Field data-invalid={Boolean(state.fieldErrors?.school_year_id)}>
+          <FieldLabel htmlFor="existing-school-year">School year</FieldLabel>
+          <select
+            id="existing-school-year"
+            name="school_year_id"
+            defaultValue={defaultSchoolYearId ?? ""}
+            required
+            className="h-11 rounded-lg border bg-background px-3 text-sm"
+          >
+            <option value="">Choose a draft or active year</option>
+            {schoolYears
+              .filter((year) => ["draft", "active"].includes(year.status))
+              .map((year) => (
+                <option key={year.id} value={year.id}>
+                  {year.label} · {year.status}
+                </option>
+              ))}
+          </select>
+          <FieldDescription>
+            Access expires at the school year end, and the service requirement is fixed at 20 hours.
+          </FieldDescription>
+          <FieldError>{state.fieldErrors?.school_year_id?.[0]}</FieldError>
+        </Field>
+        <Field data-invalid={Boolean(state.fieldErrors?.access_level)}>
+          <FieldLabel htmlFor="existing-access-level">School-year access</FieldLabel>
+          <select
+            id="existing-access-level"
+            name="access_level"
+            defaultValue="member"
+            required
+            className="h-11 rounded-lg border bg-background px-3 text-sm"
+          >
+            {memberAccessOptions.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <FieldError>{state.fieldErrors?.access_level?.[0]}</FieldError>
+        </Field>
+      </FieldGroup>
+      {state.error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {state.error}
+        </p>
+      ) : null}
+      {state.message ? (
+        <p role="status" className="rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
+          {state.message}
+        </p>
+      ) : null}
+      <Button type="submit" variant="outline" size="lg" disabled={pending}>
+        {pending ? "Adding access…" : "Add to school year"}
+      </Button>
+    </form>
+  );
+}
+
+export function RosterImportForm({
+  schoolYears,
+  defaultSchoolYearId,
+}: {
+  schoolYears: SchoolYear[];
+  defaultSchoolYearId?: string;
+}) {
   const [state, action, pending] = useActionState(importRosterAction, initialState);
   return (
     <form action={action} className="space-y-5">
@@ -119,6 +224,7 @@ export function RosterImportForm({ schoolYears }: { schoolYears: SchoolYear[] })
         <select
           id="import-school-year"
           name="school_year_id"
+          defaultValue={defaultSchoolYearId}
           required
           className="h-11 rounded-lg border bg-background px-3 text-sm"
         >
@@ -142,7 +248,9 @@ export function RosterImportForm({ schoolYears }: { schoolYears: SchoolYear[] })
           className="h-11"
         />
         <FieldDescription>
-          Up to 250 rows and 1 MB. Headers: email, full_name, optional roles. Separate roles with |.
+          Up to 250 rows and 1 MB. Headers: email, full_name, and optional roles. Use one value:
+          member, committee_head, or president_vice_president. Teacher administrators must be
+          granted individually by a platform owner.
         </FieldDescription>
       </Field>
       {state.error ? (

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { parseSchoolYearDateRange, schoolYearRoleSchema, validateInvitation } from "@/lib/domain";
+import { parseSchoolYearDateRange, validateInvitation } from "@/lib/domain";
 import {
   coordinateInvitationDelivery,
   type InvitationDeliveryOutcome,
@@ -23,19 +23,71 @@ export interface AdminFormState {
 }
 
 const INVITATION_VALIDITY_MS = 7 * 24 * 60 * 60 * 1_000;
+const memberAccessSchema = z.enum(["member", "committee_head", "president_vice_president"]);
+const invitationAccessSchema = z.enum([
+  "member",
+  "committee_head",
+  "president_vice_president",
+  "teacher_admin",
+]);
+const leadershipRoleSchema = z.enum(["committee_head", "president_vice_president"]);
+
+type MemberAccess = z.infer<typeof memberAccessSchema>;
+type InvitationAccess = z.infer<typeof invitationAccessSchema>;
+
+function rolesForInitialAccess(access: InvitationAccess): RoleSlug[] {
+  return [access];
+}
+
+function rolesForMembershipAccess(access: MemberAccess): RoleSlug[] {
+  if (access === "member") return ["member"];
+  return ["member", access];
+}
+
+function accountsUrl(input: {
+  schoolYearId?: string;
+  view?: "directory" | "add" | "invitations";
+  notice?: string;
+}): string {
+  const parameters = new URLSearchParams();
+  if (input.schoolYearId) parameters.set("year", input.schoolYearId);
+  if (input.view) parameters.set("view", input.view);
+  if (input.notice) parameters.set("notice", input.notice);
+  const query = parameters.toString();
+  return `/admin/accounts${query ? `?${query}` : ""}`;
+}
 
 function messageForDatabaseError(message: string): string {
-  if (message.includes("last") || message.includes("teacher administrator")) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("use a separate account")) {
+    return "Teacher administrators must use a separate account that has never been a member.";
+  }
+  if (normalized.includes("transfer platform ownership")) {
+    return "Transfer platform ownership before changing this account.";
+  }
+  if (
+    normalized.includes("historical or expired school-year access") ||
+    normalized.includes("historical or expired school-year roles")
+  ) {
+    return "Historical access is read-only. Assign the account to an open school year instead.";
+  }
+  if (normalized.includes("platform owner")) {
+    return "Only the platform owner can make this change.";
+  }
+  if (
+    normalized.includes("final active teacher administrator") ||
+    normalized.includes("last active teacher administrator")
+  ) {
     return "This change would remove the final active teacher administrator.";
   }
   if (
-    message.includes("duplicate") ||
-    message.includes("unique") ||
-    message.includes("already exists")
+    normalized.includes("duplicate") ||
+    normalized.includes("unique") ||
+    normalized.includes("already exists")
   ) {
     return "A matching active record already exists.";
   }
-  if (message.includes("permission") || message.includes("teacher_admin")) {
+  if (normalized.includes("permission") || normalized.includes("teacher_admin")) {
     return "An active teacher administrator role is required.";
   }
   return "The administrative change could not be completed. Review the values and try again.";
@@ -122,9 +174,16 @@ export async function inviteAccountAction(
   _previous: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
-  await requireTeacherAdmin();
+  const viewer = await requireTeacherAdmin();
   const environment = getServerEnvironment();
   const expiresAt = new Date(Date.now() + INVITATION_VALIDITY_MS).toISOString();
+  const access = invitationAccessSchema.safeParse(formData.get("access_level"));
+  if (!access.success) {
+    return { fieldErrors: { access_level: ["Choose one initial access level."] } };
+  }
+  if (access.data === "teacher_admin" && !viewer.isPlatformOwner) {
+    return { error: "Only a platform owner can invite a teacher administrator." };
+  }
   let invitation: ReturnType<typeof validateInvitation>;
   try {
     invitation = validateInvitation(
@@ -132,7 +191,7 @@ export async function inviteAccountAction(
         email: formData.get("email"),
         fullName: formData.get("full_name"),
         schoolYearId: formData.get("school_year_id"),
-        roles: formData.getAll("roles"),
+        roles: rolesForInitialAccess(access.data),
         expiresAt,
       },
       {
@@ -177,37 +236,46 @@ export async function inviteAccountAction(
   return { message: `Invitation sent to ${invitation.email}.` };
 }
 
-export async function resendInvitationAction(invitationId: string) {
+export async function resendInvitationAction(invitationId: string, schoolYearId?: string) {
   await requireTeacherAdmin();
   const parsedId = z.uuid().safeParse(invitationId);
-  if (!parsedId.success) redirect("/admin/accounts?notice=invalid-invitation");
+  if (!parsedId.success)
+    redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "invalid-invitation" }));
   const supabase = await createSupabaseServerClient();
   const expiresAt = new Date(Date.now() + INVITATION_VALIDITY_MS).toISOString();
   const delivery = await sendPreparedInvitation(supabase, {
     invitationId: parsedId.data,
     expiresAt,
   });
-  if (delivery === "not-sendable") redirect("/admin/accounts?notice=resend-not-sendable");
-  if (delivery === "provider-failed") redirect("/admin/accounts?notice=resend-email-failed");
-  if (delivery === "record-failed") redirect("/admin/accounts?notice=resend-receipt-failed");
+  if (delivery === "not-sendable")
+    redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "resend-not-sendable" }));
+  if (delivery === "provider-failed")
+    redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "resend-email-failed" }));
+  if (delivery === "record-failed")
+    redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "resend-receipt-failed" }));
   revalidatePath("/admin/accounts");
-  redirect("/admin/accounts?notice=invitation-resent");
+  redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "invitation-resent" }));
 }
 
-export async function revokeInvitationAction(invitationId: string) {
+export async function revokeInvitationAction(invitationId: string, schoolYearId?: string) {
   await requireTeacherAdmin();
   const parsedId = z.uuid().safeParse(invitationId);
-  if (!parsedId.success) redirect("/admin/accounts?notice=invalid-invitation");
+  if (!parsedId.success)
+    redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "invalid-invitation" }));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("revoke_invitation", {
     p_invitation_id: parsedId.data,
   });
-  if (error) redirect("/admin/accounts?notice=revoke-failed");
+  if (error) redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "revoke-failed" }));
   revalidatePath("/admin/accounts");
-  redirect("/admin/accounts?notice=invitation-revoked");
+  redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "invitation-revoked" }));
 }
 
-export async function setProfileStatusAction(profileId: string, status: "active" | "inactive") {
+export async function setProfileStatusAction(
+  profileId: string,
+  status: "active" | "inactive",
+  schoolYearId?: string,
+) {
   await requireTeacherAdmin();
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("set_profile_status", {
@@ -216,15 +284,20 @@ export async function setProfileStatusAction(profileId: string, status: "active"
   });
   if (error)
     redirect(
-      `/admin/accounts?notice=${encodeURIComponent(messageForDatabaseError(error.message))}`,
+      accountsUrl({
+        schoolYearId,
+        view: "directory",
+        notice: messageForDatabaseError(error.message),
+      }),
     );
   revalidatePath("/admin/accounts");
-  redirect("/admin/accounts?notice=account-status-updated");
+  redirect(accountsUrl({ schoolYearId, view: "directory", notice: "account-status-updated" }));
 }
 
 export async function setMembershipStatusAction(
   membershipId: string,
   status: "active" | "expired" | "suspended" | "archived",
+  schoolYearId?: string,
 ) {
   await requireTeacherAdmin();
   const supabase = await createSupabaseServerClient();
@@ -234,17 +307,26 @@ export async function setMembershipStatusAction(
   });
   if (error)
     redirect(
-      `/admin/accounts?notice=${encodeURIComponent(messageForDatabaseError(error.message))}`,
+      accountsUrl({
+        schoolYearId,
+        view: "directory",
+        notice: messageForDatabaseError(error.message),
+      }),
     );
   revalidatePath("/admin/accounts");
   revalidatePath("/admin/members");
-  redirect("/admin/accounts?notice=membership-status-updated");
+  redirect(accountsUrl({ schoolYearId, view: "directory", notice: "membership-status-updated" }));
 }
 
-export async function assignRoleAction(membershipId: string, formData: FormData) {
+export async function assignRoleAction(
+  membershipId: string,
+  schoolYearId: string,
+  formData: FormData,
+) {
   await requireTeacherAdmin();
-  const role = schoolYearRoleSchema.safeParse(formData.get("role"));
-  if (!role.success) redirect("/admin/settings/roles?notice=invalid-role");
+  const role = leadershipRoleSchema.safeParse(formData.get("role"));
+  if (!role.success)
+    redirect(accountsUrl({ schoolYearId, view: "directory", notice: "invalid-role" }));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("assign_membership_role", {
     p_membership_id: membershipId,
@@ -252,59 +334,108 @@ export async function assignRoleAction(membershipId: string, formData: FormData)
   });
   if (error)
     redirect(
-      `/admin/settings/roles?notice=${encodeURIComponent(messageForDatabaseError(error.message))}`,
+      accountsUrl({
+        schoolYearId,
+        view: "directory",
+        notice: messageForDatabaseError(error.message),
+      }),
     );
-  revalidatePath("/admin/settings/roles");
+  revalidatePath("/admin/accounts");
   revalidatePath("/admin/members");
-  redirect("/admin/settings/roles?notice=role-assigned");
+  redirect(accountsUrl({ schoolYearId, view: "directory", notice: "role-assigned" }));
 }
 
-export async function removeRoleAction(membershipId: string, role: RoleSlug) {
+export async function removeRoleAction(membershipId: string, role: RoleSlug, schoolYearId: string) {
   await requireTeacherAdmin();
+  const parsedRole = leadershipRoleSchema.safeParse(role);
+  if (!parsedRole.success)
+    redirect(accountsUrl({ schoolYearId, view: "directory", notice: "invalid-role" }));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("remove_membership_role", {
     p_membership_id: membershipId,
-    p_role_key: role,
+    p_role_key: parsedRole.data,
   });
   if (error)
     redirect(
-      `/admin/settings/roles?notice=${encodeURIComponent(messageForDatabaseError(error.message))}`,
+      accountsUrl({
+        schoolYearId,
+        view: "directory",
+        notice: messageForDatabaseError(error.message),
+      }),
     );
-  revalidatePath("/admin/settings/roles");
+  revalidatePath("/admin/accounts");
   revalidatePath("/admin/members");
-  redirect("/admin/settings/roles?notice=role-removed");
+  redirect(accountsUrl({ schoolYearId, view: "directory", notice: "role-removed" }));
 }
 
-export async function setTargetAction(
-  _previous: AdminFormState,
-  formData: FormData,
-): Promise<AdminFormState> {
-  await requireTeacherAdmin();
-  const parsed = z
-    .object({
-      membership_id: z.uuid(),
-      target: z
-        .union([z.literal(""), z.coerce.number().min(0).max(999)])
-        .refine(
-          (value) => value === "" || Number.isInteger(value * 4),
-          "Use quarter-hour increments.",
-        )
-        .transform((value) => (value === "" ? null : value)),
-    })
-    .safeParse({
-      membership_id: formData.get("membership_id"),
-      target: formData.get("target_hours_override") ?? "",
-    });
-  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+export async function grantTeacherAdminAction(profileId: string, schoolYearId?: string) {
+  const viewer = await requireTeacherAdmin();
+  if (!viewer.isPlatformOwner)
+    redirect(accountsUrl({ schoolYearId, view: "directory", notice: "platform-owner-required" }));
+  const parsedProfileId = z.uuid().safeParse(profileId);
+  if (!parsedProfileId.success)
+    redirect(accountsUrl({ schoolYearId, view: "directory", notice: "invalid-account" }));
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("set_membership_target", {
-    p_membership_id: parsed.data.membership_id,
-    p_target_hours_override: parsed.data.target,
+  const { error } = await supabase.rpc("grant_teacher_admin", {
+    p_profile_id: parsedProfileId.data,
   });
-  if (error) return { error: messageForDatabaseError(error.message) };
-  revalidatePath("/admin/settings/targets");
-  revalidatePath("/admin/members");
-  return { message: "Target override updated." };
+  if (error)
+    redirect(
+      accountsUrl({
+        schoolYearId,
+        view: "directory",
+        notice: messageForDatabaseError(error.message),
+      }),
+    );
+  revalidatePath("/admin/accounts");
+  redirect(accountsUrl({ schoolYearId, view: "directory", notice: "teacher-admin-granted" }));
+}
+
+export async function revokeTeacherAdminAction(profileId: string, schoolYearId?: string) {
+  const viewer = await requireTeacherAdmin();
+  if (!viewer.isPlatformOwner)
+    redirect(accountsUrl({ schoolYearId, view: "directory", notice: "platform-owner-required" }));
+  const parsedProfileId = z.uuid().safeParse(profileId);
+  if (!parsedProfileId.success)
+    redirect(accountsUrl({ schoolYearId, view: "directory", notice: "invalid-account" }));
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("revoke_teacher_admin", {
+    p_profile_id: parsedProfileId.data,
+  });
+  if (error)
+    redirect(
+      accountsUrl({
+        schoolYearId,
+        view: "directory",
+        notice: messageForDatabaseError(error.message),
+      }),
+    );
+  revalidatePath("/admin/accounts");
+  redirect(accountsUrl({ schoolYearId, view: "directory", notice: "teacher-admin-revoked" }));
+}
+
+export async function transferPlatformOwnerAction(profileId: string, schoolYearId?: string) {
+  const viewer = await requireTeacherAdmin();
+  if (!viewer.isPlatformOwner)
+    redirect(accountsUrl({ schoolYearId, view: "directory", notice: "platform-owner-required" }));
+  const parsedProfileId = z.uuid().safeParse(profileId);
+  if (!parsedProfileId.success)
+    redirect(accountsUrl({ schoolYearId, view: "directory", notice: "invalid-account" }));
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("transfer_platform_owner", {
+    p_profile_id: parsedProfileId.data,
+  });
+  if (error)
+    redirect(
+      accountsUrl({
+        schoolYearId,
+        view: "directory",
+        notice: messageForDatabaseError(error.message),
+      }),
+    );
+  revalidatePath("/admin/accounts");
+  revalidatePath("/admin/role-preview");
+  redirect(accountsUrl({ schoolYearId, view: "directory", notice: "platform-owner-transferred" }));
 }
 
 export async function createSchoolYearAction(
@@ -327,22 +458,17 @@ export async function createSchoolYearAction(
           : "The school-year dates are invalid.",
     };
   }
-  const target = z.coerce.number().min(0).max(999).safeParse(formData.get("default_target_hours"));
-  if (!target.success || !Number.isInteger(target.data * 4)) {
-    return { fieldErrors: { default_target_hours: ["Use a nonnegative quarter-hour target."] } };
-  }
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("create_school_year", {
     p_label: range.label,
     p_start_date: range.startDate,
     p_end_date: range.endDate,
-    p_default_target_hours: target.data,
+    p_default_target_hours: 20,
   });
   if (error) return { error: messageForDatabaseError(error.message) };
   revalidatePath("/admin/settings/school-years");
   return {
-    message:
-      "Draft school year created. Renew at least one teacher administrator before activation.",
+    message: "Draft school year created with the fixed 20-hour member requirement.",
   };
 }
 
@@ -364,7 +490,7 @@ export async function changeSchoolYearStatusAction(
   redirect(`/admin/settings/school-years?notice=school-year-${action}d`);
 }
 
-export async function renewMembershipAction(
+export async function addExistingAccountToSchoolYearAction(
   _previous: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
@@ -373,16 +499,12 @@ export async function renewMembershipAction(
     .object({
       school_year_id: z.uuid(),
       profile_id: z.uuid(),
-      expiration_date: z.iso.date(),
-      target_hours_override: z.union([z.literal(""), z.coerce.number().min(0).max(999)]),
-      roles: z.array(schoolYearRoleSchema).min(1),
+      access_level: memberAccessSchema,
     })
     .safeParse({
       school_year_id: formData.get("school_year_id"),
       profile_id: formData.get("profile_id"),
-      expiration_date: formData.get("expiration_date"),
-      target_hours_override: formData.get("target_hours_override") ?? "",
-      roles: formData.getAll("roles"),
+      access_level: formData.get("access_level"),
     });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
   const supabase = await createSupabaseServerClient();
@@ -391,26 +513,21 @@ export async function renewMembershipAction(
     p_renewals: [
       {
         profile_id: parsed.data.profile_id,
-        expiration_date: parsed.data.expiration_date,
-        target_hours_override:
-          parsed.data.target_hours_override === "" ? null : parsed.data.target_hours_override,
-        role_keys: parsed.data.roles,
+        role_keys: rolesForMembershipAccess(parsed.data.access_level),
       },
     ],
   });
   if (error) return { error: messageForDatabaseError(error.message) };
-  revalidatePath("/admin/settings/school-years");
   revalidatePath("/admin/accounts");
-  return { message: "Membership renewed into the selected school year." };
+  revalidatePath("/admin/members");
+  return { message: "The existing account now has access to the selected school year." };
 }
 
 const categorySchema = z.object({
   category_id: z.union([z.literal(""), z.uuid()]),
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(2000),
-  display_order: z.coerce.number().int().min(0).max(10_000),
   is_active: z.enum(["true", "false"]).transform((value) => value === "true"),
-  default_max_hours_per_request: z.union([z.literal(""), z.coerce.number().positive().max(24)]),
 });
 
 export async function upsertCategoryAction(
@@ -422,22 +539,16 @@ export async function upsertCategoryAction(
     category_id: formData.get("category_id") ?? "",
     name: formData.get("name"),
     description: formData.get("description") ?? "",
-    display_order: formData.get("display_order"),
     is_active: formData.get("is_active"),
-    default_max_hours_per_request: formData.get("default_max_hours_per_request") ?? "",
   });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
-  const cap = parsed.data.default_max_hours_per_request;
-  if (cap !== "" && !Number.isInteger(cap * 4)) {
-    return { fieldErrors: { default_max_hours_per_request: ["Use quarter-hour increments."] } };
-  }
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("upsert_service_category", {
     p_name: parsed.data.name,
     p_description: parsed.data.description,
-    p_display_order: parsed.data.display_order,
+    p_display_order: 0,
     p_is_active: parsed.data.is_active,
-    p_default_max_hours_per_request: cap === "" ? null : cap,
+    p_default_max_hours_per_request: null,
     p_category_id: parsed.data.category_id || null,
   });
   if (error) return { error: messageForDatabaseError(error.message) };
@@ -450,40 +561,26 @@ export async function setSchoolYearCategoryAction(
   formData: FormData,
 ): Promise<AdminFormState> {
   await requireTeacherAdmin();
-  const nullableQuarterHours = z.union([z.literal(""), z.coerce.number().positive().max(999)]);
   const parsed = z
     .object({
       school_year_id: z.uuid(),
       category_id: z.uuid(),
       is_available: z.enum(["true", "false"]).transform((value) => value === "true"),
-      display_order: z.coerce.number().int().min(0),
-      max_hours_per_request: nullableQuarterHours,
-      member_approved_hours_cap: nullableQuarterHours,
     })
     .safeParse({
       school_year_id: formData.get("school_year_id"),
       category_id: formData.get("category_id"),
       is_available: formData.get("is_available"),
-      display_order: formData.get("display_order"),
-      max_hours_per_request: formData.get("max_hours_per_request") ?? "",
-      member_approved_hours_cap: formData.get("member_approved_hours_cap") ?? "",
     });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
-  for (const value of [parsed.data.max_hours_per_request, parsed.data.member_approved_hours_cap]) {
-    if (value !== "" && !Number.isInteger(value * 4)) {
-      return { error: "Category limits must use quarter-hour increments." };
-    }
-  }
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("set_school_year_category", {
     p_school_year_id: parsed.data.school_year_id,
     p_category_id: parsed.data.category_id,
     p_is_available: parsed.data.is_available,
-    p_display_order: parsed.data.display_order,
-    p_max_hours_per_request:
-      parsed.data.max_hours_per_request === "" ? null : parsed.data.max_hours_per_request,
-    p_member_approved_hours_cap:
-      parsed.data.member_approved_hours_cap === "" ? null : parsed.data.member_approved_hours_cap,
+    p_display_order: 0,
+    p_max_hours_per_request: null,
+    p_member_approved_hours_cap: null,
   });
   if (error) return { error: messageForDatabaseError(error.message) };
   revalidatePath("/admin/settings/categories");
@@ -602,7 +699,7 @@ export async function importRosterAction(
   if (emailIndex < 0 || nameIndex < 0) {
     return {
       error:
-        "CSV headers must include email and full_name. An optional roles column uses | separators.",
+        "CSV headers must include email and full_name. The optional roles column accepts one school-year access value.",
     };
   }
 
@@ -613,10 +710,16 @@ export async function importRosterAction(
   const seenEmails = new Set<string>();
   for (const [offset, row] of rows.slice(1).entries()) {
     const line = offset + 2;
-    const roles = (rolesIndex >= 0 ? row[rolesIndex] : "member")
-      ?.split("|")
-      .map((role) => role.trim())
-      .filter(Boolean) ?? ["member"];
+    const rawAccess = (rolesIndex >= 0 ? row[rolesIndex] : "member")?.trim() || "member";
+    if (rawAccess === "teacher_admin") {
+      errors.push(`line ${line}: teacher administrators must be granted individually`);
+      continue;
+    }
+    const access = memberAccessSchema.safeParse(rawAccess);
+    if (!access.success) {
+      errors.push(`line ${line}: roles must contain one supported school-year access value`);
+      continue;
+    }
     let invitation: ReturnType<typeof validateInvitation>;
     try {
       invitation = validateInvitation(
@@ -624,7 +727,7 @@ export async function importRosterAction(
           email: row[emailIndex],
           fullName: row[nameIndex],
           schoolYearId: schoolYearId.data,
-          roles,
+          roles: rolesForInitialAccess(access.data),
           expiresAt: new Date(Date.now() + INVITATION_VALIDITY_MS).toISOString(),
         },
         {

@@ -66,7 +66,6 @@ const configurations: Record<
       "membership_status",
       "expiration_date",
       "role_keys",
-      "target_hours_override",
       "target_hours",
     ],
   },
@@ -149,10 +148,8 @@ const configurations: Record<
       "school_year_id",
       "category_id",
       "category_name",
-      "member_approved_hours_cap",
       "approved_hours",
       "pending_hours",
-      "remaining_category_hours",
     ],
   },
   archive: {

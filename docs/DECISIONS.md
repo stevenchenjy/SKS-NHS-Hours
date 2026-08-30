@@ -20,17 +20,17 @@ This log records decisions that materially affect security, data integrity, oper
 
 **Reason:** UI hiding and page middleware cannot enforce resource authorization, prevent self-review, or serialize concurrent decisions. Database functions can lock the request row, validate its current state, write immutable history/audit rows, and commit atomically.
 
-## D-004 — Model roles per school-year membership
+## D-004 — Separate annual member roles from global administration
 
-**Decision:** A persistent `profiles` identity has one `school_year_memberships` row per school year and zero or more `membership_roles` rows. Active access requires both an eligible membership status and the current date to fall within the school year and membership expiration bounds.
+**Decision:** A persistent profile may have annual member/leadership memberships or an exclusive global teacher-administrator grant. Annual leadership has `committee_head` and one combined `president_vice_president` option. Exactly one global administrator is platform owner; teacher-only yearly anchors exist solely for relational attribution.
 
-**Reason:** This supports multi-role users, automatic leadership expiration, renewal without overwriting history, and read-only prior-year records.
+**Reason:** Student participation and leadership must expire/reassign annually, while staff administration must remain available across years without making staff members or giving them a service requirement. A single owner enables safe IT oversight and succession without database impersonation.
 
 ## D-005 — Use exact quarter-hour numeric values
 
-**Decision:** Store hours and targets as `numeric(7,2)` with database checks for positive quarter-hour increments and a 24-hour maximum per request.
+**Decision:** Store hours as exact numeric values, require positive quarter-hour increments with a universal 24-hour maximum per request, and fix every annual member requirement at 20 approved hours.
 
-**Reason:** Exact numeric arithmetic avoids floating-point accumulation errors while supporting configured targets and quarter-hour entries.
+**Reason:** Exact numeric arithmetic avoids floating-point accumulation errors. A fixed target removes inconsistent exceptions and duplicate configuration workflows.
 
 ## D-006 — Preserve requested and actual reviewers separately
 
@@ -46,13 +46,13 @@ This log records decisions that materially affect security, data integrity, oper
 
 ## D-008 — Derive progress from request records
 
-**Decision:** Secure database views/queries aggregate authoritative requests by status. Only approved requests count toward completion; pending and changes-requested hours remain separate; displayed percent is uncapped while the visual bar caps at 100%; target zero returns a safe, policy-neutral percentage.
+**Decision:** Secure database views/queries aggregate authoritative requests by status. Only approved requests count toward the fixed 20-hour completion requirement. The progress track stacks approved, then pending in a second color, then neutral remainder; textual totals remain separate and uncapped.
 
 **Reason:** A mutable running total can drift or be tampered with. Derived totals remain explainable and auditable.
 
 ## D-009 — Disable public registration and require provisioning
 
-**Decision:** Supabase public email signup is disabled. Email/password access is invitation-based, Google OAuth is optional, allowed-domain checks are supplemental, and every authenticated identity still requires a provisioned active membership.
+**Decision:** Supabase public email signup is disabled. Email/password access is invitation-based, Google OAuth is optional, allowed-domain checks are supplemental, and every authenticated identity still requires provisioned annual access or a global administrator grant.
 
 **Reason:** School-domain ownership alone must never grant portal access.
 
@@ -85,3 +85,21 @@ This log records decisions that materially affect security, data integrity, oper
 **Decision:** Use the four accepted concepts and `docs/DESIGN_SYSTEM.md` as the visual specification: true-white table-led layouts, a cool-slate rail, forest-green primary actions/approved progress, ink-navy hierarchy, restrained amber pending states, semantic status labels, and mobile-first field/action anatomy.
 
 **Reason:** A shared component/token system keeps the large route surface coherent and provides concrete desktop/mobile comparison targets for browser QA.
+
+## D-015 — Make Accounts the access-management source of truth
+
+**Decision:** Consolidate identity status, annual access, student leadership, global grants, invitations, and roster import under Accounts. Members is progress/history only; Settings contains school years and category availability, with no duplicate Roles, Targets, or rollover editor.
+
+**Reason:** One canonical workflow reduces contradictory status displays and makes Invitations' delivery-lifecycle purpose clear.
+
+## D-016 — Remove category ordering and caps
+
+**Decision:** Categories are alphabetical and have only identity, description, active state, and school-year availability. Legacy order and cap columns/signatures remain temporarily for compatibility but are normalized to neutral values and never enforce policy.
+
+**Reason:** The program has no per-category or ordering limits; exposing unused configuration creates false rules and review failures.
+
+## D-017 — Demonstrate roles without impersonation
+
+**Decision:** Give only the platform owner a synthetic, read-only role-preview surface for Member, Committee head, President / Vice President, and Teacher administrator screens. Do not mint another user's session or weaken RLS.
+
+**Reason:** IT can train, monitor the intended presentation, and demonstrate personas while every real operation remains attributed to the signed-in identity.

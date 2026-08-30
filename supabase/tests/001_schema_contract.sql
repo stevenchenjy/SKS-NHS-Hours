@@ -1,9 +1,12 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(54);
+select extensions.plan(63);
 
 select extensions.has_table('public', 'profiles', 'profiles table exists');
+select extensions.has_table(
+  'public', 'platform_access_grants', 'global administrator grants table exists'
+);
 select extensions.has_table('public', 'school_years', 'school_years table exists');
 select extensions.has_table(
   'public', 'school_year_memberships', 'school_year_memberships table exists'
@@ -87,12 +90,24 @@ select extensions.ok(
 );
 select extensions.has_function(
   'public', 'renew_memberships', array['uuid', 'jsonb'],
-  'membership renewal RPC has the expected signature'
+  'destination school-year access RPC preserves its deployed signature'
+);
+select extensions.has_function(
+  'public', 'grant_teacher_admin', array['uuid'],
+  'global teacher-administrator grant RPC exists'
+);
+select extensions.has_function(
+  'public', 'revoke_teacher_admin', array['uuid'],
+  'global teacher-administrator revoke RPC exists'
+);
+select extensions.has_function(
+  'public', 'transfer_platform_owner', array['uuid'],
+  'platform-owner transfer RPC exists'
 );
 
 select extensions.ok(
   (
-    select count(*) = 14
+    select count(*) = 15
     from pg_catalog.pg_class relation
     join pg_catalog.pg_namespace namespace on namespace.oid = relation.relnamespace
     where namespace.nspname = 'public'
@@ -100,7 +115,8 @@ select extensions.ok(
         'profiles', 'school_years', 'school_year_memberships', 'roles',
         'membership_roles', 'service_categories', 'school_year_categories',
         'invitations', 'invitation_roles', 'hour_requests', 'hour_reviews',
-        'hour_request_corrections', 'audit_events', 'app_settings'
+        'hour_request_corrections', 'audit_events', 'app_settings',
+        'platform_access_grants'
       ])
       and relation.relrowsecurity
       and relation.relforcerowsecurity
@@ -122,7 +138,7 @@ select extensions.is(
 );
 select extensions.results_eq(
   $$
-    select name::text from public.service_categories order by display_order
+    select name::text from public.service_categories order by id
   $$,
   $$
     values
@@ -132,7 +148,23 @@ select extensions.results_eq(
       ('Fundraising & Events'::text),
       ('Community Service'::text)
   $$,
-  'the five initial service categories are seeded in display order'
+  'the five initial service categories retain their fixed seed identifiers'
+);
+select extensions.ok(
+  not exists (
+    select 1 from public.service_categories
+    where display_order <> 0 or default_max_hours_per_request is not null
+  ),
+  'seeded service categories have neutral ordering and no request caps'
+);
+select extensions.ok(
+  not exists (
+    select 1 from public.school_year_categories
+    where display_order <> 0
+      or max_hours_per_request is not null
+      or member_approved_hours_cap is not null
+  ),
+  'seeded school-year category policy has no ordering or cap values'
 );
 select extensions.is(
   (
@@ -156,11 +188,10 @@ select extensions.results_eq(
     values
       ('member'::text),
       ('committee_head'::text),
-      ('president'::text),
-      ('vice_president'::text),
+      ('president_vice_president'::text),
       ('teacher_admin'::text)
   $$,
-  'all five fixed role definitions are present'
+  'the four fixed roles include one combined president and vice-president role'
 );
 select extensions.is(
   (select count(*) from public.profiles),
@@ -175,7 +206,33 @@ select extensions.is(
     where membership_role.membership_id = '20000000-0000-4000-8000-000000000007'
   ),
   3::bigint,
-  'multi-role persona has member, committee-head, and president roles'
+  'multi-role persona has member, committee-head, and combined leadership roles'
+);
+select extensions.results_eq(
+  $$
+    select role.role_key
+    from public.membership_roles assignment
+    join public.roles role on role.id = assignment.role_id
+    where assignment.membership_id = '20000000-0000-4000-8000-000000000001'
+    order by role.display_order
+  $$,
+  $$ values ('teacher_admin'::text) $$,
+  'the seeded platform owner has only the teacher-administrator anchor role'
+);
+select extensions.is(
+  (
+    select access_level from public.platform_access_grants
+    where profile_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'
+  ),
+  'platform_owner'::text,
+  'the deterministic seeded administrator is the sole platform owner'
+);
+select extensions.ok(
+  not exists (
+    select 1 from public.member_progress
+    where profile_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'
+  ),
+  'teacher-administrator attribution anchors are excluded from member progress'
 );
 select extensions.ok(
   exists (
@@ -253,8 +310,8 @@ select extensions.has_trigger(
   'audit log has an immutability trigger'
 );
 select extensions.has_trigger(
-  'public', 'membership_roles', 'membership_roles_protect_last_admin',
-  'role removal has a last-admin invariant trigger'
+  'public', 'platform_access_grants', 'platform_access_grants_protect_last',
+  'global access grants have a last-admin and owner invariant trigger'
 );
 select extensions.has_trigger(
   'public', 'hour_requests', 'hour_requests_protect',

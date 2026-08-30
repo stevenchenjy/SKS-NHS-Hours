@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-import {
-  quarterHourUnitsToHours,
-  requestHoursSchema,
-  targetHoursSchema,
-  type QuarterHourUnits,
-} from "./hours";
+import { quarterHourUnitsToHours, requestHoursSchema, targetHoursSchema } from "./hours";
 import { HOUR_REQUEST_STATUSES, hourRequestStatusSchema, type HourRequestStatus } from "./workflow";
 
 export const progressEntrySchema = z
@@ -16,39 +11,14 @@ export const progressEntrySchema = z
   })
   .strict();
 
-export const categoryCapSchema = z
-  .object({
-    categoryId: z.string().uuid(),
-    capHours: targetHoursSchema.refine(
-      (units) => units > 0,
-      "A category cap must be greater than zero.",
-    ),
-  })
-  .strict();
-
 export const progressCalculationInputSchema = z
   .object({
     targetHours: targetHoursSchema,
     entries: z.array(progressEntrySchema),
-    categoryCaps: z.array(categoryCapSchema).default([]),
   })
-  .strict()
-  .superRefine((value, context) => {
-    const seenCategoryIds = new Set<string>();
-    for (const [index, cap] of value.categoryCaps.entries()) {
-      if (seenCategoryIds.has(cap.categoryId)) {
-        context.addIssue({
-          code: "custom",
-          path: ["categoryCaps", index, "categoryId"],
-          message: "Each category can have at most one cap.",
-        });
-      }
-      seenCategoryIds.add(cap.categoryId);
-    }
-  });
+  .strict();
 
 export type ProgressEntryInput = z.input<typeof progressEntrySchema>;
-export type CategoryCapInput = z.input<typeof categoryCapSchema>;
 export type ProgressCalculationInput = z.input<typeof progressCalculationInputSchema>;
 
 export type RequestStatusCounts = Record<HourRequestStatus, number>;
@@ -88,7 +58,6 @@ export interface OverallProgress {
 
 interface CategoryAccumulator {
   categoryId: string;
-  capUnits: number | null;
   unitsByStatus: Record<HourRequestStatus, number>;
 }
 
@@ -126,20 +95,9 @@ function toHours(units: number): number {
   return quarterHourUnitsToHours(units);
 }
 
-export function applyCategoryCap(
-  approvedUnits: QuarterHourUnits,
-  capUnits: QuarterHourUnits | null,
-): QuarterHourUnits {
-  if (capUnits === null) {
-    return approvedUnits;
-  }
-
-  return Math.min(approvedUnits, capUnits) as QuarterHourUnits;
-}
-
 /**
- * Derives all progress from authoritative request rows. Category caps affect
- * goal credit only; the raw approved total remains visible and auditable.
+ * Derives all progress from authoritative request rows. Every approved hour
+ * receives goal credit regardless of service category.
  */
 export function calculateProgress(input: ProgressCalculationInput): OverallProgress {
   const value = progressCalculationInputSchema.parse(input);
@@ -147,68 +105,46 @@ export function calculateProgress(input: ProgressCalculationInput): OverallProgr
   const requestCounts = emptyStatusCounts();
   const categories = new Map<string, CategoryAccumulator>();
 
-  for (const cap of value.categoryCaps) {
-    categories.set(cap.categoryId, {
-      categoryId: cap.categoryId,
-      capUnits: cap.capHours,
-      unitsByStatus: emptyStatusTotals(),
-    });
-  }
-
   for (const entry of value.entries) {
     statusUnits[entry.status] += entry.hours;
     requestCounts[entry.status] += 1;
 
     const category = categories.get(entry.categoryId) ?? {
       categoryId: entry.categoryId,
-      capUnits: null,
       unitsByStatus: emptyStatusTotals(),
     };
     category.unitsByStatus[entry.status] += entry.hours;
     categories.set(entry.categoryId, category);
   }
 
-  let countedApprovedUnits = 0;
-  let pendingEligibleUnits = 0;
-
   const categoryProgress = Array.from(categories.values()).map((category) => {
-    const approvedUnits = category.unitsByStatus.approved as QuarterHourUnits;
-    const capUnits = category.capUnits as QuarterHourUnits | null;
-    const countedUnits = applyCategoryCap(approvedUnits, capUnits);
-    const remainingToCapUnits = capUnits === null ? null : Math.max(capUnits - countedUnits, 0);
-    const eligiblePendingUnits =
-      remainingToCapUnits === null
-        ? category.unitsByStatus.pending
-        : Math.min(category.unitsByStatus.pending, remainingToCapUnits);
-
-    countedApprovedUnits += countedUnits;
-    pendingEligibleUnits += eligiblePendingUnits;
+    const approvedUnits = category.unitsByStatus.approved;
 
     return {
       categoryId: category.categoryId,
-      capHours: capUnits === null ? null : toHours(capUnits),
+      capHours: null,
       approvedHours: toHours(approvedUnits),
-      countedApprovedHours: toHours(countedUnits),
-      excludedApprovedHours: toHours(approvedUnits - countedUnits),
+      countedApprovedHours: toHours(approvedUnits),
+      excludedApprovedHours: 0,
       pendingHours: toHours(category.unitsByStatus.pending),
       changesRequestedHours: toHours(category.unitsByStatus.changes_requested),
-      remainingToCapHours: remainingToCapUnits === null ? null : toHours(remainingToCapUnits),
-      pendingHoursEligibleUnderCap: toHours(eligiblePendingUnits),
+      remainingToCapHours: null,
+      pendingHoursEligibleUnderCap: toHours(category.unitsByStatus.pending),
     } satisfies CategoryProgress;
   });
 
   const targetUnits = value.targetHours;
   const approvedUnits = statusUnits.approved;
-  const remainingUnits = Math.max(targetUnits - countedApprovedUnits, 0);
-  const overGoalUnits = Math.max(countedApprovedUnits - targetUnits, 0);
-  const projectedCountedUnits = countedApprovedUnits + pendingEligibleUnits;
-  const actualPercentage = percentage(countedApprovedUnits, targetUnits);
+  const remainingUnits = Math.max(targetUnits - approvedUnits, 0);
+  const overGoalUnits = Math.max(approvedUnits - targetUnits, 0);
+  const projectedCountedUnits = approvedUnits + statusUnits.pending;
+  const actualPercentage = percentage(approvedUnits, targetUnits);
 
   return {
     targetHours: toHours(targetUnits),
     approvedHours: toHours(approvedUnits),
-    countedApprovedHours: toHours(countedApprovedUnits),
-    excludedApprovedHours: toHours(approvedUnits - countedApprovedUnits),
+    countedApprovedHours: toHours(approvedUnits),
+    excludedApprovedHours: 0,
     pendingHours: toHours(statusUnits.pending),
     changesRequestedHours: toHours(statusUnits.changes_requested),
     rejectedHours: toHours(statusUnits.rejected),
@@ -218,7 +154,7 @@ export function calculateProgress(input: ProgressCalculationInput): OverallProgr
     hoursOverGoal: toHours(overGoalUnits),
     actualPercentage,
     visualPercentage: Math.min(Math.max(actualPercentage, 0), 100),
-    goalReached: countedApprovedUnits >= targetUnits,
+    goalReached: approvedUnits >= targetUnits,
     projectedCountedApprovedHours: toHours(projectedCountedUnits),
     projectedPercentage: percentage(projectedCountedUnits, targetUnits),
     requestCounts,

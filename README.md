@@ -2,16 +2,16 @@
 
 A private, school-year-based portal for National Honor Society members to submit service hours and for authorized student leaders and teacher administrators to review, report, and audit them.
 
-The application separates authentication from authorization: signing in is not enough. Access requires a provisioned active profile, an eligible school-year membership, and the role needed for the action. PostgreSQL constraints, grants, Row Level Security, and transactional functions are the final data-integrity boundary.
+The application separates authentication from authorization: signing in is not enough. Members and student leaders require an active profile plus eligible school-year access. Teacher administrators receive a separate global grant that is not a membership and does not expire with a school year. PostgreSQL constraints, grants, Row Level Security, and transactional functions are the final data-integrity boundary.
 
 ## Capabilities
 
 - Invite-only email/password access through server-verified invite/recovery token hashes, a 30-minute user-bound password-update context, and optional school Google OAuth
-- Annual memberships with `member`, `committee_head`, `president`, `vice_president`, and `teacher_admin` roles
+- Annual member access with `member`, `committee_head`, and combined `president_vice_president` roles; global `teacher_admin` and single `platform_owner` access are separate
 - Draft, submit, withdraw, changes-requested, resubmit, approve, reject, and reassign workflow
 - Self-review prevention, concurrent-decision protection, immutable review history, and traceable corrections
-- Exact quarter-hour calculations with approved, pending, remaining, and over-goal progress
-- Leader queues and roster/member history; teacher-admin account, school-year, category, target, audit, and CSV workflows
+- Exact quarter-hour calculations with a fixed 20-approved-hour requirement and a stacked approved/pending progress bar
+- Leader queues and member history; consolidated account/invitation/role administration; school-year, category, audit, CSV, and read-only role-preview workflows
 - Responsive, keyboard-accessible interface with textual status/progress equivalents
 
 ## Stack
@@ -73,7 +73,7 @@ Use separate Supabase projects and scoped Vercel variables for Preview and Produ
 - `docs/DATA_MODEL.md` — schema, relationships, constraints, functions, views, and RLS model
 - `docs/SECURITY.md` — security/privacy model, findings, and release gates
 - `docs/ADMIN_GUIDE.md` — account, role, request, correction, reporting, and succession procedures
-- `docs/SCHOOL_YEAR_ROLLOVER.md` — annual renewal, activation, validation, and history-preservation checklist
+- `docs/SCHOOL_YEAR_ROLLOVER.md` — school-year transition, account access assignment, activation, and history-preservation checklist
 - `docs/DEPLOYMENT.md` — exact Supabase/Auth/Vercel release, backup, domain, smoke, and rollback steps
 - `docs/TESTING.md` — contributor commands, test layers, fixtures, E2E coverage, and CI
 - `docs/OPERATIONS.md` — local/Supabase/Vercel setup, Auth, bootstrap, backups, release, and rollback

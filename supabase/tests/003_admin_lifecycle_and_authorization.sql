@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(32);
+select extensions.plan(37);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -178,21 +178,37 @@ select extensions.is(
 );
 
 select extensions.lives_ok(
-  $$ select public.create_school_year('2027-2028', '2027-07-01', '2028-06-30', 25.00) $$,
-  'teacher administrator can create the next school year as a draft'
+  $$ select public.create_school_year('2027-2028', '2027-07-01', '2028-06-30', 20.00) $$,
+  'teacher administrator can create a fixed-target school year as a draft'
 );
-select extensions.lives_ok(
+select extensions.throws_ok(
   $$
     select public.set_school_year_target(
       (select id from public.school_years where label = '2027-2028'), 22.50
     )
   $$,
-  'teacher administrator can change an open school-year target'
+  '23514',
+  'The annual service target is fixed at 20 approved hours',
+  'school-year target mutation is rejected by the compatibility RPC'
 );
 select extensions.is(
   (select default_target_hours from public.school_years where label = '2027-2028'),
-  22.50::numeric,
-  'school-year target change is persisted exactly'
+  20.00::numeric,
+  'new school years always retain the fixed 20-hour target'
+);
+select extensions.throws_ok(
+  $$
+    select * from public.renew_memberships(
+      (select id from public.school_years where label = '2027-2028'),
+      '[{
+        "profile_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001",
+        "role_keys":["member"]
+      }]'::jsonb
+    )
+  $$,
+  '23514',
+  'Global teacher administrators cannot receive school-year member access',
+  'destination access rejects global teacher-administrator profiles'
 );
 select extensions.lives_ok(
   $$
@@ -200,18 +216,15 @@ select extensions.lives_ok(
       (select id from public.school_years where label = '2027-2028'),
       '[
         {
-          "profile_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001",
-          "expiration_date":"2028-06-30",
-          "role_keys":["member","teacher_admin"]
-        },
-        {
           "profile_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003",
-          "expiration_date":"2028-06-30"
+          "expiration_date":"2027-08-01",
+          "target_hours_override":5,
+          "role_keys":["president_vice_president"]
         }
       ]'::jsonb
     )
   $$,
-  'batch renewal provisions selected members into the next school year'
+  'destination access adds an existing ordinary account to the selected year'
 );
 select extensions.is(
   (
@@ -221,20 +234,75 @@ select extensions.is(
     where school_year.label = '2027-2028'
   ),
   2::bigint,
-  'renewal creates exactly the selected memberships'
+  'the destination year contains one member plus the automatic admin anchor'
 );
-select extensions.ok(
-  exists (
-    select 1
+select extensions.results_eq(
+  $$
+    select role.role_key
     from public.school_year_memberships membership
     join public.school_years school_year on school_year.id = membership.school_year_id
     join public.membership_roles membership_role on membership_role.membership_id = membership.id
     join public.roles role on role.id = membership_role.role_id
     where school_year.label = '2027-2028'
       and membership.profile_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'
-      and role.role_key = 'teacher_admin'
+    order by role.display_order
+  $$,
+  $$ values ('teacher_admin'::text) $$,
+  'new school years automatically receive a teacher-only administrator anchor'
+);
+select extensions.ok(
+  exists (
+    select 1
+    from public.school_year_memberships membership
+    join public.school_years school_year on school_year.id = membership.school_year_id
+    where school_year.label = '2027-2028'
+      and membership.profile_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003'
+      and membership.expiration_date = school_year.end_date
+      and membership.target_hours_override is null
+      and membership.renewed_from_membership_id =
+        '20000000-0000-4000-8000-000000000003'
   ),
-  'renewal preserves an explicitly selected teacher-admin role'
+  'destination access forces year-end expiration, no override, and preserves history'
+);
+select extensions.results_eq(
+  $$
+    select role.role_key
+    from public.school_year_memberships membership
+    join public.school_years school_year on school_year.id = membership.school_year_id
+    join public.membership_roles assignment on assignment.membership_id = membership.id
+    join public.roles role on role.id = assignment.role_id
+    where school_year.label = '2027-2028'
+      and membership.profile_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003'
+    order by role.display_order
+  $$,
+  $$ values ('member'::text), ('president_vice_president'::text) $$,
+  'combined leadership destination access is normalized to include member'
+);
+select extensions.lives_ok(
+  $$
+    select * from public.renew_memberships(
+      (select id from public.school_years where label = '2027-2028'),
+      '[{
+        "profile_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003",
+        "role_keys":["committee_head"]
+      }]'::jsonb
+    )
+  $$,
+  'destination access can replace the selected school-year access level'
+);
+select extensions.results_eq(
+  $$
+    select role.role_key
+    from public.school_year_memberships membership
+    join public.school_years school_year on school_year.id = membership.school_year_id
+    join public.membership_roles assignment on assignment.membership_id = membership.id
+    join public.roles role on role.id = assignment.role_id
+    where school_year.label = '2027-2028'
+      and membership.profile_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003'
+    order by role.display_order
+  $$,
+  $$ values ('member'::text), ('committee_head'::text) $$,
+  'destination access replaces prior roles instead of accumulating them'
 );
 select extensions.lives_ok(
   $$

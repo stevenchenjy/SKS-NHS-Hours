@@ -155,7 +155,7 @@ describe("review authorization invariants", () => {
     });
   });
 
-  it.each(["committee_head", "president", "vice_president", "teacher_admin"] as const)(
+  it.each(["committee_head", "president_vice_president", "teacher_admin"] as const)(
     "recognizes %s as a review-capable role",
     (role) => {
       expect(

@@ -127,7 +127,7 @@ Review every filename in the dry run and confirm the project twice. Never use `-
 
 After the push, verify:
 
-- all 14 application tables have RLS enabled and forced;
+- all 15 application tables have RLS enabled and forced;
 - `anon` has no application access;
 - authenticated policy helper privileges remain narrowly sufficient for policy evaluation;
 - public function execution grants match `docs/DATABASE.md`;
@@ -140,8 +140,8 @@ The initial account is a controlled break-glass operation:
 
 1. Create/invite the intended Auth user in the Supabase dashboard and copy its UUID.
 2. Have two authorized school staff invoke the service-role-only `bootstrap_teacher_admin` RPC using the prompt-based Node procedure in `docs/OPERATIONS.md`; never paste the secret into shell history.
-3. Verify the profile, school year, membership, `member` and `teacher_admin` roles, default target, dates, and bootstrap audit event.
-4. Sign in and use the protected application workflow to provision a second teacher administrator.
+3. Verify the active profile, school year dates, global `platform_owner` grant, teacher-only attribution anchor, absence of member progress, fixed 20-hour policy, and bootstrap audit event.
+4. Sign in and use Accounts to invite and verify a separate second global teacher administrator.
 5. Prove an ordinary authenticated user, browser-safe key, and second bootstrap attempt are rejected.
 
 Do not use ad hoc inserts. Bootstrap is one-time only and not a staff-transfer mechanism.

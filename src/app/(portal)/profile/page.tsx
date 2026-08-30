@@ -9,11 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requireActiveViewer } from "@/lib/dal/access";
 import { getProgress } from "@/lib/dal/portal";
+import { deriveAnnualAccessStatus } from "@/lib/domain";
+import { formatRoleLabel } from "@/lib/domain/roles";
 
 export const metadata: Metadata = { title: "My profile" };
 
 export default async function ProfilePage() {
   const viewer = await requireActiveViewer();
+  const today = new Date().toISOString().slice(0, 10);
   const progressResults = await Promise.allSettled(
     viewer.memberships.map((membership) => getProgress(membership.id)),
   );
@@ -50,7 +53,7 @@ export default async function ProfilePage() {
             <div>
               <dt className="text-sm text-muted-foreground">Account status</dt>
               <dd className="mt-1">
-                <StatusBadge status={viewer.profile.status === "active" ? "active" : "suspended"} />
+                <StatusBadge status={viewer.profile.status} />
               </dd>
             </div>
             <div>
@@ -58,7 +61,7 @@ export default async function ProfilePage() {
               <dd className="mt-1 flex flex-wrap gap-1.5">
                 {viewer.roles.map((role) => (
                   <Badge key={role} variant="outline" className="capitalize">
-                    {role.replaceAll("_", " ")}
+                    {formatRoleLabel(role)}
                   </Badge>
                 ))}
               </dd>
@@ -79,9 +82,7 @@ export default async function ProfilePage() {
           <h2 id="membership-history" className="text-2xl font-bold">
             School-year history
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Prior years remain read-only after rollover.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Prior school years remain read-only.</p>
         </div>
         <div className="space-y-4">
           {viewer.memberships.map((membership, index) => {
@@ -97,12 +98,22 @@ export default async function ProfilePage() {
                       {membership.school_year.start_date} through {membership.school_year.end_date}
                     </p>
                   </div>
-                  <StatusBadge status={membership.status} />
+                  <StatusBadge
+                    status={deriveAnnualAccessStatus({
+                      profileStatus: viewer.profile.status,
+                      membershipStatus: membership.status,
+                      membershipExpirationDate: membership.expiration_date,
+                      schoolYearStatus: membership.school_year.status,
+                      schoolYearStartDate: membership.school_year.start_date,
+                      schoolYearEndDate: membership.school_year.end_date,
+                      onDate: today,
+                    })}
+                  />
                 </div>
                 <div className="mb-5 flex flex-wrap gap-2">
                   {membership.roles.map((role) => (
                     <Badge key={role} variant="outline" className="capitalize">
-                      {role.replaceAll("_", " ")}
+                      {formatRoleLabel(role)}
                     </Badge>
                   ))}
                 </div>

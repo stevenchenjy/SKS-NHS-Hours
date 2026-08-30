@@ -8,9 +8,9 @@ The database is the final boundary for record integrity and authorization. Appli
 
 The current migration defines:
 
-- 14 application tables for profiles, annual memberships and roles, categories, invitations, service requests, reviews, corrections, audit events, and settings;
+- 15 application tables for profiles, global platform access, annual memberships and roles, categories, invitations, service requests, reviews, corrections, audit events, and settings;
 - five caller-scoped reporting views;
-- transactional member, reviewer, administrator, invitation, rollover, correction, export-audit, and bootstrap functions;
+- transactional member, reviewer, administrator, invitation, destination-access, correction, export-audit, and bootstrap functions;
 - exact numeric and same-school-year constraints;
 - immutable review, correction, and audit history;
 - forced Row Level Security on every application table; and
@@ -19,7 +19,9 @@ The current migration defines:
 ## Schema at a glance
 
 ```text
-auth.users 1──1 profiles 1──* school_year_memberships *──1 school_years
+auth.users 1──1 profiles 1──0..1 platform_access_grants
+                    │
+                    └──* school_year_memberships *──1 school_years
                               │              │
                               │              └──* school_year_categories *──1 service_categories
                               ├──* membership_roles *──1 roles
@@ -31,42 +33,44 @@ school_years ──* invitations ──* invitation_roles *── roles
 profiles/memberships ──* audit_events
 ```
 
-IDs are UUIDs except for append-only event/history identifiers where the migration chooses an identity value. Roles belong to a school-year membership, not to the profile globally. Service requests store membership-scoped owner, requested approver, and actual reviewer references so their school-year alignment can be enforced.
+IDs are UUIDs except for append-only event/history identifiers where the migration chooses an identity value. Member and student-leadership roles belong to a school-year membership. Global `teacher_admin`/`platform_owner` authority belongs to a profile grant; teacher-only membership anchors exist solely for same-year reviewer and audit attribution. Service requests store membership-scoped owner, requested approver, and actual reviewer references so their school-year alignment can be enforced.
 
 ## Integrity invariants
 
 - A Supabase Auth UUID maps to at most one profile.
 - A profile has at most one membership in a given school year.
-- Membership status, expiration, profile status, school-year status/dates, and membership roles all participate in authorization.
-- Hours and targets use exact `numeric` values. Request hours are positive quarter-hour increments and cannot exceed 24 hours.
+- Member access depends on membership status/expiration, profile status, school-year status/dates, and roles. Global administrator access depends on an active profile and platform grant, not a school-year date.
+- Every member target is fixed at exactly 20 approved hours. Request hours are positive quarter-hour increments and cannot exceed the universal 24-hour sanity limit.
 - Requested approver and actual reviewer are separate. Both references must align with the request's school year.
 - Self-review is rejected even when the user has several roles or is a teacher administrator.
 - Review and reassignment lock and recheck the pending request. A stale second decision fails.
 - Approved rows cannot use the ordinary edit path. `correct_approved_request` records reason and before/after facts.
 - `hour_reviews`, `hour_request_corrections`, and `audit_events` are append-only.
-- Pending hours never count as approved completion. Category-approved caps are applied transactionally.
-- School-year rollover creates a new membership and preserves the previous membership and all historical records.
+- Pending hours never count as approved completion. Categories have no ordering, per-request configuration, or approved-total caps.
+- Destination-year access creates a new membership and preserves the previous membership and all historical records.
+- A teacher administrator cannot also hold member/student-leadership roles. Exactly one global administrator is the platform owner.
 
 ## Transactional API
 
 Normal writes go through these public RPCs; direct table writes are intentionally not granted to authenticated callers.
 
-| Area                  | Functions                                                                                                                                       |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Member requests       | `create_hour_request_draft`, `save_hour_request_draft`, `submit_hour_request`, `withdraw_hour_request`                                          |
-| Review                | `review_hour_request`, `reassign_hour_request`                                                                                                  |
-| Approved corrections  | `correct_approved_request`                                                                                                                      |
-| School years          | `create_school_year`, `activate_school_year`, `close_school_year`, `set_school_year_target`                                                     |
-| Memberships and roles | `renew_memberships`, `set_membership_status`, `set_membership_target`, `set_profile_status`, `assign_membership_role`, `remove_membership_role` |
-| Invitations           | `create_invitation`, `prepare_invitation_send`, `record_invitation_send_success`, `revoke_invitation`, `claim_invitation`                       |
-| Categories/settings   | `upsert_service_category`, `set_school_year_category`, `set_app_setting`                                                                        |
-| Reporting             | `record_export`                                                                                                                                 |
-| Reviewer discovery    | `list_eligible_reviewers` returns only eligible IDs, full name, and role keys to an active same-year member; it excludes the caller and email   |
-| Initial access        | `bootstrap_teacher_admin` (service role only, one time)                                                                                         |
+| Area                  | Functions                                                                                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Member requests       | `create_hour_request_draft`, `save_hour_request_draft`, `submit_hour_request`, `withdraw_hour_request`                                        |
+| Review                | `review_hour_request`, `reassign_hour_request`                                                                                                |
+| Approved corrections  | `correct_approved_request`                                                                                                                    |
+| School years          | `create_school_year`, `activate_school_year`, `close_school_year`; the legacy `set_school_year_target` contract accepts only 20               |
+| Memberships and roles | `renew_memberships` (destination access), `set_membership_status`, `set_profile_status`, `assign_membership_role`, `remove_membership_role`   |
+| Global administration | `grant_teacher_admin`, `revoke_teacher_admin`, `transfer_platform_owner`; platform-owner-only                                                 |
+| Invitations           | `create_invitation`, `prepare_invitation_send`, `record_invitation_send_success`, `revoke_invitation`, `claim_invitation`                     |
+| Categories/settings   | `upsert_service_category`, `set_school_year_category`, `set_app_setting`                                                                      |
+| Reporting             | `record_export`                                                                                                                               |
+| Reviewer discovery    | `list_eligible_reviewers` returns only eligible IDs, full name, and role keys to an active same-year member; it excludes the caller and email |
+| Initial access        | `bootstrap_teacher_admin` (service role only, one time)                                                                                       |
 
 The invitation transport boundary is explicitly two phase. `prepare_invitation_send(uuid)` returns only `(invitation_id uuid, email text, full_name text)` and writes no send fact. After Auth accepts the email, `record_invitation_send_success(uuid, uuid, timestamptz)` returns the updated invitation, advances expiry/count/time once per idempotency UUID, and audits `invitation.sent` or `invitation.resent`. The migration asserts that the former pre-provider `resend_invitation` RPC is absent.
 
-`set_school_year_target` accepts a nonnegative quarter-hour value, locks the year, permits only draft/active years, and records `school_year.target_updated`. The current application sets the default target when creating a year and uses member overrides in `/admin/settings/targets`; do not bypass the RPC with direct SQL if a later default-target editing surface is added.
+Target columns and the legacy target RPC signatures remain for migration compatibility, but triggers normalize every year to 20 and reject membership overrides. The application exposes no Target settings surface. Category RPC signatures likewise retain obsolete ordering/cap arguments for compatibility while storing neutral values (`0`/`null`).
 
 Function arguments are untrusted data, not proof of authority. Except for the first-admin bootstrap, security-definer functions derive the actor from `auth.uid()` and recheck current database eligibility.
 
@@ -74,13 +78,13 @@ Function arguments are untrusted data, not proof of authority. Except for the fi
 
 Every view is declared `security_invoker`, so its underlying table policies still apply.
 
-| View                     | Authorized purpose                                                                                                             |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `member_progress`        | Effective target; role keys; counts and totals for each request status; remaining/over-goal values; uncapped actual percentage |
-| `pending_review_queue`   | Eligible pending service rows, requested assignment, age, and member/category context                                          |
-| `category_totals`        | Approved and pending hours plus remaining configured category allowance                                                        |
-| `school_year_summary`    | Teacher-admin aggregate membership/request totals for one year                                                                 |
-| `export_service_records` | Teacher-admin service-record export shape, including `latest_review_comment` from the newest non-null reviewer comment         |
+| View                     | Authorized purpose                                                                                                                        |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `member_progress`        | Fixed target; member/leadership role keys; counts and totals for each request status; remaining/over-goal values; administrators excluded |
+| `pending_review_queue`   | Eligible pending service rows, requested assignment, age, and member/category context                                                     |
+| `category_totals`        | Approved and pending hours by category; legacy cap/remaining columns are always null                                                      |
+| `school_year_summary`    | Teacher-admin aggregate membership/request totals for one year                                                                            |
+| `export_service_records` | Teacher-admin service-record export shape, including `latest_review_comment` from the newest non-null reviewer comment                    |
 
 Application queries must still bound and paginate result sets. A PostgREST response limit is not a safe export-completeness mechanism.
 
@@ -88,8 +92,9 @@ Application queries must still bound and paginate result sets. A PostgREST respo
 
 - `anon` has no application-table/view/function privileges.
 - `authenticated` receives `SELECT` only on the listed application tables and views and `EXECUTE` only on explicitly listed RPCs.
-- All 14 application tables have RLS enabled and forced.
-- Policies authorize ownership, currently eligible review capability, or active teacher-administrator capability as appropriate.
+- All 15 application tables have RLS enabled and forced.
+- Policies authorize ownership, currently eligible annual review capability, or an active global administrator grant as appropriate.
+- The platform-owner-only role-preview surface uses fixed synthetic data and never impersonates or changes a real user's authorization.
 - The `private` schema is not an exposed application API. Authenticated callers receive only the schema usage and exact read-only helper execution privileges needed to evaluate RLS/view predicates; other private functions remain unavailable.
 - `service_role` can execute the first-admin bootstrap and must never reach a browser or an ordinary data path.
 
@@ -116,8 +121,9 @@ The database suite currently lives in:
 - `supabase/tests/005_reviewer_directory.sql`
 - `supabase/tests/006_invitation_send_integrity.sql`
 - `supabase/tests/007_hour_request_reviewer_names.sql`
+- `supabase/tests/008_global_admin_and_simplified_policy.sql`
 
-Together they declare 226 pgTAP assertions (plans 54 + 51 + 32 + 8 + 20 + 48 + 13). GitHub Actions CI run `33240848186` at commit `e7ae98dd01d4406ab2f282639ab8325131d094c3` started a disposable local Supabase stack, applied the complete two-migration chain and seed from a clean reset, and passed all seven native pgTAP files. The verification ledger in `docs/QA.md` remains the authoritative release record.
+Together they declare 301 pgTAP assertions (plans 63 + 51 + 37 + 9 + 20 + 48 + 13 + 60). At this change, parsing and plan counts pass, but the current eight-file suite has not run locally because no Docker-compatible runtime is installed. CI on the release commit or a Docker-enabled clean reset is the required execution evidence. The earlier seven-file/226-assertion pass remains historical evidence for the prior schema only.
 
 ## Migration procedure
 
@@ -142,4 +148,4 @@ An application rollback does not undo a database migration. Keep migrations back
 
 ## Current verification boundary
 
-CI run `33240848186` at commit `e7ae98dd01d4406ab2f282639ab8325131d094c3` completed a clean native Supabase reset of the full two-migration chain and passed all seven pgTAP files and 226 assertions. The local Auth/PostgREST end-to-end suite also passed, including a true simultaneous review race in two browser contexts that produced exactly one terminal decision. This local CI evidence does not replace the real first-administrator and successor-administrator procedure, hosted Auth and invitation verification, hosted paginated CSV integration checks, or other production deployment gates in `docs/QA.md` and `docs/DEPLOYMENT.md`.
+The current migration has passed a linked Supabase dry-run and PostgreSQL-dialect parsing. The application has passed formatting, lint, TypeScript, 209 unit tests, and a production build in a non-iCloud temporary checkout. The eight-file/301-assertion database suite still requires a clean CI/container execution before promotion; after that, hosted Auth/invitation, role-preview, paginated CSV, and administrator-succession smoke checks remain separate gates in `docs/QA.md` and `docs/DEPLOYMENT.md`.

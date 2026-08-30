@@ -133,7 +133,7 @@ export const memberRosterQuerySchema = z
     page: pageQuerySchema,
     pageSize: pageSizeQuerySchema,
     q: searchQuerySchema,
-    role: optionalQueryList(schoolYearRoleSchema, 5),
+    role: optionalQueryList(schoolYearRoleSchema, 4),
     progressState: optionalQueryList(progressStateSchema, 4),
     requestStatus: optionalQueryList(hourRequestStatusSchema, 6),
     membershipStatus: optionalQueryList(membershipStatusSchema, 4),

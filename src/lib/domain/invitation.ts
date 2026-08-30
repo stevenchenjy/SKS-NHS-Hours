@@ -36,17 +36,16 @@ export const invitationInputSchema = z
     email: invitationEmailSchema,
     fullName: invitationFullNameSchema,
     schoolYearId: z.string().uuid(),
-    roles: z.array(schoolYearRoleSchema).min(1).max(5),
+    roles: z.array(schoolYearRoleSchema).length(1, "Choose one initial access level."),
     expiresAt: isoTimestampSchema,
   })
   .strict()
   .superRefine((value, context) => {
-    const distinctRoles = new Set(value.roles);
-    if (distinctRoles.size !== value.roles.length) {
+    if (value.roles[0] === "teacher_admin" && value.roles.length !== 1) {
       context.addIssue({
         code: "custom",
         path: ["roles"],
-        message: "An invitation cannot assign the same role more than once.",
+        message: "Teacher administrator access cannot be combined with a member role.",
       });
     }
   });

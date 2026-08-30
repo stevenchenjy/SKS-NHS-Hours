@@ -55,13 +55,13 @@ The current unit suite under `src/lib/domain` covers:
 - real ISO school-year dates and active-year/membership eligibility;
 - role and review-capability rules;
 - allowed/forbidden request workflow transitions, self-review, and actual-reviewer invariants;
-- approved/pending/category-cap progress, target zero, and over-goal percentages;
+- fixed-20 approved/pending progress, stacked visual presentation, and over-goal percentages;
 - strict allowlisted filters, pagination, and parameter-pollution rejection;
 - invitation email/domain/role/expiry validation;
 - CSV quoting, line endings, Unicode, and spreadsheet-formula neutralization; and
 - typed bounded audit event shapes.
 
-The pure domain subset contains eight files and 181 tests, including the final invitation send audit taxonomy. The repository unit run also includes one file with nine same-origin navigation tests, one with four signed password-update-context tests, one with five invitation-delivery coordinator tests, and two DAL files with five mapping/guard tests. The current total is 13 files and 204 tests. Record the actual count/output from the release commit rather than assuming those numbers still apply.
+The current repository unit run contains 14 files and 209 tests, including domain rules, same-origin navigation, password-update context, invitation delivery, DAL global-access mapping, audit visibility, and progress presentation. Record the actual count/output from the release commit rather than assuming those numbers remain fixed.
 
 ## Database and RLS tests
 
@@ -69,13 +69,14 @@ The pgTAP files are:
 
 - `supabase/tests/001_schema_contract.sql` — tables/views/functions, RLS/forced-RLS, grants, constraints, indexes, and policy-helper privilege contract;
 - `supabase/tests/002_workflows_and_rls.sql` — request lifecycle, eligibility, reviews, self-review, progress, invitations, audits, and direct caller behavior;
-- `supabase/tests/003_admin_lifecycle_and_authorization.sql` — anonymous/unprovisioned/member/reviewer/admin boundaries, different eligible reviewer, corrections, targets, renewal/rollover/history, and export visibility;
-- `supabase/tests/004_bootstrap.sql` — service-role-only one-time first-admin behavior, roles, audit, and second-call denial;
+- `supabase/tests/003_admin_lifecycle_and_authorization.sql` — actor boundaries, corrections, fixed target/cap-free categories, destination access/history, global grants, and export visibility;
+- `supabase/tests/004_bootstrap.sql` — service-role-only one-time first-owner behavior, teacher-only anchor, audit, and second-call denial;
 - `supabase/tests/005_reviewer_directory.sql` — ordinary-member minimal reviewer discovery plus self/inactive/expired/suspended/non-review/other-year exclusions and anonymous/unprovisioned/expired denial;
 - `supabase/tests/006_invitation_send_integrity.sql` — two-phase delivery privileges/state checks, provider-accepted send facts/audits, idempotent acknowledgement, resend behavior, and unauthorized denial; and
 - `supabase/tests/007_hour_request_reviewer_names.sql` — request-scoped requested/actual reviewer display names without direct profile or membership disclosure, including cross-member/anonymous denial and historical attribution after reviewer expiration.
+- `supabase/tests/008_global_admin_and_simplified_policy.sql` — global grants/owner transfer, teacher-only anchors, progress exclusion, fixed targets, neutral category policy, destination access, read-only historical annual access/roles, combined leadership, and owner-only teacher-admin invitation lifecycle.
 
-They currently declare 226 assertions across seven files (plans 54 + 51 + 32 + 8 + 20 + 48 + 13). Run them only after a clean reset:
+They currently declare 301 assertions across eight files (plans 63 + 51 + 37 + 9 + 20 + 48 + 13 + 60). Run them only after a clean reset:
 
 ```bash
 supabase db reset --local
@@ -93,13 +94,15 @@ Critical cases include:
 5. a terminal second decision fails and only one actual reviewer is recorded;
 6. approved records require an audited immutable correction;
 7. pending/changes-requested hours do not count as approved progress;
-8. target zero and over-goal progress are exact;
+8. fixed-20 remaining/over-goal progress is exact and global admins are excluded;
 9. school-year/category/reviewer composite references cannot cross years;
-10. rollover preserves prior membership/history and does not preserve stale authority;
-11. account/role/year/category/invitation/review/correction/rollover/export actions append audit events;
+10. destination access preserves prior membership/history and does not preserve stale leadership;
+11. account/role/global-grant/year/category/invitation/review/correction/destination-access/export actions append audit events;
 12. invitation provider rejection cannot fabricate send facts, while accepted acknowledgements are idempotent;
 13. authenticated policy predicates have only the exact helper privileges needed to evaluate forced RLS; and
-14. reviewer display names are available only through a request-scoped RPC to callers who can view the request, without granting direct profile/membership visibility, and remain attributable after reviewer expiration.
+14. reviewer display names are available only through a request-scoped RPC to callers who can view the request, without granting direct profile/membership visibility, and remain attributable after reviewer expiration;
+15. expired/closed annual access and roles remain read-only and must be recreated through destination-year access; and
+16. only the platform owner can prepare, acknowledge, resend, or revoke a teacher-admin invitation.
 
 PostgreSQL row locks are used for review concurrency, and the SQL suite checks a stale sequential second action. The authenticated browser suite also runs a true simultaneous two-browser-context race and proves one success response, one conflict response, and exactly one persisted approval. Rerun both layers on the release commit.
 
@@ -127,9 +130,9 @@ The authenticated portal suite covers 13 workflows:
 5. a simultaneous two-browser-context review race with one success, one conflict, and one persisted approval;
 6. self-review denial;
 7. changes requested, `save_changes`, persisted reviewer feedback, and resubmission;
-8. actual percentage above target and over-goal text;
+8. adjacent approved/pending segments, fixed-20 wording, and uncapped over-goal text;
 9. teacher-admin roster/member history plus one serious/critical axe scan;
-10. year creation and expired-membership renewal;
+10. year creation and destination-year access assignment;
 11. expired-account experience;
 12. ordinary member denial from an admin route; and
 13. mobile submission and approval.
@@ -192,4 +195,4 @@ Release blocks on any failed required check; Critical/High security issue; cross
 
 ## Current observed status
 
-Do not duplicate a stale pass/fail list here. `docs/QA.md` records time-stamped observations. At this guide's update, the 13-file/204-test unit suite, a clean native Supabase reset, all seven pgTAP files with 226 assertions, all 13 authenticated portal workflows, and both design-preview Playwright tests had passed locally. The portal run included the partial-draft path, requested-versus-actual reviewer attribution, persisted feedback after `save_changes`, and the simultaneous review race. No hosted smoke, 200% zoom, or screen-reader run was observed; the remaining manual groups above also stay release gates until recorded. Those are release gaps, not documentation gaps.
+Do not duplicate a stale pass/fail list here. `docs/QA.md` records time-stamped observations. At this guide's update, formatting, lint, TypeScript, 209 unit tests, and a production build pass in a locally hydrated temporary checkout. The current eight-file/301-assertion database suite has passed parsing/plan validation but awaits clean CI/container execution; the older seven-file/226-assertion pass applies only to the previous schema. Rendered Browser-plugin and hosted smoke results must also be recorded before release. Those are release gates, not documentation gaps.

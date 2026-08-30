@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   HourRequest,
   AccountDirectoryRecord,
+  GlobalAccessLevel,
   Membership,
   PendingQueueItem,
   Profile,
@@ -86,15 +87,10 @@ export async function listCategories(schoolYearId: string): Promise<ServiceCateg
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("school_year_categories")
-    .select(
-      "display_order,max_hours_per_request,member_approved_hours_cap,service_categories!inner(id,name,description,display_order,is_active)",
-    )
+    .select("service_categories!inner(id,name,description,is_active)")
     .eq("school_year_id", schoolYearId)
     .eq("is_available", true);
   const rows = requireData(data, error, "Unable to load service categories") as unknown as Array<{
-    display_order: number;
-    max_hours_per_request: number | string | null;
-    member_approved_hours_cap: number | string | null;
     service_categories: ServiceCategory | ServiceCategory[];
   }>;
   return rows
@@ -102,15 +98,10 @@ export async function listCategories(schoolYearId: string): Promise<ServiceCateg
       const categories = Array.isArray(row.service_categories)
         ? row.service_categories
         : [row.service_categories];
-      return categories.map((category) => ({
-        ...category,
-        display_order: row.display_order,
-        max_hours_per_request: row.max_hours_per_request,
-        member_approved_hours_cap: row.member_approved_hours_cap,
-      }));
+      return categories;
     })
     .filter((category) => category.is_active)
-    .sort((a, b) => a.display_order - b.display_order);
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
 
 export async function listActiveReviewers(schoolYearId: string): Promise<ReviewerOption[]> {
@@ -243,7 +234,7 @@ export async function listAuditEvents(schoolYearId: string, limit = 100) {
     .select(
       "id,actor_profile_id,actor_membership_id,action,entity_type,entity_id,school_year_id,old_values,new_values,metadata,occurred_at,profiles!audit_events_actor_profile_id_fkey(full_name,email)",
     )
-    .eq("school_year_id", schoolYearId)
+    .or(`school_year_id.eq.${schoolYearId},school_year_id.is.null`)
     .order("occurred_at", { ascending: false })
     .limit(Math.min(limit, 250));
   return requireData(data, error, "Unable to load audit events");
@@ -324,14 +315,29 @@ export async function listAccountDirectory(
   schoolYearId: string,
 ): Promise<AccountDirectoryRecord[]> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("school_year_memberships")
-    .select(
-      "id,profile_id,school_year_id,status,expiration_date,target_hours_override,renewed_from_membership_id,created_at,profiles!school_year_memberships_profile_id_fkey!inner(id,email,full_name,status,deactivated_at,created_at,updated_at),school_years!school_year_memberships_school_year_id_fkey!inner(id,label,start_date,end_date,default_target_hours,status,created_at,closed_at)",
-    )
-    .eq("school_year_id", schoolYearId)
-    .order("created_at", { ascending: false });
-  const rows = requireData(data, error, "Unable to load account directory") as unknown as Array<{
+  const [profileResult, membershipResult, accessResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id,email,full_name,status,deactivated_at,created_at,updated_at")
+      .order("full_name"),
+    supabase
+      .from("school_year_memberships")
+      .select(
+        "id,profile_id,school_year_id,status,expiration_date,target_hours_override,renewed_from_membership_id,created_at,school_years!school_year_memberships_school_year_id_fkey!inner(id,label,start_date,end_date,default_target_hours,status,created_at,closed_at)",
+      )
+      .eq("school_year_id", schoolYearId),
+    supabase.from("platform_access_grants").select("profile_id,access_level"),
+  ]);
+  const profiles = requireData(
+    profileResult.data,
+    profileResult.error,
+    "Unable to load account profiles",
+  ) as Profile[];
+  const rows = requireData(
+    membershipResult.data,
+    membershipResult.error,
+    "Unable to load account memberships",
+  ) as unknown as Array<{
     id: string;
     profile_id: string;
     school_year_id: string;
@@ -340,9 +346,13 @@ export async function listAccountDirectory(
     target_hours_override: string | number | null;
     renewed_from_membership_id: string | null;
     created_at: string;
-    profiles: Profile | Profile[];
     school_years: SchoolYear | SchoolYear[];
   }>;
+  const accessRows = requireData(
+    accessResult.data,
+    accessResult.error,
+    "Unable to load global account access",
+  ) as Array<{ profile_id: string; access_level: GlobalAccessLevel }>;
   const ids = rows.map((row) => row.id);
   const { data: assignments, error: assignmentError } = ids.length
     ? await supabase
@@ -360,28 +370,31 @@ export async function listAccountDirectory(
     if (!relation) continue;
     roles.set(row.membership_id, [...(roles.get(row.membership_id) ?? []), relation.role_key]);
   }
-  return rows.flatMap((row) => {
-    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    const schoolYear = Array.isArray(row.school_years) ? row.school_years[0] : row.school_years;
-    if (!profile || !schoolYear) return [];
-    return [
-      {
-        profile,
-        membership: {
-          id: row.id,
-          profile_id: row.profile_id,
-          school_year_id: row.school_year_id,
-          status: row.status,
-          expiration_date: row.expiration_date,
-          target_hours_override: row.target_hours_override,
-          renewed_from_membership_id: row.renewed_from_membership_id,
-          created_at: row.created_at,
-          school_year: schoolYear,
-          roles: roles.get(row.id) ?? [],
-        },
-      },
-    ];
-  });
+  const memberships = new Map<string, Membership>();
+  for (const row of rows) {
+    const schoolYear = firstRelation(row.school_years);
+    if (!schoolYear) continue;
+    memberships.set(row.profile_id, {
+      id: row.id,
+      profile_id: row.profile_id,
+      school_year_id: row.school_year_id,
+      status: row.status,
+      expiration_date: row.expiration_date,
+      target_hours_override: row.target_hours_override,
+      renewed_from_membership_id: row.renewed_from_membership_id,
+      created_at: row.created_at,
+      school_year: schoolYear,
+      roles: roles.get(row.id) ?? [],
+    });
+  }
+  const accessByProfile = new Map(
+    accessRows.map((row) => [row.profile_id, row.access_level] as const),
+  );
+  return profiles.map((profile) => ({
+    profile,
+    membership: memberships.get(profile.id) ?? null,
+    globalAccessLevel: accessByProfile.get(profile.id) ?? null,
+  }));
 }
 
 export async function listRoleRecords(): Promise<RoleRecord[]> {
@@ -397,8 +410,8 @@ export async function listAllServiceCategories() {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("service_categories")
-    .select("*")
-    .order("display_order");
+    .select("id,name,description,is_active")
+    .order("name");
   return requireData(data, error, "Unable to load categories");
 }
 
@@ -406,8 +419,9 @@ export async function listSchoolYearCategorySettings(schoolYearId: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("school_year_categories")
-    .select("*,service_categories!inner(*)")
-    .eq("school_year_id", schoolYearId)
-    .order("display_order");
+    .select(
+      "school_year_id,category_id,is_available,service_categories!inner(id,name,description,is_active)",
+    )
+    .eq("school_year_id", schoolYearId);
   return requireData(data, error, "Unable to load category settings");
 }

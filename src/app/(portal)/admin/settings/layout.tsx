@@ -5,8 +5,6 @@ import { requireTeacherAdmin } from "@/lib/dal/access";
 const settingsNavigation = [
   ["/admin/settings/school-years", "School years"],
   ["/admin/settings/categories", "Categories"],
-  ["/admin/settings/roles", "Roles"],
-  ["/admin/settings/targets", "Targets"],
 ] as const;
 
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {

@@ -13,7 +13,6 @@ describe("overall NHS progress", () => {
         { categoryId: CATEGORY_A, status: "approved", hours: "8.00" },
         { categoryId: CATEGORY_A, status: "pending", hours: "4.00" },
       ],
-      categoryCaps: [],
     });
 
     expect(progress).toMatchObject({
@@ -123,11 +122,10 @@ describe("overall NHS progress", () => {
   });
 });
 
-describe("category caps", () => {
-  it("caps goal credit without hiding raw approved service", () => {
+describe("unlimited service categories", () => {
+  it("credits every approved hour regardless of category", () => {
     const progress = calculateProgress({
       targetHours: 20,
-      categoryCaps: [{ categoryId: CATEGORY_A, capHours: 5 }],
       entries: [
         { categoryId: CATEGORY_A, status: "approved", hours: 8 },
         { categoryId: CATEGORY_A, status: "pending", hours: 2 },
@@ -138,24 +136,24 @@ describe("category caps", () => {
 
     expect(progress).toMatchObject({
       approvedHours: 14,
-      countedApprovedHours: 11,
-      excludedApprovedHours: 3,
-      actualPercentage: 55,
-      remainingApprovedHours: 9,
+      countedApprovedHours: 14,
+      excludedApprovedHours: 0,
+      actualPercentage: 70,
+      remainingApprovedHours: 6,
       pendingHours: 3,
-      projectedCountedApprovedHours: 12,
+      projectedCountedApprovedHours: 17,
     });
     expect(progress.categories).toEqual([
       {
         categoryId: CATEGORY_A,
-        capHours: 5,
+        capHours: null,
         approvedHours: 8,
-        countedApprovedHours: 5,
-        excludedApprovedHours: 3,
+        countedApprovedHours: 8,
+        excludedApprovedHours: 0,
         pendingHours: 2,
         changesRequestedHours: 0,
-        remainingToCapHours: 0,
-        pendingHoursEligibleUnderCap: 0,
+        remainingToCapHours: null,
+        pendingHoursEligibleUnderCap: 2,
       },
       {
         categoryId: CATEGORY_B,
@@ -169,45 +167,5 @@ describe("category caps", () => {
         pendingHoursEligibleUnderCap: 1,
       },
     ]);
-  });
-
-  it("limits projected pending credit to unused category capacity", () => {
-    const progress = calculateProgress({
-      targetHours: 20,
-      categoryCaps: [{ categoryId: CATEGORY_A, capHours: 5 }],
-      entries: [
-        { categoryId: CATEGORY_A, status: "approved", hours: 3 },
-        { categoryId: CATEGORY_A, status: "pending", hours: 4 },
-      ],
-    });
-
-    const category = progress.categories[0];
-    expect(category).toBeDefined();
-    expect(category?.remainingToCapHours).toBe(2);
-    expect(category?.pendingHoursEligibleUnderCap).toBe(2);
-    expect(progress.projectedCountedApprovedHours).toBe(5);
-  });
-
-  it("rejects duplicate category-cap policies", () => {
-    expect(() =>
-      calculateProgress({
-        targetHours: 20,
-        entries: [],
-        categoryCaps: [
-          { categoryId: CATEGORY_A, capHours: 5 },
-          { categoryId: CATEGORY_A, capHours: 6 },
-        ],
-      }),
-    ).toThrow(/at most one cap/i);
-  });
-
-  it("rejects a zero cap while still allowing a zero overall target", () => {
-    expect(() =>
-      calculateProgress({
-        targetHours: 0,
-        entries: [],
-        categoryCaps: [{ categoryId: CATEGORY_A, capHours: 0 }],
-      }),
-    ).toThrow(/greater than zero/i);
   });
 });

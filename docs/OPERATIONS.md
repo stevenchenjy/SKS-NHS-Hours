@@ -91,16 +91,16 @@ The seed and synthetic E2E credentials are for local development only. Do not pa
 
 After `supabase db reset --local`, `supabase/seed.sql` creates these fictional relational fixtures. Run `pnpm test:e2e:prepare` to have the loopback-only Auth admin preparer assign their local-only password `LocalOnly123!`; raw SQL seed hashes are not treated as login credentials. They use the `example.edu` domain. Set local `ALLOWED_EMAIL_DOMAINS=example.edu`; none of these identities may be copied to Preview or Production.
 
-| Email                          | Membership/roles                               | Purpose                      |
-| ------------------------------ | ---------------------------------------------- | ---------------------------- |
-| `admin@example.edu`            | Active `member`, `teacher_admin`               | Administration and review    |
-| `reviewer@example.edu`         | Active `member`, `committee_head`              | Assigned-review queue        |
-| `member@example.edu`           | Active `member`                                | Ordinary submission/history  |
-| `leader@example.edu`           | Active `member`, `president`                   | Leader roster/review         |
-| `vice-president@example.edu`   | Active `member`, `vice_president`              | Vice-president authorization |
-| `multi-role@example.edu`       | Active `member`, `committee_head`, `president` | Combined-role behavior       |
-| `expired-reviewer@example.edu` | Expired `member`, `committee_head`             | Stale-leader denial/history  |
-| `expired-member@example.edu`   | Expired `member`                               | Expired-account experience   |
+| Email                          | Membership/roles                              | Purpose                      |
+| ------------------------------ | --------------------------------------------- | ---------------------------- |
+| `admin@example.edu`            | Global `platform_owner`; teacher-only anchors | Administration and review    |
+| `reviewer@example.edu`         | Active `member`, `committee_head`             | Assigned-review queue        |
+| `member@example.edu`           | Active `member`                               | Ordinary submission/history  |
+| `leader@example.edu`           | Active `member`, `president_vice_president`   | Leader roster/review         |
+| `vice-president@example.edu`   | Active `member`, `president_vice_president`   | President / VP authorization |
+| `multi-role@example.edu`       | Active `member`, both annual leadership roles | Combined-role behavior       |
+| `expired-reviewer@example.edu` | Expired `member`, `committee_head`            | Stale-leader denial/history  |
+| `expired-member@example.edu`   | Expired `member`                              | Expired-account experience   |
 
 The fixed IDs and credentials are intentionally discoverable because they are synthetic local fixtures. Their presence in any hosted environment is a release failure.
 
@@ -148,68 +148,68 @@ Google sign-in is optional and must remain hidden while `NEXT_PUBLIC_GOOGLE_AUTH
 6. Set `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` in only the configured Vercel environments and redeploy.
 7. Verify that a Google-authenticated but unprovisioned account receives no portal data.
 
-### Invite, resend, deactivate, and renew
+### Invite, resend, deactivate, and assign annual access
 
 Use the teacher-administrator account UI for ordinary lifecycle operations; do not create application membership records manually after initial bootstrap.
 
 - **Invite:** validate the email and allowed domain; create pending application invitation/role metadata with no recorded send; ask Supabase Auth to accept an Invite User message carrying the exact invitation ID; then record the accepted send/count/audit. Claim membership/roles only after token-hash confirmation succeeds.
-- **Resend:** use the same pending invitation and call Auth Invite User again. Only a provider-accepted message extends expiry to seven days and increments `send_count`; a provider rejection leaves those facts unchanged. Do not use the ordinary signup-confirmation resend method and do not create a duplicate application invitation/membership. If Auth accepted the email but receipt recording failed, inspect the invitation and audit trail before another send.
+- **Resend:** use the same pending invitation and call Auth Invite User again. Only a provider-accepted message extends expiry to seven days and increments `send_count`; a provider rejection leaves those facts unchanged. Do not use the ordinary signup-confirmation resend method and do not create a duplicate application invitation/membership. If Auth accepted the email but receipt recording failed, inspect the invitation and audit trail before another send. Preparation, acknowledgement, resend, and revocation for a teacher-admin invitation are platform-owner-only.
 - **Deactivate:** make the profile inactive or membership suspended through the protected workflow. Revoking the Auth session is additional defense, not a substitute for membership checks.
-- **Renew:** create a new membership for the new school year, link it to the previous membership, and assign new-year roles. Do not extend or overwrite the historical membership.
-- **Expire/archive:** retain identity, approved requests, review/correction history, and audit events. Expiration removes active submission/review authority.
+- **Add existing account to a year:** create/reactivate a destination-year membership, fix expiration to the year end, link prior access when available, and deliberately choose Member, Committee head, or President / Vice President. Do not extend or overwrite the historical membership.
+- **Expire/archive:** retain identity, approved requests, review/correction history, and audit events. Expiration removes active submission/review authority. Expired access and access/roles in closed or archived years are read-only; continued participation uses destination-year access.
 
 Invitation secrets and password-reset tokens must never be stored in application tables or logs.
 
 ## School administration procedures
 
-Every procedure below requires a currently active `teacher_admin` membership unless it is explicitly a leader review action. Use two different people for submission and review, and verify the resulting history/audit after consequential changes.
+Every procedure below requires an active global `teacher_admin` or `platform_owner` grant unless it is explicitly a student-leader review action. Global administrators do not require in-date annual membership. Use different people for submission and review, and verify the resulting history/audit after consequential changes.
 
 ### Invite and manage accounts
 
-1. Open `/admin/accounts` and select the intended school year.
-2. For one account, use **Invite one** and enter the normalized school email, full name, year, and one or more roles. A successful portal result means Auth accepted the send and its receipt was recorded; verify inbox delivery separately.
+1. Open `/admin/accounts`, select the intended school year, and use **Accounts**, **Add accounts**, or **Invitations** for directory state, access creation, or delivery lifecycle respectively.
+2. Under **Add accounts**, invite one identity with email, full name, and one initial access choice. Committee head and President / Vice President include member. Teacher administrator is exclusive/global and requires the platform owner. A successful portal result means Auth accepted the send and its receipt was recorded; verify inbox delivery separately.
 3. For a roster, use **Import roster** with UTF-8 CSV headers `email,full_name,roles`. Separate combined roles with `|`. The importer accepts at most 250 account rows and 1 MB, rejects unknown/duplicate headers and duplicate emails, and validates the whole file before starting invitations. Provider/state/receipt failures after validation can still produce a partial result; resolve each reported line and use Resend rather than reimporting it blindly.
-4. Use **Invitations** to inspect status, expiry, and provider-accepted send count. Resend requests a new Auth message and updates the facts only after acceptance; Revoke prevents the portal invitation from being claimed. Verify actual inbox delivery because Auth/SMTP is a separate system.
-5. Use **Directory** actions to suspend/reactivate a membership or deactivate/reactivate a profile. Profile deactivation affects all years; membership status is year-specific. The database prevents removal/deactivation of the final active teacher administrator.
+4. Use **Invitations** to inspect status, expiry, and provider-accepted send count. Resend requests a new Auth message and updates the facts only after acceptance; Revoke prevents the portal invitation from being claimed. Only the platform owner can perform lifecycle actions on a teacher-admin invitation. Verify actual inbox delivery because Auth/SMTP is a separate system.
+5. Use **Accounts** actions to suspend/reactivate eligible open-year annual access or deactivate/reactivate a profile. Profile status affects every path; annual status is year-specific. Expired and closed/archived-year access and roles are read-only, so use destination-year access for continued participation. The database protects the final global administrator and requires ownership transfer before owner removal.
 
-### Assign roles and targets
+### Assign annual and global access
 
-1. Open `/admin/settings/roles`, select the school year, and add/remove roles on that year's membership.
-2. Keep the baseline `member` role. Combined roles are expected; do not create duplicate accounts for leaders.
-3. Open `/admin/settings/targets` for exceptional member-specific targets. A blank override inherits the school's default. Values are exact nonnegative quarter-hour amounts.
-4. A year's default target is set at creation. The database exposes an audited `set_school_year_target` operation for draft/active years, but the current UI has no separate post-creation default-target editor; do not use a direct table update as a workaround.
-5. After changes, sign in with an affected synthetic user in non-production or have the user refresh/sign in again; verify the new capabilities and audit event rather than relying on hidden navigation alone.
+1. In Accounts, select the school year and assign one annual access level: Member, Committee head, or President / Vice President.
+2. Leadership automatically includes member and is assigned deliberately each year. Do not create duplicate identities for ordinary student leadership.
+3. Every member target is fixed at 20 approved hours. There is no Target settings page or override workflow.
+4. Only the platform owner can invite/grant/revoke a teacher administrator or transfer ownership. Staff administration must use a separate identity from any member participation/history.
+5. After changes, use synthetic accounts in non-production or have the person refresh/sign in; verify the new capability and audit event rather than relying on navigation alone.
 
-### Create a year and roll memberships forward
+### Create a year and assign the new roster
 
-1. Open `/admin/settings/school-years` and create a draft year with consecutive-year label, inclusive dates, and default target (normally 20 hours).
-2. Renew selected profiles into the draft year. For each, set expiration, target override if any, and next-year roles. Renewal creates a separate membership and links the prior membership; it does not rewrite history.
-3. Ensure at least one renewed membership has `teacher_admin`, review the renewed count/roles/targets, then activate the year.
+1. Open `/admin/settings/school-years` and create a draft year with a consecutive label and inclusive dates. The requirement is fixed at 20 approved hours.
+2. In Accounts → Add accounts, add selected existing profiles or invite/import new identities into the draft year. Choose each person's annual access deliberately; the destination transaction links prior membership when available and does not rewrite history.
+3. Review member/leadership access and category availability, then activate. Global administrators retain access automatically and must not be added as members.
 4. Close the prior year when policy says submissions/reviews must stop. Retain it for read-only history.
-5. Spot-check an expired ordinary member, expired former leader, renewed member, and renewed leader. Old leadership must not authorize a current action.
+5. Spot-check an expired ordinary member, expired former leader, newly assigned member, and newly assigned leader. Old leadership must not authorize a current action.
 
 ### Manage categories
 
-Open `/admin/settings/categories` to add/rename/reorder/deactivate the global category and to set per-year availability, per-request maximum, and optional member approved-hours cap. Active names are case-insensitively unique. Deactivate or make unavailable instead of deleting a referenced category. A cap is enforced at approval under a transaction, so explain any excluded/rejected approval to the member.
+Open `/admin/settings/categories` to add, rename, describe, activate/deactivate, and set per-year availability. Categories are alphabetical and have no configurable order, per-request category maximum, or per-member approved-hours cap. The universal request sanity limit remains 24 hours in quarter-hour increments. Deactivate or make unavailable instead of deleting a referenced category.
 
 ### Process and correct service requests
 
 1. Reviewers use `/admin/requests`; **Assigned to me** is a focus view and **All pending** is the shared eligible queue.
-2. Open the request, review member/activity/history/assignment, and approve, request changes, reject, or reassign. Changes/rejection require a useful comment. Self-review is never allowed, including for multi-role teacher administrators.
+2. Open the request, review member/activity/history/assignment, and approve, request changes, reject, or reassign. Changes/rejection require a useful comment. Self-review is never allowed, including for reviewers with multiple annual student roles and for global teacher administrators.
 3. If a request is no longer pending, reload instead of retrying blindly; another reviewer may have completed the serialized transaction.
 4. To fix an approved record, a teacher administrator uses the correction form on its request page, enters corrected fields and a specific reason, then verifies the immutable before/after correction, review history, and audit event. Never edit the row directly.
 
 ### Read progress, audit, and exports
 
-- Leaders use `/admin/members` and member profiles to inspect authorized progress and complete service history. Approved, pending, changes-requested, remaining, and over-goal values remain distinct.
-- Teacher administrators use `/admin/audit` to review audit events by year/action/actor/entity and investigate unexpected account, role, review, correction, invitation, rollover, or export activity.
+- Leaders use `/admin/members` and member profiles to inspect authorized progress and complete service history. Approved, pending, changes-requested, remaining, and over-goal values remain distinct; global administrators are excluded from member counts/progress.
+- Teacher administrators use `/admin/audit` to review audit events by year/action/actor/entity and investigate unexpected account, role, review, correction, invitation, destination-access, global-grant, or export activity.
 - Teacher administrators use `/admin/exports` to generate only the smallest export needed for a defined school purpose. The route pages through the caller-scoped view with deterministic ordering, advances by the number of rows actually returned until an empty page, includes `latest_review_comment` in complete service/archive shapes, records the final row count, and uses private/no-store CSV headers. Verify completeness under the hosted PostgREST row cap at release, store the downloaded file only in approved school storage, and delete it when the purpose/retention period ends.
 
-Audit and export pages/routes are implemented, and the native local RLS suite has passed. Production use remains gated on hosted complete-row export integration under the actual PostgREST row cap, formula-neutralization/browser checks in the school's supported spreadsheet application, and deployed private-cache/header verification; see `docs/SECURITY.md` and `docs/QA.md`.
+Audit and export pages/routes are implemented. The prior-schema native RLS suite passed; the updated suite remains an exact-commit CI gate. Production use also remains gated on hosted complete-row export integration under the actual PostgREST row cap, formula-neutralization/browser checks in the school's supported spreadsheet application, and deployed private-cache/header verification; see `docs/SECURITY.md` and `docs/QA.md`.
 
 ## First teacher-administrator bootstrap
 
-The first teacher administrator is a break-glass provisioning operation because no existing application administrator can authorize it. The migration-defined `bootstrap_teacher_admin` RPC is limited to the service role, serializes competing calls, refuses to run after any teacher-admin assignment exists, verifies a matching Supabase Auth user, and atomically creates the profile, school year (or checks its existing dates), membership, `member` plus `teacher_admin` roles, and audit event. Perform it with two school staff present and record the operator, user UUID, school year, timestamp, and reason in the private school change log.
+The first teacher administrator is a break-glass provisioning operation because no existing application owner can authorize it. The migration-defined `bootstrap_teacher_admin` RPC is limited to the service role, serializes competing calls, refuses after any global administrator grant exists, verifies a matching Supabase Auth user, and atomically creates the profile, school year (or checks its dates), `platform_owner` grant, teacher-only attribution anchor, and audit event. It never assigns member access or a service requirement. Perform it with two school staff present and record the operator, user UUID, school year, timestamp, and reason in the private school change log.
 
 Before production launch:
 
@@ -259,12 +259,12 @@ Before production launch:
 
    Enter the environment's Supabase project URL, elevated secret/service-role API key, Auth UUID, normalized email, full name, label such as `2026-2027`, and ISO dates when prompted. The `apikey` header supports current opaque Supabase secret keys; do not also put an `sb_secret_…` value in an `Authorization: Bearer` header because it is not a JWT. Do not place the key in `.env.example`, paste it into a command argument, or retain it in a general terminal profile.
 
-4. Confirm one profile and membership exist, both roles are assigned, the target/dates are correct, and the bootstrap audit event is present.
-5. Sign in as that user and immediately use the protected application role/account workflow to provision a second teacher administrator.
+4. Confirm one active profile, one platform-owner grant, and a teacher-only attribution anchor exist; confirm there is no member role/progress; verify dates and the bootstrap audit event.
+5. Sign in as that user and use Accounts to invite a separate second teacher administrator. Verify it before transferring ownership or removing access.
 6. Verify both accounts can see the audit trail, then revoke any temporary Auth setup credential.
 7. Test that an authenticated ordinary account and the browser-safe anon key cannot execute `bootstrap_teacher_admin`, and that a second elevated invocation is rejected.
 
-Do not replace the RPC with ad hoc table inserts. The RPC's native allow, deny, and second-call tests have passed. Production launch remains blocked until the real break-glass bootstrap is performed with two school staff under dual control and the protected application workflow for provisioning and verifying a successor teacher administrator is exercised successfully.
+Do not replace the RPC with ad hoc table inserts. Its prior-schema native allow, deny, and second-call tests passed; require the updated exact-commit database CI pass as well. Production launch remains blocked until the real break-glass bootstrap is performed with two school staff under dual control and the protected application workflow for provisioning and verifying a successor teacher administrator is exercised successfully.
 
 ## Supabase project and schema deployment
 
@@ -431,7 +431,7 @@ For a suspected incident:
 
 ## Routine operational checklist
 
-- At each school year: create the new year, verify dates and target, select renewals, assign roles, review the summary, create new memberships, and retain the old year read-only.
+- At each school year: create the draft year, verify dates and fixed 20-hour policy, add the member roster, deliberately assign student leadership, review category availability, activate, and retain the old year read-only.
 - Monthly during active use: review inactive/expiring accounts, privileged roles, invitation failures, audit events, export activity, Auth errors, and backup status.
-- At staff turnover: bootstrap/verify the successor teacher administrator before removing predecessor access; rotate shared operational secrets; review GitHub, Vercel, Supabase, SMTP, Google, and domain access.
+- At staff turnover: invite and verify a separate successor teacher administrator, transfer platform ownership when appropriate, then remove predecessor access; rotate shared operational secrets and review GitHub, Vercel, Supabase, SMTP, Google, and domain access.
 - At dependency updates: run the full check suite, database/RLS tests, browser workflows, dependency audit, and production build before promotion.

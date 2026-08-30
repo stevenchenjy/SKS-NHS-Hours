@@ -95,6 +95,8 @@ export default async function AuditPage({
             <option value="hour_request.">Request decisions</option>
             <option value="invitation.">Invitations</option>
             <option value="membership.">Memberships and roles</option>
+            <option value="teacher_admin.">Teacher administrators</option>
+            <option value="platform_owner.">Platform ownership</option>
             <option value="school_year.">School years</option>
             <option value="category.">Categories</option>
             <option value="export.">Exports</option>

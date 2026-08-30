@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(8);
+select extensions.plan(9);
 
 select extensions.ok(
   not has_function_privilege(
@@ -56,11 +56,12 @@ select extensions.throws_ok(
 );
 
 reset role;
-alter table public.membership_roles disable trigger membership_roles_protect_last_admin;
+alter table public.platform_access_grants disable trigger platform_access_grants_protect_last;
+delete from public.platform_access_grants;
+alter table public.platform_access_grants enable trigger platform_access_grants_protect_last;
 delete from public.membership_roles membership_role
 using public.roles role
 where membership_role.role_id = role.id and role.role_key = 'teacher_admin';
-alter table public.membership_roles enable trigger membership_roles_protect_last_admin;
 
 set local role service_role;
 select set_config('request.jwt.claim.sub', '', true);
@@ -88,8 +89,16 @@ select extensions.is(
     where membership.profile_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbb020'
       and role.role_key in ('member', 'teacher_admin')
   ),
-  2::bigint,
-  'bootstrap creates the baseline member and teacher-admin role assignments'
+  1::bigint,
+  'bootstrap creates only the teacher-administrator attribution role'
+);
+select extensions.is(
+  (
+    select access_level from public.platform_access_grants
+    where profile_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbb020'
+  ),
+  'platform_owner'::text,
+  'the first bootstrapped global administrator becomes platform owner'
 );
 select extensions.ok(
   exists (
@@ -114,7 +123,7 @@ select extensions.throws_ok(
     )
   $$,
   '55000',
-  'A teacher administrator already exists',
+  'A global teacher administrator already exists',
   'bootstrap fails closed after the first administrator exists'
 );
 

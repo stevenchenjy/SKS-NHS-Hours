@@ -67,14 +67,14 @@ describe("invitation validation", () => {
         invitation({
           email: " STUDENT@SCHOOL.EDU ",
           fullName: " Student Example ",
-          roles: ["member", "president"],
+          roles: ["president_vice_president"],
         }),
         policy,
       ),
     ).toEqual(
       invitation({
         email: "student@school.edu",
-        roles: ["member", "president"],
+        roles: ["president_vice_president"],
       }),
     );
   });
@@ -94,12 +94,18 @@ describe("invitation validation", () => {
     ).toThrow(/14 days/i);
   });
 
-  it("rejects duplicate, empty, or unknown role assignments", () => {
-    expect(() => validateInvitation(invitation({ roles: ["member", "member"] }), policy)).toThrow(
-      /same role/i,
-    );
+  it("requires one known initial access level", () => {
+    expect(() =>
+      validateInvitation(invitation({ roles: ["member", "committee_head"] }), policy),
+    ).toThrow(/one initial access level/i);
     expect(() => validateInvitation(invitation({ roles: [] }), policy)).toThrow();
     expect(() => validateInvitation(invitation({ roles: ["principal"] }), policy)).toThrow();
+  });
+
+  it("accepts teacher-administrator access only as its own initial level", () => {
+    expect(validateInvitation(invitation({ roles: ["teacher_admin"] }), policy).roles).toEqual([
+      "teacher_admin",
+    ]);
   });
 
   it("requires a bounded full name", () => {

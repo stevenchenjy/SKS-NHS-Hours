@@ -1,13 +1,13 @@
 export const roleSlugs = [
   "member",
   "committee_head",
-  "president",
-  "vice_president",
+  "president_vice_president",
   "teacher_admin",
 ] as const;
 
 export type RoleSlug = (typeof roleSlugs)[number];
 export type ReviewerRole = Exclude<RoleSlug, "member">;
+export type GlobalAccessLevel = "teacher_admin" | "platform_owner";
 export type MembershipStatus = "active" | "expired" | "suspended" | "archived";
 export type SchoolYearStatus = "draft" | "active" | "closed" | "archived";
 export type HourRequestStatus =
@@ -63,18 +63,18 @@ export interface Viewer {
   activeMembership: Membership | null;
   memberships: Membership[];
   roles: RoleSlug[];
+  globalAccessLevel: GlobalAccessLevel | null;
+  isMember: boolean;
   canReview: boolean;
   isTeacherAdmin: boolean;
+  isPlatformOwner: boolean;
 }
 
 export interface ServiceCategory {
   id: string;
   name: string;
   description: string | null;
-  display_order: number;
   is_active: boolean;
-  max_hours_per_request?: number | string | null;
-  member_approved_hours_cap?: number | string | null;
 }
 
 export interface ReviewerOption {
@@ -183,8 +183,9 @@ export interface PendingQueueItem extends HourRequest {
 }
 
 export interface AccountDirectoryRecord {
-  membership: Membership;
+  membership: Membership | null;
   profile: Profile;
+  globalAccessLevel: GlobalAccessLevel | null;
 }
 
 export interface RoleRecord {

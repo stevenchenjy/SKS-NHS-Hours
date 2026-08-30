@@ -202,7 +202,7 @@ values
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001', '2026-07-01 12:00:00+00',
    '2026-07-01 12:00:00+00'),
   ('20000000-0000-4000-8000-000000000004', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa004',
-   '10000000-0000-4000-8000-000000000001', 'active', '2027-06-30', 10.00,
+   '10000000-0000-4000-8000-000000000001', 'active', '2027-06-30', null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001', '2026-07-01 12:00:00+00',
    '2026-07-01 12:00:00+00'),
   ('20000000-0000-4000-8000-000000000005', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa005',
@@ -225,24 +225,34 @@ on conflict (id) do update
 set status = excluded.status, expiration_date = excluded.expiration_date,
     target_hours_override = excluded.target_hours_override;
 
+insert into public.platform_access_grants (
+  profile_id, access_level, granted_by_profile_id, granted_at
+)
+values (
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001', 'platform_owner',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001', '2026-07-01 12:00:00+00'
+)
+on conflict (profile_id) do update
+set access_level = excluded.access_level,
+    granted_by_profile_id = excluded.granted_by_profile_id;
+
 insert into public.membership_roles (membership_id, role_id, assigned_by_profile_id)
 select seeded.membership_id, role.id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'::uuid
 from (
   values
-    ('20000000-0000-4000-8000-000000000001'::uuid, 'member'),
     ('20000000-0000-4000-8000-000000000001'::uuid, 'teacher_admin'),
     ('20000000-0000-4000-8000-000000000002'::uuid, 'member'),
     ('20000000-0000-4000-8000-000000000002'::uuid, 'committee_head'),
     ('20000000-0000-4000-8000-000000000003'::uuid, 'member'),
     ('20000000-0000-4000-8000-000000000004'::uuid, 'member'),
-    ('20000000-0000-4000-8000-000000000004'::uuid, 'president'),
+    ('20000000-0000-4000-8000-000000000004'::uuid, 'president_vice_president'),
     ('20000000-0000-4000-8000-000000000005'::uuid, 'member'),
     ('20000000-0000-4000-8000-000000000005'::uuid, 'committee_head'),
     ('20000000-0000-4000-8000-000000000006'::uuid, 'member'),
-    ('20000000-0000-4000-8000-000000000006'::uuid, 'vice_president'),
+    ('20000000-0000-4000-8000-000000000006'::uuid, 'president_vice_president'),
     ('20000000-0000-4000-8000-000000000007'::uuid, 'member'),
     ('20000000-0000-4000-8000-000000000007'::uuid, 'committee_head'),
-    ('20000000-0000-4000-8000-000000000007'::uuid, 'president'),
+    ('20000000-0000-4000-8000-000000000007'::uuid, 'president_vice_president'),
     ('20000000-0000-4000-8000-000000000008'::uuid, 'member')
 ) as seeded(membership_id, role_key)
 join public.roles role on role.role_key = seeded.role_key
@@ -254,19 +264,19 @@ insert into public.service_categories (
 )
 values
   ('30000000-0000-4000-8000-000000000001', 'Green Team',
-   'Environmental service projects sponsored by the Green Team.', 10, true, 12.50,
+   'Environmental service projects sponsored by the Green Team.', 0, true, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
   ('30000000-0000-4000-8000-000000000002', 'Peer Tutoring',
-   'Approved peer tutoring and academic support.', 20, true, 12.00,
+   'Approved peer tutoring and academic support.', 0, true, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
   ('30000000-0000-4000-8000-000000000003', 'Concessions',
-   'Volunteer shifts supporting school concession operations.', 30, true, 12.00,
+   'Volunteer shifts supporting school concession operations.', 0, true, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
   ('30000000-0000-4000-8000-000000000004', 'Fundraising & Events',
-   'Fundraising, setup, cleanup, and event support.', 40, true, 12.00,
+   'Fundraising, setup, cleanup, and event support.', 0, true, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
   ('30000000-0000-4000-8000-000000000005', 'Community Service',
-   'Service performed for community organizations.', 50, true, 12.00,
+   'Service performed for community organizations.', 0, true, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001')
 on conflict (id) do update
 set name = excluded.name, description = excluded.description,
@@ -279,19 +289,19 @@ insert into public.school_year_categories (
 )
 values
   ('10000000-0000-4000-8000-000000000001',
-   '30000000-0000-4000-8000-000000000001', true, 10, 12.50, 20.00,
+   '30000000-0000-4000-8000-000000000001', true, 0, null, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
   ('10000000-0000-4000-8000-000000000001',
-   '30000000-0000-4000-8000-000000000002', true, 20, 12.00, null,
+   '30000000-0000-4000-8000-000000000002', true, 0, null, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
   ('10000000-0000-4000-8000-000000000001',
-   '30000000-0000-4000-8000-000000000003', true, 30, 12.00, null,
+   '30000000-0000-4000-8000-000000000003', true, 0, null, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
   ('10000000-0000-4000-8000-000000000001',
-   '30000000-0000-4000-8000-000000000004', true, 40, 12.00, null,
+   '30000000-0000-4000-8000-000000000004', true, 0, null, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
   ('10000000-0000-4000-8000-000000000001',
-   '30000000-0000-4000-8000-000000000005', true, 50, 12.00, null,
+   '30000000-0000-4000-8000-000000000005', true, 0, null, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001')
 on conflict (school_year_id, category_id) do update
 set is_available = excluded.is_available, display_order = excluded.display_order,

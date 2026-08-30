@@ -4,7 +4,7 @@
 
 This document describes the intended production architecture for the NHS Service Hours Portal and the invariants that every implementation path must preserve. The product and security decisions in `docs/DECISIONS.md` are authoritative. Database migrations are the source of truth for schema, constraints, grants, policies, and transactional functions; this document explains why those pieces exist and how they interact.
 
-The portal is a private school record system. It is not a public volunteer directory. An authenticated identity does not receive application access merely because it can sign in: access also requires a provisioned profile and an eligible school-year membership.
+The portal is a private school record system. It is not a public volunteer directory. An authenticated identity does not receive application access merely because it can sign in: access also requires a provisioned active profile and either eligible annual member access or a global administrator grant.
 
 ## System context
 
@@ -35,15 +35,16 @@ flowchart LR
 ## Architectural invariants
 
 1. The authenticated user ID is derived from the verified server session, never from a form field.
-2. Every protected request evaluates profile status, school-year dates, membership status and expiration, and current membership roles.
-3. A user may have several roles on one membership; no single global role claim is authoritative.
+2. Member requests evaluate profile status, school-year dates, membership status/expiration, and current roles. Administrator requests evaluate profile status and a database-backed global grant.
+3. Annual student access is `member` plus any explicitly assigned annual leadership capabilities. Global teacher-administrator access is exclusive, independent of school years, and is never inferred from a browser claim.
 4. Authorization-sensitive mutations run server-side and end in a database transaction or narrowly scoped RPC.
 5. Row Level Security and explicit grants deny unauthorized direct Data API access.
 6. Requested approver, current assignment, and actual reviewer are separate facts.
-7. Only approved requests contribute to approved progress. Pending and changes-requested hours remain separate.
+7. Only approved requests contribute to the fixed 20-hour requirement. Pending hours are a separately colored adjacent visual/text value; changes-requested hours remain separate.
 8. Reviews, corrections, and audit events are append-only. Approved facts are never silently overwritten.
-9. Historical identities and records survive school-year expiration, suspension, and rollover.
-10. Sensitive responses and pages are private and must not enter shared caches.
+9. Historical identities and records survive school-year expiration, suspension, and transition.
+10. Exactly one active global administrator is platform owner. Role preview is synthetic and read-only; it never impersonates a real account.
+11. Sensitive responses and pages are private and must not enter shared caches.
 
 These invariants implement the choices recorded in `docs/DECISIONS.md`, especially D-003 through D-011.
 
@@ -78,8 +79,8 @@ The server layer performs the following sequence for protected work:
 
 1. Create a caller-scoped Supabase server client from the request cookies.
 2. Verify identity using a server-validated claim/user API; do not authorize from an unverified client session object.
-3. Load the provisioned profile and relevant membership.
-4. Evaluate account, year, membership, expiration, and role requirements.
+3. Load the provisioned profile, global grant, and relevant memberships.
+4. Evaluate the appropriate global-administrator or annual member/reviewer requirement.
 5. Validate and normalize the request with a runtime schema.
 6. Call a typed query or one transactional RPC.
 7. Return a minimal view model or redirect to a same-origin path.
@@ -88,7 +89,7 @@ The Supabase secret key is reserved for operations that cannot use caller-scoped
 
 ### Database layer
 
-PostgreSQL stores normalized identities, school years, memberships, roles, categories, requests, reviews, corrections, invitations, settings, and audit events. `supabase/migrations/20260829030000_initial_nhs_backend.sql` defines the current schema, restricted functions, security-invoker views, explicit grants, and forced RLS.
+PostgreSQL stores normalized identities, global platform-access grants, school years, memberships, roles, categories, requests, reviews, corrections, invitations, settings, and audit events. The ordered files in `supabase/migrations` define the current schema, restricted functions, security-invoker views, explicit grants, and forced RLS.
 
 The `member_progress`, `pending_review_queue`, `category_totals`, `school_year_summary`, and `export_service_records` views expose calculated/reporting shapes with caller semantics. They still require tests under `anon`, ordinary authenticated, leader, expired-leader, and teacher-administrator contexts.
 
@@ -109,7 +110,7 @@ The `member_progress`, `pending_review_queue`, `category_totals`, `school_year_s
 | Same-origin redirect validation                    | `src/lib/safe-navigation.ts`                                                                                                                     |
 | Authorized paginated CSV route                     | `src/app/api/exports/[type]/route.ts`                                                                                                            |
 | Pure business rules                                | `src/lib/domain`                                                                                                                                 |
-| Database integrity/authorization                   | `supabase/migrations/20260829030000_initial_nhs_backend.sql`                                                                                     |
+| Database integrity/authorization                   | Ordered SQL under `supabase/migrations`                                                                                                          |
 | Synthetic local data                               | `supabase/seed.sql`                                                                                                                              |
 | Database/browser tests and CI                      | `supabase/tests`, `tests/e2e/portal.spec.ts`, `tests/e2e/design-preview.spec.ts`, `playwright.config.ts`, `.github/workflows/ci.yml`             |
 
@@ -117,16 +118,16 @@ The `member_progress`, `pending_review_queue`, `category_totals`, `school_year_s
 
 ### Invitation and first sign-in
 
-1. A teacher administrator submits an email, name, school year, membership state, and roles.
-2. The server validates the allowed email domain and verifies that the caller has a currently active `teacher_admin` membership; the database separately validates the target school year and invitation roles.
+1. A teacher administrator submits an email, name, school year, and one initial access choice from Accounts → Add accounts.
+2. The server validates the allowed email domain and verifies a global administrator grant. The database separately validates the target school year and normalizes Committee head or President / Vice President to include member. Teacher administrator must be exclusive and requires the platform owner.
 3. `create_invitation` records the pending business record and proposed roles with `send_count = 0` and `sent_at = null`; no invitation secret is stored.
-4. `prepare_invitation_send` rechecks that the caller is a current teacher administrator and that the invitation is still pending in an open year, then returns only the email/name/ID needed by the server-only Auth call.
+4. `prepare_invitation_send` rechecks the caller's global grant and that the invitation is still pending in an open year, then returns only the email/name/ID needed by the server-only Auth call.
 5. The server calls Supabase Auth Invite User with the exact invitation ID and a non-secret `invitation_send_id` UUID in Auth metadata. Only after the provider accepts the call does `record_invitation_send_success` set the seven-day expiry, increment the factual send count, and append `invitation.sent` or `invitation.resent`. The same UUID makes the database acknowledgement idempotent and correlatable; an acknowledgement failure is reported explicitly and retried with that UUID without resending the email.
 6. The Invite User template sends the one-time token hash to `/auth/confirm?token_hash=…&type=invite`. The server verifies `type=invite`, claims the exact invitation (or the sole safe verified-email fallback), and creates a signed, user-bound, 30-minute HTTP-only password-update context.
 7. The recovery template sends `/auth/confirm?token_hash=…&type=recovery`; `/auth/recovery-callback` is the PKCE fallback for a stock recovery template. Either route must verify fresh Auth proof before creating the same bounded password-update context. An ordinary signed-in session cannot open or submit `/update-password` without it.
 8. OAuth uses the allowlisted `/auth/callback` code-exchange route. Same-origin navigation rejects absolute, scheme-relative, backslash-normalized, encoded-backslash, and control-character destinations.
 9. A first-time verification/claim failure signs out and fails closed; returning users proceed only when an existing profile is visible.
-10. A provisioned active user reaches the dashboard. An expired or inactive user reaches a limited account-status page. An unprovisioned identity receives no portal data.
+10. A provisioned active member reaches the dashboard. A global administrator reaches administration even outside a school-year date range. An expired member reaches a limited account-status page; an unprovisioned or inactive identity receives no portal data.
 
 Resending uses the same pending invitation and a fresh Auth Invite User message. It does not create a second membership or grant access by email domain alone. If Auth accepts a message but the database receipt cannot be recorded after its bounded retry, the UI reports that partial failure and tells the administrator to inspect the audit trail before another send.
 
@@ -140,7 +141,7 @@ Resending uses the same pending invitation and a fresh Auth Invite User message.
 
 ### Review, changes, rejection, and reassignment
 
-1. The server verifies an active review-capable role in the request's school year.
+1. The server verifies either an active review-capable annual role or a global teacher-administrator grant. Global administrators use a teacher-only same-year attribution anchor.
 2. The database transaction locks the request row and rechecks that it is still `pending`.
 3. The transaction rejects self-review and stale/expired reviewer authority.
 4. Approval, changes requested, rejection, or reassignment appends immutable review history. Changes requested and rejection require a comment.
@@ -156,16 +157,20 @@ Approved records are locked in ordinary edit paths. A teacher administrator supp
 Progress is calculated from authoritative request rows, not stored as a mutable total:
 
 ```text
-actual percentage = approved hours / target hours * 100
-remaining hours   = max(target hours - approved hours, 0)
-hours over goal   = max(approved hours - target hours, 0)
+actual percentage = approved hours / 20 * 100
+remaining hours   = max(20 - approved hours, 0)
+hours over goal   = max(approved hours - 20, 0)
 ```
 
-Target zero is handled explicitly and never divides by zero. The UI may cap the bar at 100 percent, but text always shows the true percentage. Pending totals are reported separately.
+The UI renders approved from the left, pending immediately after it, and neutral remainder on the same track. Visual width is capped at 100 percent, but text always shows the true approved percentage, pending hours, and over-goal hours. Pending never changes the approved-hours remainder.
+
+### Platform-owner role preview
+
+The single platform owner can open fixed Member, Committee head, President / Vice President, and Teacher administrator screen fixtures. The server authorizes the owner before rendering; the fixtures contain synthetic constants, do not load a target user's records, and disable hosted content interactions. This is demonstration, not impersonation: every real mutation continues to derive the signed-in actor from the session.
 
 ### CSV export
 
-1. The server verifies an active `teacher_admin` role.
+1. The server verifies an active global teacher-administrator grant.
 2. A caller-safe query/view returns only the requested authorized dataset in deterministic pages so the Data API row limit cannot silently truncate a file.
 3. The serializer quotes fields, normalizes line endings, and neutralizes spreadsheet formula control prefixes.
 4. The response uses an attachment content disposition, UTF-8 CSV content type, and private/no-store caching.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  deriveAnnualAccessStatus,
   evaluateMembershipAccess,
   isDateWithinRange,
   isIsoCalendarDate,
@@ -157,5 +158,35 @@ describe("school-year membership access", () => {
         onDate: "2027-06-15",
       }),
     ).toBe(true);
+  });
+});
+
+describe("annual access display status", () => {
+  const ACTIVE_ACCESS = {
+    profileStatus: "active",
+    membershipStatus: "active",
+    membershipExpirationDate: "2027-09-01",
+    schoolYearStatus: "active",
+    schoolYearStartDate: "2026-09-01",
+    schoolYearEndDate: "2027-09-01",
+    onDate: "2026-10-01",
+  } as const;
+
+  it("shows a closed school year as closed even when its membership row is still active", () => {
+    expect(
+      deriveAnnualAccessStatus({
+        ...ACTIVE_ACCESS,
+        schoolYearStatus: "closed",
+      }),
+    ).toBe("closed");
+  });
+
+  it("shows calendar-expired access as expired even when its membership row is still active", () => {
+    expect(
+      deriveAnnualAccessStatus({
+        ...ACTIVE_ACCESS,
+        membershipExpirationDate: "2026-09-30",
+      }),
+    ).toBe("expired");
   });
 });

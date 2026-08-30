@@ -79,7 +79,7 @@ export const requestHoursSchema = quarterHourInputSchema
     `A single-date request cannot exceed ${MAX_REQUEST_HOURS} hours.`,
   );
 
-/** Valid annual targets and category caps. Zero is allowed and handled safely. */
+/** Valid annual targets. Zero remains supported for historical data safety. */
 export const targetHoursSchema = quarterHourInputSchema;
 
 export type HoursInput = z.input<typeof quarterHourInputSchema>;

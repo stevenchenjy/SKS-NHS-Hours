@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AlertCircle, ArrowRight, ClipboardList, Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/portal/page-header";
@@ -21,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { requireActiveViewer } from "@/lib/dal/access";
+import { requirePortalViewer } from "@/lib/dal/access";
 import { getProgress, listCategories, listMemberRequests, listSchoolYears } from "@/lib/dal/portal";
 import type { HourRequest, HourRequestStatus, ServiceCategory } from "@/lib/types";
 
@@ -58,7 +59,8 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const viewer = await requireActiveViewer();
+  const viewer = await requirePortalViewer();
+  if (!viewer.isMember) redirect("/admin");
   const params = await searchParams;
   const selectedYearId = stringParam(params.year) ?? viewer.activeMembership.school_year_id;
   const selectedStatus = stringParam(params.status);

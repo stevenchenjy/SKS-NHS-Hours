@@ -43,6 +43,11 @@ export default async function AdminOverviewPage() {
   const waiting = queue.slice(0, 6);
   const today = new Date().toISOString().slice(0, 10);
   const attentionMemberships = directory
+    .filter((record) => record.globalAccessLevel === null)
+    .filter(
+      (record): record is typeof record & { membership: NonNullable<typeof record.membership> } =>
+        record.membership !== null,
+    )
     .filter(({ membership }) => {
       const days = Math.ceil(
         (new Date(`${membership.expiration_date}T12:00:00`).getTime() -

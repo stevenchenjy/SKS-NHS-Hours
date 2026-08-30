@@ -23,6 +23,8 @@ import {
   listMemberRequests,
   listMembershipsForProfile,
 } from "@/lib/dal/portal";
+import { deriveAnnualAccessStatus } from "@/lib/domain";
+import { formatRoleLabel } from "@/lib/domain/roles";
 import type { HourRequest } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Member profile" };
@@ -56,6 +58,17 @@ export default async function MemberProfilePage({
   const selectedMembership =
     memberships.find((membership) => membership.school_year_id === requestedYear) ?? memberships[0];
   if (!selectedMembership) notFound();
+  const today = new Date().toISOString().slice(0, 10);
+  const annualStatus = (membership: (typeof memberships)[number]) =>
+    deriveAnnualAccessStatus({
+      profileStatus: profile.status,
+      membershipStatus: membership.status,
+      membershipExpirationDate: membership.expiration_date,
+      schoolYearStatus: membership.school_year.status,
+      schoolYearStartDate: membership.school_year.start_date,
+      schoolYearEndDate: membership.school_year.end_date,
+      onDate: today,
+    });
   const [progress, requests] = await Promise.all([
     getProgress(selectedMembership.id),
     listMemberRequests(
@@ -88,9 +101,13 @@ export default async function MemberProfilePage({
             <span className="inline-flex items-center gap-2">
               <Mail className="size-4" aria-hidden="true" /> {profile.email}
             </span>
-            <StatusBadge
-              status={profile.status === "active" ? selectedMembership.status : "suspended"}
-            />
+            <span className="inline-flex items-center gap-2">
+              Account <StatusBadge status={profile.status} />
+            </span>
+            <span className="inline-flex items-center gap-2">
+              {selectedMembership.school_year.label} access
+              <StatusBadge status={annualStatus(selectedMembership)} />
+            </span>
           </span>
         }
       />
@@ -202,7 +219,7 @@ export default async function MemberProfilePage({
                 <article key={membership.id} className="border-t pt-4 first:border-t-0 first:pt-0">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-semibold">{membership.school_year.label}</h3>
-                    <StatusBadge status={membership.status} />
+                    <StatusBadge status={annualStatus(membership)} />
                   </div>
                   <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                     <CalendarDays className="size-4" aria-hidden="true" /> Expires{" "}
@@ -211,7 +228,7 @@ export default async function MemberProfilePage({
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {membership.roles.map((role) => (
                       <Badge key={role} variant="outline" className="capitalize">
-                        {role.replaceAll("_", " ")}
+                        {formatRoleLabel(role)}
                       </Badge>
                     ))}
                   </div>

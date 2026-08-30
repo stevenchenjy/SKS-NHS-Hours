@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -29,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { requirePlatformOwner } from "@/lib/dal/access";
 import type {
   HourRequestStatus,
   ProgressRecord,
@@ -37,7 +37,7 @@ import type {
   Viewer,
 } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Local design preview", robots: { index: false } };
+export const metadata: Metadata = { title: "Role preview", robots: { index: false } };
 
 const memberViewer: Viewer = {
   id: "10000000-0000-4000-8000-000000000001",
@@ -74,10 +74,37 @@ const memberViewer: Viewer = {
   },
   memberships: [],
   roles: ["member"],
+  globalAccessLevel: null,
+  isMember: true,
   canReview: false,
   isTeacherAdmin: false,
+  isPlatformOwner: false,
 };
 memberViewer.memberships = memberViewer.activeMembership ? [memberViewer.activeMembership] : [];
+
+const committeeHeadViewer: Viewer = {
+  ...memberViewer,
+  activeMembership: memberViewer.activeMembership
+    ? { ...memberViewer.activeMembership, roles: ["member", "committee_head"] }
+    : null,
+  roles: ["member", "committee_head"],
+  canReview: true,
+};
+committeeHeadViewer.memberships = committeeHeadViewer.activeMembership
+  ? [committeeHeadViewer.activeMembership]
+  : [];
+
+const presidentViewer: Viewer = {
+  ...memberViewer,
+  activeMembership: memberViewer.activeMembership
+    ? { ...memberViewer.activeMembership, roles: ["member", "president_vice_president"] }
+    : null,
+  roles: ["member", "president_vice_president"],
+  canReview: true,
+};
+presidentViewer.memberships = presidentViewer.activeMembership
+  ? [presidentViewer.activeMembership]
+  : [];
 
 const adminViewer: Viewer = {
   ...memberViewer,
@@ -89,19 +116,15 @@ const adminViewer: Viewer = {
     email: "avery.morgan@example.edu",
     full_name: "Avery Morgan",
   },
-  activeMembership: memberViewer.activeMembership
-    ? {
-        ...memberViewer.activeMembership,
-        id: "20000000-0000-4000-8000-000000000008",
-        profile_id: "10000000-0000-4000-8000-000000000008",
-        roles: ["member", "teacher_admin"],
-      }
-    : null,
-  roles: ["member", "teacher_admin"],
+  activeMembership: null,
+  memberships: [],
+  roles: [],
+  globalAccessLevel: "teacher_admin",
+  isMember: false,
   canReview: true,
   isTeacherAdmin: true,
+  isPlatformOwner: false,
 };
-adminViewer.memberships = adminViewer.activeMembership ? [adminViewer.activeMembership] : [];
 
 const progress: ProgressRecord = {
   membership_id: "20000000-0000-4000-8000-000000000001",
@@ -133,25 +156,19 @@ const categories: ServiceCategory[] = [
     id: "40000000-0000-4000-8000-000000000001",
     name: "Community Service",
     description: "Direct service that benefits the surrounding community.",
-    display_order: 10,
     is_active: true,
-    max_hours_per_request: 12,
   },
   {
     id: "40000000-0000-4000-8000-000000000002",
     name: "School Service",
     description: "Service that supports the school community.",
-    display_order: 20,
     is_active: true,
-    max_hours_per_request: 8,
   },
   {
     id: "40000000-0000-4000-8000-000000000003",
     name: "Peer Tutoring",
     description: "Academic support provided without compensation.",
-    display_order: 30,
     is_active: true,
-    member_approved_hours_cap: 10,
   },
 ];
 
@@ -166,7 +183,7 @@ const reviewers: ReviewerOption[] = [
     membershipId: "20000000-0000-4000-8000-000000000007",
     userId: "10000000-0000-4000-8000-000000000007",
     fullName: "Noah Williams",
-    roles: ["president"],
+    roles: ["president_vice_president"],
   },
   {
     membershipId: "20000000-0000-4000-8000-000000000008",
@@ -627,25 +644,127 @@ function LogHoursPreview() {
   );
 }
 
+function localDesignPreviewEnabled(): boolean {
+  if (process.env.NHS_DESIGN_PREVIEW !== "true") return false;
+  if (process.env.NODE_ENV !== "production") return true;
+
+  try {
+    const hostname = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "").hostname;
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  } catch {
+    return false;
+  }
+}
+
+function RolePreviewToolbar({ screen, role }: { screen: string; role: string | undefined }) {
+  const items = [
+    {
+      href: "/design-preview?screen=dashboard",
+      label: "Member",
+      active: screen === "dashboard" || screen === "log",
+    },
+    {
+      href: "/design-preview?screen=review&role=committee_head",
+      label: "Committee head",
+      active: screen === "review" && role !== "president_vice_president",
+    },
+    {
+      href: "/design-preview?screen=review&role=president_vice_president",
+      label: "President / Vice President",
+      active: screen === "review" && role === "president_vice_president",
+    },
+    {
+      href: "/design-preview?screen=admin",
+      label: "Teacher administrator",
+      active: screen === "admin",
+    },
+  ];
+
+  return (
+    <aside
+      aria-label="Read-only role preview"
+      className="fixed inset-x-3 top-24 z-50 rounded-xl border bg-background/96 p-3 shadow-xl backdrop-blur sm:left-auto sm:right-4 sm:w-64"
+    >
+      <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+        Read-only role preview
+      </p>
+      <nav aria-label="Preview a role" className="mt-2 flex gap-2 overflow-x-auto sm:flex-col">
+        {items.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={item.active ? "page" : undefined}
+            className={
+              item.active
+                ? "shrink-0 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+                : "shrink-0 rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+            }
+          >
+            {item.label}
+          </Link>
+        ))}
+        <Link
+          href="/admin"
+          className="shrink-0 rounded-md border px-3 py-2 text-sm font-semibold hover:bg-accent"
+        >
+          Back to administration
+        </Link>
+      </nav>
+    </aside>
+  );
+}
+
 export default async function DesignPreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ screen?: string }>;
+  searchParams: Promise<{ screen?: string; role?: string }>;
 }) {
-  if (process.env.NHS_DESIGN_PREVIEW !== "true") notFound();
-  const { screen = "dashboard" } = await searchParams;
-  const isAdmin = screen === "admin" || screen === "review";
+  const localPreview = localDesignPreviewEnabled();
+  if (!localPreview) await requirePlatformOwner();
+
+  const { screen = "dashboard", role } = await searchParams;
+  const viewer =
+    screen === "admin"
+      ? adminViewer
+      : screen === "review" && role === "president_vice_president"
+        ? presidentViewer
+        : screen === "review"
+          ? committeeHeadViewer
+          : memberViewer;
+  const previewName =
+    screen === "admin"
+      ? "Teacher administrator"
+      : screen === "review" && role === "president_vice_president"
+        ? "President / Vice President"
+        : screen === "review"
+          ? "Committee head"
+          : "Member";
+
   return (
-    <AppShell viewer={isAdmin ? adminViewer : memberViewer}>
-      {screen === "admin" ? (
-        <AdminDashboardPreview />
-      ) : screen === "review" ? (
-        <ReviewRequestPreview />
-      ) : screen === "log" ? (
-        <LogHoursPreview />
-      ) : (
-        <MemberDashboardPreview />
-      )}
-    </AppShell>
+    <>
+      <RolePreviewToolbar screen={screen} role={role} />
+      {!localPreview ? (
+        <p className="sr-only" aria-live="polite">
+          Current synthetic preview: {previewName}. Interactive controls inside the preview are
+          disabled.
+        </p>
+      ) : null}
+      <div
+        inert={!localPreview}
+        className={localPreview ? "pt-24 sm:pt-0" : "pointer-events-none pt-24 sm:pt-0"}
+      >
+        <AppShell viewer={viewer}>
+          {screen === "admin" ? (
+            <AdminDashboardPreview />
+          ) : screen === "review" ? (
+            <ReviewRequestPreview />
+          ) : screen === "log" ? (
+            <LogHoursPreview />
+          ) : (
+            <MemberDashboardPreview />
+          )}
+        </AppShell>
+      </div>
+    </>
   );
 }

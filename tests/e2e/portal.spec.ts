@@ -2,6 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
+import { syntheticAccounts } from "./synthetic-accounts";
+
 // These workflows intentionally build on shared seeded state. Retrying a late
 // test would replay earlier mutations against the same database.
 test.describe.configure({ mode: "serial", retries: 0 });
@@ -11,6 +13,7 @@ const assignedTitle = `E2E Park Inventory ${Date.now()}`;
 const openQueueTitle = `E2E Food Drive ${Date.now()}`;
 const concurrentReviewTitle = `E2E Concurrent Review ${Date.now()}`;
 const selfReviewTitle = `E2E Leader Service ${Date.now()}`;
+const overRequirementTitle = `E2E Over Requirement ${Date.now()}`;
 const rolloverLabel = "2027-2028";
 const activeSchoolYearId = "10000000-0000-4000-8000-000000000001";
 let assignedRequestPath = "";
@@ -39,12 +42,38 @@ async function login(page: Page, email: string) {
   await page.getByRole("button", { name: "Sign in" }).click();
   const renderedError = page.getByRole("alert").filter({ hasText: /\S/ });
   await Promise.race([
-    page.waitForURL(/\/(dashboard|account-expired)/),
+    page.waitForURL(/\/(dashboard|admin|account-expired)/),
     renderedError.waitFor({ state: "visible" }).then(async () => {
       const message = await renderedError.textContent();
       throw new Error(`Synthetic sign-in failed for ${email}: ${message?.trim()}`);
     }),
   ]);
+}
+
+async function expectProgressSummary(
+  page: Page,
+  summary: string,
+  approvedWidth: number,
+  pendingWidth: number,
+  approvedPercentage = approvedWidth,
+  pendingPercentage = pendingWidth,
+) {
+  const progress = page.getByRole("progressbar", { name: "Approved service-hour progress" });
+  await expect(progress).toHaveAttribute("aria-valuetext", summary);
+  await expect(page.getByText(summary, { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(`${approvedPercentage}% approved · ${pendingPercentage}% pending`, {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(progress.locator('[data-progress-segment="approved"]')).toHaveAttribute(
+    "style",
+    new RegExp(`width:\\s*${String(approvedWidth).replace(".", "\\.")}%`),
+  );
+  await expect(progress.locator('[data-progress-segment="pending"]')).toHaveAttribute(
+    "style",
+    new RegExp(`width:\\s*${String(pendingWidth).replace(".", "\\.")}%`),
+  );
 }
 
 async function choose(page: Page, label: string, option: RegExp | string) {
@@ -72,7 +101,7 @@ async function createPartialDraft(): Promise<string> {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const { error: signInError } = await client.auth.signInWithPassword({
-    email: "member@example.edu",
+    email: syntheticAccounts.member.email,
     password,
   });
   if (signInError) {
@@ -104,7 +133,7 @@ async function createPartialDraft(): Promise<string> {
 async function submitRequest(
   page: Page,
   title: string,
-  reviewer: RegExp = /Riley Reviewer/,
+  reviewer: RegExp = new RegExp(syntheticAccounts.committeeHead.fullName),
   hours = "1.25",
 ) {
   await page.goto("/hours/new");
@@ -123,18 +152,35 @@ async function submitRequest(
 test("member login, dashboard, submission, approver selection, and pending total", async ({
   page,
 }) => {
-  await login(page, "member@example.edu");
+  await login(page, syntheticAccounts.member.email);
   await expect(page.getByRole("heading", { name: "Your service progress" })).toBeVisible();
-  await submitRequest(page, assignedTitle, /Riley Reviewer/, "3.25");
+  await expectProgressSummary(
+    page,
+    "12.5 of 20 approved · 3.25 pending · 7.5 approved hours remaining",
+    62.5,
+    16.25,
+  );
+  await submitRequest(
+    page,
+    assignedTitle,
+    new RegExp(syntheticAccounts.committeeHead.fullName),
+    "3.25",
+  );
   assignedRequestPath = new URL(page.url()).pathname;
   await expect(page.getByText("Request submitted.")).toBeVisible();
   await expect(page.getByText("Requested approver", { exact: true }).locator("..")).toContainText(
-    "Riley Reviewer",
+    syntheticAccounts.committeeHead.fullName,
   );
   await expect(page.getByText("Actual reviewer", { exact: true }).locator("..")).toContainText(
     "Not yet reviewed",
   );
   await page.goto("/dashboard");
+  await expectProgressSummary(
+    page,
+    "12.5 of 20 approved · 6.5 pending · 7.5 approved hours remaining",
+    62.5,
+    32.5,
+  );
   const assignedRow = page.getByRole("row").filter({ hasText: assignedTitle });
   await expect(assignedRow).toHaveCount(1);
   await expect(assignedRow).toContainText("Pending");
@@ -142,7 +188,7 @@ test("member login, dashboard, submission, approver selection, and pending total
 
 test("member dashboard renders and edits an intentionally partial draft", async ({ page }) => {
   const draftId = await createPartialDraft();
-  await login(page, "member@example.edu");
+  await login(page, syntheticAccounts.member.email);
   await page.goto("/dashboard?status=draft");
 
   const editLink = page.locator(`a[href="/hours/${draftId}/edit"]`);
@@ -167,47 +213,53 @@ test("member dashboard renders and edits an intentionally partial draft", async 
 });
 
 test("requested leader processes the assigned request and progress updates", async ({ page }) => {
-  await login(page, "reviewer@example.edu");
+  await login(page, syntheticAccounts.committeeHead.email);
   await page.goto(`/admin/requests?scope=assigned&search=${encodeURIComponent(assignedTitle)}`);
   await openQueueRequest(page, assignedTitle);
   await expect(page.getByRole("heading", { name: "Review request" })).toBeVisible();
   await page.getByRole("button", { name: "Approve request" }).click();
   await page.waitForURL(/\/admin\/requests\?notice=decision-recorded/);
 
-  await login(page, "member@example.edu");
-  await expect(page.getByText(/15\.75 of 20 approved/)).toBeVisible();
+  await login(page, syntheticAccounts.member.email);
+  await expectProgressSummary(
+    page,
+    "15.75 of 20 approved · 3.25 pending · 4.25 approved hours remaining",
+    78.75,
+    16.25,
+  );
   if (!assignedRequestPath) throw new Error("The assigned request path was not captured.");
   await page.goto(assignedRequestPath);
   await expect(page.getByText("Actual reviewer", { exact: true }).locator("..")).toContainText(
-    "Riley Reviewer",
+    syntheticAccounts.committeeHead.fullName,
   );
 });
 
 test("a different eligible leader processes a request from all pending", async ({ page }) => {
-  await login(page, "member@example.edu");
+  await login(page, syntheticAccounts.member.email);
   await submitRequest(page, openQueueTitle);
   const openQueueRequestPath = new URL(page.url()).pathname;
-  await login(page, "vice-president@example.edu");
+  await login(page, syntheticAccounts.presidentVicePresident.email);
+  await expect(page.locator("header").getByText("President / Vice President")).toBeVisible();
   await page.goto(`/admin/requests?scope=all&search=${encodeURIComponent(openQueueTitle)}`);
   await openQueueRequest(page, openQueueTitle);
   await expect(page.getByText(openQueueTitle)).toBeVisible();
   await page.getByRole("button", { name: "Approve request" }).click();
   await page.waitForURL(/decision-recorded/);
 
-  await login(page, "member@example.edu");
+  await login(page, syntheticAccounts.member.email);
   await page.goto(openQueueRequestPath);
   await expect(page.getByText("Requested approver", { exact: true }).locator("..")).toContainText(
-    "Riley Reviewer",
+    syntheticAccounts.committeeHead.fullName,
   );
   await expect(page.getByText("Actual reviewer", { exact: true }).locator("..")).toContainText(
-    "Val Vice President",
+    syntheticAccounts.presidentVicePresident.fullName,
   );
 });
 
 test("simultaneous reviewers serialize to one decision", async ({ browser, baseURL, page }) => {
   if (!baseURL) throw new Error("Playwright baseURL is required for the review race test.");
 
-  await login(page, "member@example.edu");
+  await login(page, syntheticAccounts.member.email);
   await submitRequest(page, concurrentReviewTitle);
   const requestId = new URL(page.url()).pathname.split("/").at(-1);
   if (!requestId) throw new Error("Submitted request URL did not contain a request ID.");
@@ -219,8 +271,8 @@ test("simultaneous reviewers serialize to one decision", async ({ browser, baseU
     const reviewerPage = await reviewerContext.newPage();
     const leaderPage = await leaderContext.newPage();
     await Promise.all([
-      login(reviewerPage, "reviewer@example.edu"),
-      login(leaderPage, "vice-president@example.edu"),
+      login(reviewerPage, syntheticAccounts.committeeHead.email),
+      login(leaderPage, syntheticAccounts.presidentVicePresident.email),
     ]);
     await Promise.all([reviewerPage.goto(requestPath), leaderPage.goto(requestPath)]);
     await Promise.all([
@@ -259,12 +311,14 @@ test("simultaneous reviewers serialize to one decision", async ({ browser, baseU
   const requestHistory = page.getByRole("region", { name: "Request history" });
   await expect(requestHistory.getByText("approved", { exact: true })).toHaveCount(1);
   await expect(page.getByText("Actual reviewer", { exact: true }).locator("..")).toContainText(
-    /Riley Reviewer|Val Vice President/,
+    new RegExp(
+      `${syntheticAccounts.committeeHead.fullName}|${syntheticAccounts.presidentVicePresident.fullName}`,
+    ),
   );
 });
 
 test("self-review controls are denied for a leader's own request", async ({ page }) => {
-  await login(page, "leader@example.edu");
+  await login(page, syntheticAccounts.leaderMember.email);
   await submitRequest(page, selfReviewTitle);
   await page.goto(`/admin/requests?scope=all&search=${encodeURIComponent(selfReviewTitle)}`);
   await openQueueRequest(page, selfReviewTitle);
@@ -275,7 +329,7 @@ test("self-review controls are denied for a leader's own request", async ({ page
 test("changes-requested activity returns to the member for editing and resubmission", async ({
   page,
 }) => {
-  await login(page, "member@example.edu");
+  await login(page, syntheticAccounts.member.email);
   await page.goto("/hours/40000000-0000-4000-8000-000000000004/edit");
   await expect(page.getByRole("heading", { name: "Update and resubmit" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Reviewer feedback" })).toBeVisible();
@@ -295,18 +349,56 @@ test("changes-requested activity returns to the member for editing and resubmiss
   await expect(page.getByText("Pending", { exact: true })).toBeVisible();
 });
 
-test("above-target member sees the true percentage and over-goal message", async ({ page }) => {
-  await login(page, "leader@example.edu");
-  await expect(page.getByText(/120% complete/)).toBeVisible();
-  await expect(page.getByText(/2 hours over goal/)).toBeVisible();
+test("above-target member sees accurate totals while the stacked visual remains capped", async ({
+  page,
+}) => {
+  await login(page, syntheticAccounts.leaderMember.email);
+  await submitRequest(
+    page,
+    overRequirementTitle,
+    new RegExp(syntheticAccounts.committeeHead.fullName),
+    "9",
+  );
+
+  await login(page, syntheticAccounts.committeeHead.email);
+  await page.goto(
+    `/admin/requests?scope=assigned&search=${encodeURIComponent(overRequirementTitle)}`,
+  );
+  await openQueueRequest(page, overRequirementTitle);
+  await page.getByRole("button", { name: "Approve request" }).click();
+  await page.waitForURL(/decision-recorded/);
+
+  await login(page, syntheticAccounts.leaderMember.email);
+  await expectProgressSummary(
+    page,
+    "21 of 20 approved · 0 pending · 1 approved hours over requirement",
+    100,
+    0,
+    105,
+    0,
+  );
 });
 
-test("teacher administrator opens the full roster and member profile", async ({ page }) => {
-  await login(page, "admin@example.edu");
+test("platform owner receives global admin navigation and opens a member profile", async ({
+  page,
+}) => {
+  await login(page, syntheticAccounts.platformOwner.email);
+  await expect(page).toHaveURL(/\/admin(?:\?|$)/);
+  await expect(page.locator("header").getByText("Platform owner", { exact: true })).toBeVisible();
+  await expect(page.getByText("All school years", { exact: true })).toBeVisible();
+  const primaryNavigation = page.getByRole("navigation", { name: "Primary navigation" });
+  await expect(primaryNavigation.getByRole("link", { name: "Dashboard" })).toHaveCount(0);
+  await expect(primaryNavigation.getByRole("link", { name: "Log Hours" })).toHaveCount(0);
+  await expect(primaryNavigation.getByRole("link", { name: "My Profile" })).toHaveCount(0);
+  await expect(primaryNavigation.getByRole("link", { name: "Member progress" })).toBeVisible();
+  await expect(primaryNavigation.getByRole("link", { name: "Role preview" })).toBeVisible();
+
   await page.goto("/admin/members?search=Morgan+Member");
-  await expect(page.getByText("Morgan Member").first()).toBeVisible();
+  await expect(page.getByText(syntheticAccounts.member.fullName).first()).toBeVisible();
   await page.getByRole("button", { name: "Open", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Morgan Member" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: syntheticAccounts.member.fullName }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Complete service log" })).toBeVisible();
 
   const accessibility = await new AxeBuilder({ page }).analyze();
@@ -315,47 +407,75 @@ test("teacher administrator opens the full roster and member profile", async ({ 
       ["serious", "critical"].includes(violation.impact ?? ""),
     ),
   ).toEqual([]);
+
+  await page.goto("/admin/accounts?view=invitations");
+  await expect(page.getByRole("heading", { name: "Invitation activity" })).toBeVisible();
+  await expect(
+    page.getByText(/Invitations are for people who have not activated an account/),
+  ).toBeVisible();
+
+  await page.goto("/admin/settings/roles");
+  await expect(page).toHaveURL(/\/admin\/accounts\?view=directory/);
+  await page.goto("/admin/settings/targets");
+  await expect(page).toHaveURL(/\/admin\/accounts\?view=directory/);
 });
 
-test("teacher administrator creates a year and renews an expired membership", async ({ page }) => {
-  await login(page, "admin@example.edu");
+test("platform owner creates a year and assigns the next leadership team", async ({ page }) => {
+  await login(page, syntheticAccounts.platformOwner.email);
   await page.goto("/admin/settings/school-years");
   await page.getByLabel("Label").fill(rolloverLabel);
   await page.getByLabel("Start date").fill("2027-07-01");
   await page.getByLabel("End date").fill("2028-06-30");
   await page.getByRole("button", { name: "Create draft school year" }).click();
-  await expect(page.getByText(/Draft school year created/)).toBeVisible();
-  await page.reload();
-  await page
-    .getByLabel("User")
-    .selectOption({ label: "Emery Expired Member · expired-member@example.edu" });
-  await page.getByLabel("New school year").selectOption({ label: `${rolloverLabel} · draft` });
-  await page.getByLabel("Expiration date").fill("2028-06-30");
-  await page.getByRole("checkbox", { name: /4 · Review summary and confirm/ }).check();
-  await page.getByRole("button", { name: "5 · Create membership" }).click();
-  await expect(page.getByText(/Membership renewed/)).toBeVisible();
+  await expect(
+    page.getByText("Draft school year created with the fixed 20-hour member requirement."),
+  ).toBeVisible();
+
+  await page.goto("/admin/accounts?view=add");
+  const yearSwitcher = page
+    .locator("form")
+    .filter({ has: page.getByRole("button", { name: "View", exact: true }) });
+  await yearSwitcher.getByLabel("School year").selectOption({ label: rolloverLabel });
+  await yearSwitcher.getByRole("button", { name: "View", exact: true }).click();
+
+  const existingAccount = page.getByRole("region", {
+    name: "Add an existing account to a school year",
+  });
+  await existingAccount.getByLabel("Existing account").selectOption({
+    label: `${syntheticAccounts.expiredMember.fullName} · ${syntheticAccounts.expiredMember.email}`,
+  });
+  await existingAccount.getByLabel("School-year access").selectOption("president_vice_president");
+  await existingAccount.getByRole("button", { name: "Add to school year" }).click();
+  await expect(
+    existingAccount.getByText("The existing account now has access to the selected school year."),
+  ).toBeVisible();
 });
 
 test("expired member receives the limited expired-account experience", async ({ page }) => {
-  await login(page, "expired-member@example.edu");
+  await login(page, syntheticAccounts.expiredMember.email);
   await expect(page).toHaveURL(/\/account-expired/);
   await expect(page.getByRole("heading", { name: /membership is not active/i })).toBeVisible();
   await expect(page.getByText(rolloverLabel)).toBeVisible();
 });
 
 test("ordinary member cannot open leader or teacher-admin routes", async ({ page }) => {
-  await login(page, "member@example.edu");
+  await login(page, syntheticAccounts.member.email);
   await page.goto("/admin/accounts");
   await expect(page).toHaveURL(/\/dashboard\?notice=not-authorized/);
 });
 
 test("@mobile member submission and leader approval remain usable", async ({ page }) => {
   const mobileTitle = `E2E Mobile Service ${Date.now()}`;
-  await login(page, "member@example.edu");
-  await submitRequest(page, mobileTitle, /Riley Reviewer/, "0.25");
+  await login(page, syntheticAccounts.member.email);
+  await submitRequest(
+    page,
+    mobileTitle,
+    new RegExp(syntheticAccounts.committeeHead.fullName),
+    "0.25",
+  );
   await expect(page.getByText("Request submitted.")).toBeVisible();
 
-  await login(page, "reviewer@example.edu");
+  await login(page, syntheticAccounts.committeeHead.email);
   await page.goto(`/admin/requests?scope=assigned&search=${encodeURIComponent(mobileTitle)}`);
   await openQueueRequest(page, mobileTitle);
   const approveButton = page.getByRole("button", { name: "Approve request" });

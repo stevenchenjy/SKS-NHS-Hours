@@ -15,9 +15,6 @@ export const metadata: Metadata = { title: "Service categories" };
 interface CategorySetting {
   category_id: string;
   is_available: boolean;
-  display_order: number;
-  max_hours_per_request: string | number | null;
-  member_approved_hours_cap: string | number | null;
 }
 
 function param(value: string | string[] | undefined): string {
@@ -37,16 +34,16 @@ export default async function CategoriesSettingsPage({
     listAllServiceCategories(),
     listSchoolYearCategorySettings(yearId),
   ]);
-  const categories = categoryData as unknown as Array<
-    ServiceCategory & { default_max_hours_per_request: string | number | null }
-  >;
+  const categories = (categoryData as unknown as ServiceCategory[]).toSorted((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+  );
   const settings = settingData as unknown as CategorySetting[];
 
   return (
     <div className="page-container">
       <PageHeader
         title="Service categories"
-        description="Rename, reorder, deactivate, and scope categories by school year without removing historical references."
+        description="Name, describe, deactivate, and make categories available by school year without removing historical references."
       />
 
       <section aria-labelledby="master-categories-heading" className="rounded-xl border p-5 sm:p-6">
@@ -54,7 +51,8 @@ export default async function CategoriesSettingsPage({
           Category directory
         </h2>
         <p className="mb-6 mt-1 text-sm text-muted-foreground">
-          Active names are unique without regard to letter case. Deactivation is archive-safe.
+          Categories are listed alphabetically. Active names are unique without regard to letter
+          case, and deactivation is archive-safe.
         </p>
         <div className="space-y-5 divide-y">
           {categories.map((category) => (
@@ -75,11 +73,10 @@ export default async function CategoriesSettingsPage({
         <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 id="year-categories-heading" className="text-xl font-bold">
-              School-year availability and limits
+              School-year availability
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Per-request limits and optional member annual category caps are enforced during
-              review.
+              Choose which active categories members can use during the selected school year.
             </p>
           </div>
           <form>

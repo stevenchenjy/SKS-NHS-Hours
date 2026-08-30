@@ -1,164 +1,95 @@
-# NHS Service Hours Portal — School-year rollover
+# NHS Service Hours Portal — School-year transition
 
-Rollover creates new annual authorization records without moving or rewriting the prior year's service history. A teacher administrator should run it before the new year begins, with a second administrator reviewing the plan.
+A school-year transition creates new annual access records without moving or rewriting the prior year's service history. There is no dedicated rollover panel: teacher administrators create the year in Settings and assign the new roster and leadership team from Accounts.
 
-## The rollover invariant
+## Invariants
 
 ```text
-one person/profile
-  ├── prior-year membership → prior roles, requests, reviews, corrections, audit
-  └── new-year membership   → new expiration, target override, and deliberately selected roles
+one profile
+  ├── prior-year membership → frozen roles, requests, reviews, and audit history
+  └── new-year membership   → fixed year-end expiration and deliberately selected access
+
+global administrator grant  → no annual membership requirement, no service target
 ```
 
-The process does not extend the old membership, copy requests, copy decisions, or make last year's leaders current leaders. Historical rows remain attributable to their original membership and school year.
+- Every member has a fixed requirement of 20 approved hours.
+- Pending hours are displayed separately and never count as approved completion.
+- Member and student-leadership access belongs to one school year.
+- Committee head and President / Vice President automatically include member access.
+- Student leadership never carries forward automatically.
+- Teacher-administrator and platform-owner access is global and must not be assigned as annual member access.
+- Prior memberships and service records remain attributable and are never repurposed.
 
-## Preconditions
+## Prepare the transition
 
-Before beginning:
+Before changing state:
 
-- confirm the new label, inclusive start/end dates, default target, and school-approved membership expiration rule;
-- confirm who approves the rollover and who will retain teacher-administrator access;
-- confirm the current hosted backup/PITR state and the recovery owner;
-- resolve duplicate profiles and uncertain account status before renewal;
-- review current profiles, memberships, roles, target overrides, and expiring accounts;
-- decide which categories will be available and whether per-request or approved-hours caps change;
-- use a protected non-production environment with synthetic data to rehearse the process; and
-- keep the prior year open until the renewal results have been reviewed unless policy requires an earlier close.
+- agree on the new label and inclusive start/end dates;
+- confirm the incoming member roster and leadership appointments;
+- decide which service categories remain available;
+- resolve or document pending requests in the current year;
+- test the process with synthetic records in staging; and
+- have a second authorized person review the planned roster and dates.
 
-The application currently renews one selected identity at a time. Plan enough operator time; do not invent a bulk SQL shortcut around the protected function.
+## Create the draft year
 
-## 1. Create the draft year
+In Settings → School years:
 
-1. Open `/admin/settings/school-years`.
-2. Create a school year with a consecutive label such as `2027-2028`.
-3. Enter real ISO dates whose years match the label and set the default target, normally 20 hours.
-4. Confirm the record appears with status `draft`.
-5. Verify the `school_year.created` audit event.
+1. enter a consecutive label such as `2027-2028`;
+2. enter the real inclusive dates whose years match the label;
+3. create the year; it starts as `draft` with the fixed 20-hour requirement; and
+4. verify that global administrators can still open administration without an annual assignment.
 
-A draft does not accept ordinary member submissions. The default target can be changed only while the year is draft or active through the protected `set_school_year_target` database operation. The current UI sets the default during creation and does not expose a separate post-creation editor.
+A draft does not accept ordinary member submissions. Only one year may be active.
 
-## 2. Configure categories
+## Configure categories
 
-Open `/admin/settings/categories` and review each global category for the destination year:
+In Settings → Categories, choose whether each active category is available for the draft year. Categories are alphabetical; there is no custom ordering, per-category request maximum, or per-member category cap. Availability changes do not rewrite historical requests.
 
-- available or unavailable;
-- display order;
-- maximum hours per request; and
-- optional approved-hours cap per member/category.
+## Assign the new roster and leadership
 
-Do not delete a category referenced by history. Global category activation and year-specific availability are separate controls.
+In Accounts → Add accounts:
 
-Verify the expected five initial names exist where required: Green Team, Peer Tutoring, Concessions, Fundraising & Events, and Community Service.
+1. select the destination draft year;
+2. choose an existing active profile or invite/import a new person;
+3. select exactly one access level: Member, Committee head, or President / Vice President; and
+4. submit and verify the destination-year row in Accounts.
 
-## 3. Build the renewal list
+The protected destination-access transaction creates or reactivates the membership, fixes its expiration to the year end, clears target overrides, replaces destination-year roles, and records a prior-membership link when available. Committee head and President / Vice President normalize to `member` plus the selected leadership role.
 
-For each person, decide:
+Do not add a global teacher administrator as a member. If one person genuinely needs staff administration and a member demonstration persona, use separate identities with synthetic data for the latter.
 
-| Decision       | Question                                                                                   |
-| -------------- | ------------------------------------------------------------------------------------------ |
-| Include        | Is this person an NHS participant in the destination year?                                 |
-| Expiration     | What in-year date ends active privileges under school policy?                              |
-| Target         | Do they inherit the year default, or have an approved override?                            |
-| Roles          | Which destination-year roles are approved? Do not assume prior leadership carries forward. |
-| Profile status | Is the identity still active across the portal?                                            |
+## Verify before activation
 
-Include `member` for students who submit service hours. Assign review roles only to approved leaders. Renew at least two teacher administrators where staffing permits so routine turnover does not create a single point of failure.
+Check:
 
-## 4. Renew each membership
+- label and inclusive dates;
+- fixed 20-hour requirement;
+- expected member count, excluding global administrators;
+- one deliberately selected access level per person;
+- expected Committee head and President / Vice President reviewers;
+- category availability;
+- no stale leadership carried into the new year; and
+- audit entries for the year, accounts, invitations, and category changes.
 
-In the **School-year rollover** panel on `/admin/settings/school-years`:
+Use the platform owner's read-only Role preview for demonstrations. For an interactive submission/review rehearsal, use separate synthetic Member and leader accounts so self-review remains impossible.
 
-1. choose the existing user;
-2. choose the new draft year;
-3. enter an expiration date inside the destination year;
-4. enter a target override or leave it blank to inherit the default;
-5. select every destination-year role;
-6. read the summary and tick the confirmation; and
-7. choose **Create membership**.
+## Activate and validate
 
-The `renew_memberships` transaction creates or safely reactivates the destination membership, records a renewal link when a source membership exists, replaces the destination role set with the selected roles, and appends audit events. The operation must fail atomically for invalid role, date, status, target, or last-admin conditions.
+Activate the draft year only after the review. Then verify:
 
-After each batch of work, reconcile:
+1. a member can sign in, see the correct year, and submit a quarter-hour request;
+2. the member progress line shows approved, then pending, then neutral remainder;
+3. a Committee head or President / Vice President can see and decide eligible pending work;
+4. a global teacher administrator can administer and review without becoming a member;
+5. Members excludes global administrators from progress and requirements;
+6. Accounts is the canonical status/role editor and Invitations shows delivery lifecycle only; and
+7. exports and audit are scoped to the selected year while administration remains global.
 
-- selected people versus created destination memberships;
-- expiration dates and target overrides;
-- role counts, especially `teacher_admin` and review-capable roles;
-- duplicate membership count, which must remain zero; and
-- audit events for each renewal/role assignment.
+## Close the prior year
 
-## 5. Validate before activation
+After pending work and required exports are handled, close the prior year. Closing prevents ordinary new activity but preserves requests, decisions, corrections, roles, identities, and audit history. Never extend the prior year or mutate historical roles to represent the new team.
 
-Use non-production accounts that represent:
+## Recovery
 
-- renewed ordinary member;
-- renewed committee head/president/vice president;
-- renewed teacher administrator;
-- multi-role user;
-- person intentionally not renewed;
-- expired prior member; and
-- expired former leader.
-
-Confirm:
-
-- a renewed member has only the intended destination membership/roles and cannot edit prior-year records;
-- a former leader with no destination review role cannot open current leader surfaces or call review functions;
-- a renewed leader can see permitted destination-year roster/pending records but cannot self-review;
-- the destination target and category settings produce expected progress;
-- the teacher administrator can see accounts, settings, audit, and exports;
-- old requests, reviews, corrections, requested approvers, actual reviewers, and audits are unchanged; and
-- current-year queries do not mix prior-year membership IDs.
-
-Run the database and browser rollover cases in `docs/TESTING.md`; a visual count alone is not sufficient evidence.
-
-## 6. Activate the new year
-
-Activation requires a valid active teacher-administrator membership in the target year.
-
-1. Have the second administrator review memberships, roles, target, dates, and categories.
-2. On `/admin/settings/school-years`, activate the draft year.
-3. Confirm it is the single active year and verify the activation audit event.
-4. Sign out and back in with the test personas so navigation and protected routes are evaluated against the new year.
-5. Submit a 0.25-hour synthetic request to a different active reviewer and complete one approval.
-6. Confirm pending/approved totals, actual reviewer, and audit events.
-
-If activation fails, read the error and correct the draft data. Do not directly update year status.
-
-## 7. Close the prior year
-
-Close the prior year only after the school-approved submission/review cutoff and reconciliation are complete:
-
-1. export the smallest authorized archival data set required by policy;
-2. verify the export row count and audit event;
-3. store it only in approved restricted storage;
-4. close the year from `/admin/settings/school-years`;
-5. verify prior history remains readable to authorized users and no prior-year active mutation succeeds; and
-6. record the operator, approver, counts, exceptions, and completion time in the private annual operations record.
-
-Closing is not deletion. Do not archive or anonymize records until the school's approved retention/legal-hold process says to do so.
-
-## Failure and recovery
-
-`renew_memberships` is transactional for the submitted renewal payload. A failed call should create neither a partial membership nor partial role/audit state for that call. The current UI submits one identity per call, so a series of successful renewals followed by a later failure is expected to retain the earlier successful identities.
-
-For an incorrect destination membership:
-
-- correct status, target, or roles through the protected UI/RPC and preserve the audit trail;
-- do not delete the membership or edit historical links directly;
-- do not restore the whole database for a routine operator mistake; and
-- escalate conflicting totals, missing audits, duplicate membership errors, or unexpected authority before activation.
-
-If a new year was activated incorrectly, stop writes and choose a controlled forward correction. Database restoration is reserved for an approved incident decision; application rollback alone does not reverse year or membership changes.
-
-## Completion record
-
-Record outside the repository, without credentials or unnecessary personal data:
-
-- source and destination school-year IDs/labels;
-- migration/application release identifiers;
-- backup verification time and recovery owner;
-- total eligible, renewed, excluded, and exception counts;
-- counts by destination role;
-- target and category configuration reviewed;
-- test-persona results;
-- activation and prior-year closure audit IDs/timestamps; and
-- operator and independent reviewer approval.
+If the wrong access was assigned, correct the destination-year row through Accounts. If dates or activation were wrong, use the protected school-year workflow and preserve audit history. Do not repair a transition with direct table updates, deletes, copied requests, or renamed identities.

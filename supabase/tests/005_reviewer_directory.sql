@@ -144,7 +144,7 @@ select fixture.membership_id, role.id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'
 from (
   values
     ('21111111-1111-4111-8111-111111111001'::uuid, 'committee_head'),
-    ('21111111-1111-4111-8111-111111111002'::uuid, 'president'),
+    ('21111111-1111-4111-8111-111111111002'::uuid, 'president_vice_president'),
     ('21111111-1111-4111-8111-111111111003'::uuid, 'committee_head'),
     ('21111111-1111-4111-8111-111111111004'::uuid, 'member')
 ) fixture(membership_id, role_key)
@@ -194,8 +194,8 @@ select extensions.is(
     from public.list_eligible_reviewers('10000000-0000-4000-8000-000000000001')
     where membership_id = '20000000-0000-4000-8000-000000000001'
   ),
-  array['member', 'teacher_admin']::text[],
-  'the directory includes the administrator role keys without exposing email'
+  array['teacher_admin']::text[],
+  'the directory includes the teacher-only administrator anchor without exposing email'
 );
 select extensions.is(
   (
@@ -203,7 +203,7 @@ select extensions.is(
     from public.list_eligible_reviewers('10000000-0000-4000-8000-000000000001')
     where membership_id = '20000000-0000-4000-8000-000000000007'
   ),
-  array['member', 'committee_head', 'president']::text[],
+  array['member', 'committee_head', 'president_vice_president']::text[],
   'the directory preserves all ordered role keys for a multi-role reviewer'
 );
 select extensions.is(

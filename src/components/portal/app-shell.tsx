@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   ClipboardCheck,
   Download,
+  Eye,
   FileClock,
   Home,
   LogOut,
@@ -38,7 +39,7 @@ const memberNavigation: NavigationItem[] = [
 const reviewerNavigation: NavigationItem[] = [
   { href: "/admin", label: "Admin overview", icon: ClipboardCheck },
   { href: "/admin/requests", label: "Review requests", icon: FileClock },
-  { href: "/admin/members", label: "Members", icon: UsersRound },
+  { href: "/admin/members", label: "Member progress", icon: UsersRound },
 ];
 
 const teacherAdminNavigation: NavigationItem[] = [
@@ -47,6 +48,12 @@ const teacherAdminNavigation: NavigationItem[] = [
   { href: "/admin/exports", label: "Exports", icon: Download },
   { href: "/admin/settings/school-years", label: "Settings", icon: Settings },
 ];
+
+const rolePreviewNavigation: NavigationItem = {
+  href: "/admin/role-preview",
+  label: "Role preview",
+  icon: Eye,
+};
 
 function initials(name: string): string {
   return name
@@ -58,9 +65,11 @@ function initials(name: string): string {
 }
 
 function roleLabel(viewer: Viewer): string {
-  if (viewer.isTeacherAdmin) return "Teacher administrator";
-  if (viewer.roles.includes("president")) return "President";
-  if (viewer.roles.includes("vice_president")) return "Vice president";
+  if (viewer.isPlatformOwner) return "Platform owner";
+  if (viewer.isTeacherAdmin) return "Global teacher administrator";
+  if (viewer.roles.includes("president_vice_president")) {
+    return "President / Vice President";
+  }
   if (viewer.roles.includes("committee_head")) return "Committee head";
   return "Member";
 }
@@ -93,14 +102,23 @@ function NavLink({ item, compact = false }: { item: NavigationItem; compact?: bo
 }
 
 export function AppShell({ viewer, children }: { viewer: Viewer; children: ReactNode }) {
+  const adminOnly = viewer.isTeacherAdmin && !viewer.isMember;
   const navigation = [
-    ...memberNavigation,
+    ...(viewer.isMember ? memberNavigation : []),
     ...(viewer.canReview ? reviewerNavigation : []),
     ...(viewer.isTeacherAdmin ? teacherAdminNavigation : []),
+    ...(viewer.isPlatformOwner ? [rolePreviewNavigation] : []),
   ];
-  const bottomNavigation = viewer.canReview
-    ? [memberNavigation[0], memberNavigation[1], reviewerNavigation[1]]
-    : memberNavigation;
+  const bottomNavigation = adminOnly
+    ? [
+        reviewerNavigation[0],
+        reviewerNavigation[1],
+        teacherAdminNavigation[0],
+        ...(viewer.isPlatformOwner ? [rolePreviewNavigation] : []),
+      ]
+    : viewer.canReview
+      ? [memberNavigation[0], memberNavigation[1], reviewerNavigation[1]]
+      : memberNavigation;
   const safeBottomNavigation = bottomNavigation.filter((item): item is NavigationItem =>
     Boolean(item),
   );
@@ -108,7 +126,10 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
   return (
     <div className="min-h-dvh bg-background">
       <header className="fixed inset-x-0 top-0 z-40 flex h-20 items-center justify-between border-b bg-background/96 px-5 backdrop-blur sm:px-7 lg:px-8">
-        <Link href="/dashboard" className="flex items-center gap-3 font-bold tracking-tight">
+        <Link
+          href={adminOnly ? "/admin" : "/dashboard"}
+          className="flex items-center gap-3 font-bold tracking-tight"
+        >
           <span className="flex size-10 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
             NHS
           </span>
@@ -142,9 +163,13 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
         </nav>
         <div className="border-t p-4">
           <div className="mb-3 rounded-lg bg-background/70 px-4 py-3">
-            <p className="text-xs text-muted-foreground">School year</p>
+            <p className="text-xs text-muted-foreground">
+              {viewer.isTeacherAdmin ? "Access" : "School year"}
+            </p>
             <p className="mt-0.5 text-sm font-semibold">
-              {viewer.activeMembership?.school_year.label ?? "No active year"}
+              {viewer.isTeacherAdmin
+                ? "All school years"
+                : (viewer.activeMembership?.school_year.label ?? "No active year")}
             </p>
           </div>
           <form action={signOutAction}>

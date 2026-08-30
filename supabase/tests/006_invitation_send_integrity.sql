@@ -412,7 +412,7 @@ select extensions.throws_ok(
     from public.prepare_invitation_send(current_setting('test.invitation_id')::uuid)
   $$,
   '42501',
-  'An active teacher administrator is required',
+  'An active global teacher administrator is required',
   'a non-administrator reviewer cannot prepare an invitation send'
 );
 select extensions.throws_ok(
@@ -424,7 +424,7 @@ select extensions.throws_ok(
     )
   $$,
   '42501',
-  'An active teacher administrator is required',
+  'An active global teacher administrator is required',
   'a non-administrator reviewer cannot record provider success'
 );
 

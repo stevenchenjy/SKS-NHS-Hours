@@ -2,25 +2,24 @@ import type { Metadata } from "next";
 import { Archive, CheckCircle2 } from "lucide-react";
 
 import { changeSchoolYearStatusAction } from "@/app/actions/admin-actions";
-import { CreateSchoolYearForm, RenewMembershipForm } from "@/components/admin/settings-forms";
+import { CreateSchoolYearForm } from "@/components/admin/settings-forms";
 import { PageHeader } from "@/components/portal/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requireTeacherAdmin } from "@/lib/dal/access";
-import { listAccountDirectory, listSchoolYears } from "@/lib/dal/portal";
+import { listSchoolYears } from "@/lib/dal/portal";
 
 export const metadata: Metadata = { title: "School years" };
 
 export default async function SchoolYearsSettingsPage() {
-  const viewer = await requireTeacherAdmin();
+  await requireTeacherAdmin();
   const years = await listSchoolYears();
-  const accounts = await listAccountDirectory(viewer.activeMembership.school_year_id);
 
   return (
     <div className="page-container">
       <PageHeader
         title="School years"
-        description="Create, activate, close, and roll memberships forward without overwriting prior-year records."
+        description="Create, activate, and close school years. The member requirement is fixed at 20 hours, and global administrators retain access automatically."
       />
 
       <section aria-labelledby="year-list-heading" className="mb-10">
@@ -43,8 +42,7 @@ export default async function SchoolYearsSettingsPage() {
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Default target:{" "}
-                  <strong className="text-foreground">{year.default_target_hours} hours</strong>
+                  <strong className="text-foreground">20-hour member requirement</strong>
                 </p>
                 <Badge variant="outline" className="w-fit capitalize">
                   {year.status}
@@ -73,27 +71,16 @@ export default async function SchoolYearsSettingsPage() {
         </div>
       </section>
 
-      <div className="grid gap-8 xl:grid-cols-2">
-        <section aria-labelledby="create-year-heading" className="rounded-xl border p-6">
-          <h2 id="create-year-heading" className="text-xl font-bold">
-            Create the next school year
-          </h2>
-          <p className="mb-6 mt-1 text-sm leading-6 text-muted-foreground">
-            A new year starts as a draft. Add a teacher administrator membership before activation.
-          </p>
-          <CreateSchoolYearForm />
-        </section>
-        <section aria-labelledby="rollover-heading" className="rounded-xl border p-6 xl:row-span-2">
-          <h2 id="rollover-heading" className="text-xl font-bold">
-            School-year rollover
-          </h2>
-          <p className="mb-6 mt-1 text-sm leading-6 text-muted-foreground">
-            Renew one selected identity at a time. Each confirmation creates a destination-year
-            membership and keeps the source history read-only.
-          </p>
-          <RenewMembershipForm years={years} accounts={accounts} />
-        </section>
-      </div>
+      <section aria-labelledby="create-year-heading" className="max-w-3xl rounded-xl border p-6">
+        <h2 id="create-year-heading" className="text-xl font-bold">
+          Create the next school year
+        </h2>
+        <p className="mb-6 mt-1 text-sm leading-6 text-muted-foreground">
+          A new year starts as a draft with the fixed 20-hour requirement. Add member and leadership
+          access from Accounts; global administrators need no annual assignment.
+        </p>
+        <CreateSchoolYearForm />
+      </section>
     </div>
   );
 }

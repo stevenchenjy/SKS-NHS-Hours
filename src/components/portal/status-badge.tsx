@@ -4,7 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { HourRequestStatus, MembershipStatus } from "@/lib/types";
 
-type Status = HourRequestStatus | MembershipStatus | "at_goal" | "below_goal";
+type Status =
+  | HourRequestStatus
+  | MembershipStatus
+  | "inactive"
+  | "closed"
+  | "upcoming"
+  | "at_goal"
+  | "below_goal";
 
 const presentation: Record<
   Status,
@@ -44,6 +51,21 @@ const presentation: Record<
     label: "Active",
     className: "bg-[var(--status-approved-bg)] text-[var(--status-approved)]",
     icon: CheckCircle2,
+  },
+  inactive: {
+    label: "Inactive",
+    className: "bg-destructive/10 text-destructive",
+    icon: XCircle,
+  },
+  upcoming: {
+    label: "Upcoming",
+    className: "bg-[var(--status-pending-bg)] text-[var(--status-pending)]",
+    icon: Clock3,
+  },
+  closed: {
+    label: "Closed",
+    className: "bg-[var(--status-neutral-bg)] text-[var(--status-neutral)]",
+    icon: Archive,
   },
   expired: {
     label: "Expired",

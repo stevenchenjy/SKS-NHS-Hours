@@ -286,25 +286,25 @@ select extensions.lives_ok(
   $$
     select public.create_hour_request_draft(
       p_school_year_id => '10000000-0000-4000-8000-000000000001',
-      p_title => 'Category Cap Attempt',
-      p_description => 'Would exceed the configured Green Team approved-hour cap.',
+      p_title => 'Uncapped Category Request',
+      p_description => 'Confirms that categories no longer impose a separate approved-hour cap.',
       p_category_id => '30000000-0000-4000-8000-000000000001',
       p_service_date => '2026-08-25',
       p_hours => 8.00,
       p_requested_approver_membership_id => '20000000-0000-4000-8000-000000000002',
-      p_client_submission_key => 'category-cap-attempt'
+      p_client_submission_key => 'uncapped-category-request'
     )
   $$,
-  'member can draft a request below the per-request cap'
+  'member can draft a category request within the universal 24-hour sanity limit'
 );
 select extensions.lives_ok(
   $$
     select public.submit_hour_request(
-      (select id from public.hour_requests where client_submission_key = 'category-cap-attempt'),
+      (select id from public.hour_requests where client_submission_key = 'uncapped-category-request'),
       1
     )
   $$,
-  'category-cap request can enter the pending queue'
+  'uncapped category request can enter the pending queue'
 );
 
 reset role;
@@ -344,16 +344,14 @@ select extensions.throws_ok(
   'Request is no longer pending',
   'a second review attempt fails closed'
 );
-select extensions.throws_ok(
+select extensions.lives_ok(
   $$
     select public.review_hour_request(
-      (select id from public.hour_requests where client_submission_key = 'category-cap-attempt'),
+      (select id from public.hour_requests where client_submission_key = 'uncapped-category-request'),
       'approve'
     )
   $$,
-  '23514',
-  'Approval would exceed the member category cap of 20.00 hours',
-  'approval enforces the per-member category cap transactionally'
+  'approval is not blocked by a retired per-category cap'
 );
 
 reset role;
@@ -447,8 +445,8 @@ select extensions.throws_ok(
     )
   $$,
   '23514',
-  'Cannot remove the last teacher administrator for this school year',
-  'last teacher administrator role cannot be removed'
+  'Teacher-administrator access is global; use the global administrator workflow',
+  'teacher-administrator access cannot be removed through a school-year role RPC'
 );
 select extensions.throws_ok(
   $$ select public.set_app_setting('public_signup_enabled', 'true'::jsonb) $$,
@@ -478,16 +476,16 @@ select extensions.is(
     select actual_percentage from public.member_progress
     where membership_id = '20000000-0000-4000-8000-000000000004'
   ),
-  120.00::numeric,
-  'actual percentage remains uncapped above goal'
+  60.00::numeric,
+  'actual percentage uses the fixed 20-hour goal'
 );
 select extensions.is(
   (
     select over_goal_hours from public.member_progress
     where membership_id = '20000000-0000-4000-8000-000000000004'
   ),
-  2.00::numeric,
-  'progress reports hours beyond the member goal'
+  0.00::numeric,
+  'twelve approved hours do not exceed the fixed 20-hour goal'
 );
 select extensions.is(
   (select count(*) from public.school_year_summary),
@@ -528,7 +526,9 @@ select extensions.ok(
   exists (
     select 1 from public.member_progress
     where membership_id = '20000000-0000-4000-8000-000000000007'
-      and role_keys @> array['member', 'committee_head', 'president']::text[]
+      and role_keys @> array[
+        'member', 'committee_head', 'president_vice_president'
+      ]::text[]
   ),
   'roster progress aggregates multi-role assignments without N+1 queries'
 );

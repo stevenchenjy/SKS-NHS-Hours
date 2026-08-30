@@ -2,6 +2,34 @@ import { z } from "zod";
 
 import { membershipStatusSchema } from "./roles";
 
+export type AnnualAccessStatus =
+  "active" | "inactive" | "draft" | "upcoming" | "closed" | "expired" | "suspended" | "archived";
+
+export function deriveAnnualAccessStatus(input: {
+  profileStatus: "active" | "inactive";
+  membershipStatus: "active" | "expired" | "suspended" | "archived";
+  membershipExpirationDate: string;
+  schoolYearStatus: "draft" | "active" | "closed" | "archived";
+  schoolYearStartDate: string;
+  schoolYearEndDate: string;
+  onDate: string;
+}): AnnualAccessStatus {
+  if (["closed", "archived"].includes(input.schoolYearStatus)) return "closed";
+  if (
+    input.membershipStatus === "expired" ||
+    input.membershipExpirationDate < input.onDate ||
+    input.schoolYearEndDate < input.onDate
+  ) {
+    return "expired";
+  }
+  if (input.membershipStatus === "archived") return "archived";
+  if (input.profileStatus === "inactive") return "inactive";
+  if (input.membershipStatus === "suspended") return "suspended";
+  if (input.schoolYearStartDate > input.onDate) return "upcoming";
+  if (input.schoolYearStatus === "draft") return "draft";
+  return "active";
+}
+
 export const SCHOOL_YEAR_LABEL_PATTERN = /^(\d{4})-(\d{4})$/;
 export const ISO_DATE_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 export const SCHOOL_YEAR_STATUSES = ["draft", "active", "closed", "archived"] as const;

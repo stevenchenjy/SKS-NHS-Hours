@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { requireReviewer } from "@/lib/dal/access";
 import { listRosterProgress } from "@/lib/dal/portal";
+import { formatRoleLabel } from "@/lib/domain/roles";
 
 export const metadata: Metadata = { title: "Member roster" };
 
@@ -92,9 +93,7 @@ export default async function MemberRosterPage({
             <option value="">All roles</option>
             <option value="member">Member</option>
             <option value="committee_head">Committee head</option>
-            <option value="president">President</option>
-            <option value="vice_president">Vice president</option>
-            <option value="teacher_admin">Teacher administrator</option>
+            <option value="president_vice_president">President / Vice President</option>
           </select>
         </label>
         <label>
@@ -173,7 +172,7 @@ export default async function MemberRosterPage({
                     <div className="flex max-w-[220px] flex-wrap gap-1">
                       {member.roles?.map((memberRole) => (
                         <Badge key={memberRole} variant="outline" className="capitalize">
-                          {memberRole.replaceAll("_", " ")}
+                          {formatRoleLabel(memberRole)}
                         </Badge>
                       ))}
                     </div>
