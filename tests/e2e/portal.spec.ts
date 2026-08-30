@@ -423,10 +423,11 @@ test("platform owner receives global admin navigation and opens a member profile
 test("platform owner creates a year and assigns the next leadership team", async ({ page }) => {
   await login(page, syntheticAccounts.platformOwner.email);
   await page.goto("/admin/settings/school-years");
-  await page.getByLabel("Label").fill(rolloverLabel);
-  await page.getByLabel("Start date").fill("2027-07-01");
-  await page.getByLabel("End date").fill("2028-06-30");
-  await page.getByRole("button", { name: "Create draft school year" }).click();
+  const createYear = page.getByRole("region", { name: "Create the next school year" });
+  await createYear.getByLabel("Label").fill(rolloverLabel);
+  await createYear.getByLabel("Start date").fill("2027-07-01");
+  await createYear.getByLabel("End date").fill("2028-06-30");
+  await createYear.getByRole("button", { name: "Create draft school year" }).click();
   await expect(
     page.getByText("Draft school year created with the fixed 20-hour member requirement."),
   ).toBeVisible();
