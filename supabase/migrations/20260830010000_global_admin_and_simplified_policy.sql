@@ -2629,7 +2629,9 @@ select
     as approved_hours,
   coalesce(sum(request.hours) filter (where request.status = 'pending'), 0)::numeric(12, 2)
     as pending_hours,
-  null::numeric(12, 2) as remaining_category_hours
+  -- The legacy CASE expression exposed an unbounded numeric type; preserve it
+  -- so CREATE OR REPLACE can retain the deployed view column.
+  null::numeric as remaining_category_hours
 from public.school_year_memberships membership
 join public.school_year_categories year_category
   on year_category.school_year_id = membership.school_year_id
