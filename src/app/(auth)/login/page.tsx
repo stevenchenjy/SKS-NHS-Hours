@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { googleLoginAction } from "@/app/actions/auth-actions";
 import { LoginForm } from "@/components/auth/login-form";
+import { SchoolBrand } from "@/components/auth/school-brand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { safeInternalPath } from "@/lib/safe-navigation";
@@ -48,10 +49,7 @@ export default async function LoginPage({
     <Card className="border-border/80 py-0 shadow-sm">
       <CardHeader className="border-b px-6 py-7">
         <div className="mb-5 flex items-center gap-3 lg:hidden">
-          <span className="flex size-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-            NHS
-          </span>
-          <span className="text-sm font-semibold">NHS Service Hours</span>
+          <SchoolBrand compact />
         </div>
         <CardTitle as="h1" className="text-3xl font-bold tracking-tight">
           Welcome back
