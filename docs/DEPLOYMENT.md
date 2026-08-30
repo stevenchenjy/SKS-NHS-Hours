@@ -56,17 +56,17 @@ Copy the local URL/keys from `supabase status` into `.env.local`; never copy the
 
 Configure every value separately for its environment.
 
-| Variable                          | Scope          | Requirement                                                                                     |
-| --------------------------------- | -------------- | ----------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`        | Browser/server | Exact Supabase project URL                                                                      |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`   | Browser/server | Browser-safe publishable/legacy anon key, still constrained by RLS                              |
-| `NEXT_PUBLIC_APP_URL`             | Browser/server | Exact public origin, no path/trailing slash                                                     |
-| `SUPABASE_SERVICE_ROLE_KEY`       | Server only    | Elevated secret/service-role credential for narrow Auth admin operations                        |
-| `PASSWORD_UPDATE_CONTEXT_SECRET`  | Server only    | Dedicated random value of at least 32 bytes for signed invite/recovery password-update contexts |
-| `ALLOWED_EMAIL_DOMAINS`           | Server only    | Comma-separated lowercase school domains; does not provision access                             |
-| `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` | Browser/server | `false` until Google and redirects are fully configured                                         |
-| `SERVER_ACTION_ALLOWED_ORIGINS`   | Server config  | Normally empty; reviewed comma-separated additional trusted origins only                        |
-| `NHS_DESIGN_PREVIEW`              | Server only    | `false` or absent in Preview/Production                                                         |
+| Variable                               | Scope          | Requirement                                                                                     |
+| -------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Browser/server | Exact Supabase project URL                                                                      |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser/server | Browser-safe publishable key; the local CLI's legacy anon value is also supported               |
+| `NEXT_PUBLIC_APP_URL`                  | Browser/server | Exact public origin, no path/trailing slash                                                     |
+| `SUPABASE_SECRET_KEY`                  | Server only    | Elevated secret key; the local CLI's legacy service-role value is also supported                |
+| `PASSWORD_UPDATE_CONTEXT_SECRET`       | Server only    | Dedicated random value of at least 32 bytes for signed invite/recovery password-update contexts |
+| `ALLOWED_EMAIL_DOMAINS`                | Server only    | Comma-separated lowercase school domains; does not provision access                             |
+| `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED`      | Browser/server | `false` until Google and redirects are fully configured                                         |
+| `SERVER_ACTION_ALLOWED_ORIGINS`        | Server config  | Normally empty; reviewed comma-separated additional trusted origins only                        |
+| `NHS_DESIGN_PREVIEW`                   | Server only    | `false` or absent in Preview/Production                                                         |
 
 Never put an elevated key in a `NEXT_PUBLIC_` value. Current opaque `sb_secret_…` Supabase keys belong in the `apikey` header when used directly; do not treat them as JWT bearer tokens. Keep actual values in Vercel/environment secret storage, not Git.
 

@@ -37,17 +37,17 @@ Do not install dependencies with npm or Yarn; keep `pnpm-lock.yaml` authoritativ
 
 Create `.env.local` from `.env.example`. `.env.local` is ignored by Git.
 
-| Variable                          | Exposure             | Required                                   | Meaning                                                                                                  |
-| --------------------------------- | -------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`        | Browser and server   | Yes                                        | Environment-specific Supabase project URL                                                                |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`   | Browser and server   | Yes                                        | Browser-safe Supabase publishable/legacy anon key; it is not a secret and remains constrained by RLS     |
-| `NEXT_PUBLIC_APP_URL`             | Browser and server   | Yes                                        | Exact public origin for this deployment, with no path or trailing slash                                  |
-| `SUPABASE_SERVICE_ROLE_KEY`       | Server only          | Required for privileged account operations | Elevated Supabase secret/service-role credential used by the server-only admin client                    |
-| `PASSWORD_UPDATE_CONTEXT_SECRET`  | Server only          | Required for password-update proof         | At least 32 random bytes for signing the 30-minute invite/recovery context; use a dedicated hosted value |
-| `ALLOWED_EMAIL_DOMAINS`           | Server only          | Recommended                                | Comma-separated lowercase school domains; this supplements invitations and never grants access by itself |
-| `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` | Browser and server   | Yes                                        | `true` only after Google and Supabase OAuth are configured; otherwise `false`                            |
-| `SERVER_ACTION_ALLOWED_ORIGINS`   | Server configuration | Optional                                   | Comma-separated additional trusted origins, without paths; normally empty on a single-origin deployment  |
-| `NHS_DESIGN_PREVIEW`              | Server only          | Optional                                   | Local design-fixture switch; must be `false` or absent in Preview and Production                         |
+| Variable                               | Exposure             | Required                                   | Meaning                                                                                                  |
+| -------------------------------------- | -------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Browser and server   | Yes                                        | Environment-specific Supabase project URL                                                                |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser and server   | Yes                                        | Browser-safe Supabase publishable key; use the local CLI's legacy anon value for local development       |
+| `NEXT_PUBLIC_APP_URL`                  | Browser and server   | Yes                                        | Exact public origin for this deployment, with no path or trailing slash                                  |
+| `SUPABASE_SECRET_KEY`                  | Server only          | Required for privileged account operations | Elevated Supabase secret key; use the local CLI's legacy service-role value only for local development   |
+| `PASSWORD_UPDATE_CONTEXT_SECRET`       | Server only          | Required for password-update proof         | At least 32 random bytes for signing the 30-minute invite/recovery context; use a dedicated hosted value |
+| `ALLOWED_EMAIL_DOMAINS`                | Server only          | Recommended                                | Comma-separated lowercase school domains; this supplements invitations and never grants access by itself |
+| `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED`      | Browser and server   | Yes                                        | `true` only after Google and Supabase OAuth are configured; otherwise `false`                            |
+| `SERVER_ACTION_ALLOWED_ORIGINS`        | Server configuration | Optional                                   | Comma-separated additional trusted origins, without paths; normally empty on a single-origin deployment  |
+| `NHS_DESIGN_PREVIEW`                   | Server only          | Optional                                   | Local design-fixture switch; must be `false` or absent in Preview and Production                         |
 
 The environment parser in `src/lib/env.ts` fails closed when required values are absent or malformed. The elevated client in `src/lib/supabase/admin.ts` is server-only. A value prefixed with `NEXT_PUBLIC_` is bundled for browsers, so an elevated key must never be placed in one of those variables.
 

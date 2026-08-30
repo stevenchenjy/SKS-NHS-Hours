@@ -5,13 +5,13 @@ const { loadEnvConfig } = nextEnv;
 loadEnvConfig(process.cwd());
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const secretKey = process.env.SUPABASE_SECRET_KEY;
 const password = process.env.E2E_PASSWORD ?? "LocalOnly123!";
 
-if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+if (!supabaseUrl || !publishableKey || !secretKey) {
   throw new Error(
-    "NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY are required to prepare E2E Auth users.",
+    "NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, and SUPABASE_SECRET_KEY are required to prepare E2E Auth users.",
   );
 }
 
@@ -37,10 +37,10 @@ const syntheticUsers = [
   { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa008", email: "expired-member@example.edu" },
 ];
 
-const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+const adminClient = createClient(supabaseUrl, secretKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-const authClient = createClient(supabaseUrl, anonKey, {
+const authClient = createClient(supabaseUrl, publishableKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 

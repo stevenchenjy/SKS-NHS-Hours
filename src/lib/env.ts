@@ -4,9 +4,9 @@ import { z } from "zod";
 
 const serverEnvironmentSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20),
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(20),
   NEXT_PUBLIC_APP_URL: z.url(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
+  SUPABASE_SECRET_KEY: z.string().min(20).optional(),
   PASSWORD_UPDATE_CONTEXT_SECRET: z.string().min(32).optional(),
   ALLOWED_EMAIL_DOMAINS: z.string().default(""),
   NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: z.enum(["true", "false"]).default("false"),
@@ -46,7 +46,9 @@ export function getServerEnvironment(): ServerEnvironment {
 }
 
 export function hasSupabaseEnvironment(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  );
 }
 
 export function assertAllowedEmail(email: string, domains: string[]): void {
@@ -58,11 +60,10 @@ export function assertAllowedEmail(email: string, domains: string[]): void {
 
 export function getPasswordUpdateContextSecret(): string {
   const environment = getServerEnvironment();
-  const secret =
-    environment.PASSWORD_UPDATE_CONTEXT_SECRET ?? environment.SUPABASE_SERVICE_ROLE_KEY;
+  const secret = environment.PASSWORD_UPDATE_CONTEXT_SECRET ?? environment.SUPABASE_SECRET_KEY;
   if (!secret || secret.length < 32) {
     throw new Error(
-      "PASSWORD_UPDATE_CONTEXT_SECRET or a sufficiently long SUPABASE_SERVICE_ROLE_KEY is required.",
+      "PASSWORD_UPDATE_CONTEXT_SECRET or a sufficiently long SUPABASE_SECRET_KEY is required.",
     );
   }
   return secret;

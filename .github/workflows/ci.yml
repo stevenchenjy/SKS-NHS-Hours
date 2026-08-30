@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 20
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: example-anon-key-that-is-long-enough-for-build
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: example-publishable-key-that-is-long-enough-for-build
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       ALLOWED_EMAIL_DOMAINS: example.edu
       NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "false"
@@ -85,8 +85,8 @@ jobs:
           supabase status -o env > /tmp/nhs-supabase.env
           source /tmp/nhs-supabase.env
           echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY" >> "$GITHUB_ENV"
-          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SECRET_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
       - run: pnpm test:e2e:prepare
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e

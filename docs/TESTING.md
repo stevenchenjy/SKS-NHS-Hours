@@ -154,7 +154,7 @@ The environment parser intentionally fails closed when required public settings 
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co \
-NEXT_PUBLIC_SUPABASE_ANON_KEY=example-anon-key-that-is-long-enough-for-build \
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=example-publishable-key-that-is-long-enough-for-build \
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000 \
 PASSWORD_UPDATE_CONTEXT_SECRET=build-only-password-context-secret-000000000000 \
 ALLOWED_EMAIL_DOMAINS=example.edu \

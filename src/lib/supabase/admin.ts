@@ -6,11 +6,11 @@ import { getServerEnvironment } from "@/lib/env";
 
 export function createSupabaseAdminClient() {
   const environment = getServerEnvironment();
-  if (!environment.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for this operation.");
+  if (!environment.SUPABASE_SECRET_KEY) {
+    throw new Error("SUPABASE_SECRET_KEY is required for this operation.");
   }
 
-  return createClient(environment.NEXT_PUBLIC_SUPABASE_URL, environment.SUPABASE_SERVICE_ROLE_KEY, {
+  return createClient(environment.NEXT_PUBLIC_SUPABASE_URL, environment.SUPABASE_SECRET_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }

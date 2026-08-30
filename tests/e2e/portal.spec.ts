@@ -63,12 +63,12 @@ async function createPartialDraft(): Promise<string> {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     "NEXT_PUBLIC_SUPABASE_URL",
   );
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!anonKey) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY is required for E2E tests.");
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!publishableKey) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is required for E2E tests.");
   }
 
-  const client = createClient(supabaseUrl, anonKey, {
+  const client = createClient(supabaseUrl, publishableKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const { error: signInError } = await client.auth.signInWithPassword({
