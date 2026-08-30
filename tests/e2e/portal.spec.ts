@@ -427,6 +427,7 @@ test("platform owner receives global admin navigation and opens a member profile
 
 test("platform owner creates a year and assigns the next leadership team", async ({ page }) => {
   await login(page, syntheticAccounts.platformOwner.email);
+  await expect(page.locator("header").getByText("Platform owner", { exact: true })).toBeVisible();
   await page.goto("/admin/settings/school-years");
   const createYear = page.getByRole("region", { name: "Create the next school year" });
   await createYear.getByLabel("Label").fill(rolloverLabel);
