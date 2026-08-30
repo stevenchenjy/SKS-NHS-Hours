@@ -302,7 +302,7 @@ select set_config(
   'test.closed_admin_year_id',
   (
     select (public.create_school_year(
-      p_label => 'Closed global-invitation attribution',
+      p_label => '2030-2031',
       p_start_date => date '2030-09-01',
       p_end_date => date '2031-09-01',
       p_default_target_hours => 20.00
