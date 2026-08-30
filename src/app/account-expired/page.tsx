@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Archive, LogOut } from "lucide-react";
 
 import { signOutAction } from "@/app/actions/auth-actions";
@@ -11,6 +12,12 @@ export const metadata: Metadata = { title: "Membership inactive" };
 
 export default async function AccountExpiredPage() {
   const viewer = await getViewer();
+
+  if (viewer?.activeMembership) {
+    if (viewer.isTeacherAdmin) redirect("/admin");
+    if (viewer.isMember) redirect("/dashboard");
+  }
+
   const latest = viewer?.memberships[0];
   return (
     <main
