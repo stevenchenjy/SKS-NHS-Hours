@@ -36,18 +36,23 @@ test.beforeAll(() => {
 });
 
 async function login(page: Page, email: string) {
+  const destination = /\/(dashboard|admin|account-expired)/;
   await page.goto("/login");
   await page.getByLabel("School email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   const renderedError = page.getByRole("alert").filter({ hasText: /\S/ });
   await Promise.race([
-    page.waitForURL(/\/(dashboard|admin|account-expired)/),
+    page.waitForURL(destination),
     renderedError.waitFor({ state: "visible" }).then(async () => {
       const message = await renderedError.textContent();
       throw new Error(`Synthetic sign-in failed for ${email}: ${message?.trim()}`);
     }),
   ]);
+  // A full request confirms the server can read the cookie set by the login
+  // action before the test interacts with the destination page.
+  await page.reload();
+  await page.waitForURL(destination);
 }
 
 async function expectProgressSummary(
