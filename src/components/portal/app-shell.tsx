@@ -32,8 +32,13 @@ interface NavigationItem {
 const memberNavigation: NavigationItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/hours/new", label: "Log Hours", icon: PencilLine },
-  { href: "/profile", label: "My Profile", icon: UserRound },
 ];
+
+const profileNavigation: NavigationItem = {
+  href: "/profile",
+  label: "My Profile",
+  icon: UserRound,
+};
 
 const reviewerNavigation: NavigationItem[] = [
   { href: "/admin/requests", label: "Review requests", icon: FileClock },
@@ -60,16 +65,6 @@ function initials(name: string): string {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
-}
-
-function roleLabel(viewer: Viewer): string {
-  if (viewer.isPlatformOwner) return "Platform owner";
-  if (viewer.isTeacherAdmin) return "Global teacher administrator";
-  if (viewer.roles.includes("president_vice_president")) {
-    return "President / Vice President";
-  }
-  if (viewer.roles.includes("committee_head")) return "Committee head";
-  return "Member";
 }
 
 function NavLink({ item, compact = false }: { item: NavigationItem; compact?: boolean }) {
@@ -105,6 +100,7 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
     ...(viewer.canReview ? reviewerNavigation : []),
     ...(viewer.isTeacherAdmin ? teacherAdminNavigation : []),
     ...(viewer.isPlatformOwner ? [rolePreviewNavigation] : []),
+    ...(viewer.isMember ? [profileNavigation] : []),
   ];
   const bottomNavigation = adminOnly
     ? [
@@ -115,7 +111,7 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
       ]
     : viewer.canReview
       ? [memberNavigation[0], memberNavigation[1], reviewerNavigation[0]]
-      : memberNavigation;
+      : [...memberNavigation, profileNavigation];
   const safeBottomNavigation = bottomNavigation.filter((item): item is NavigationItem =>
     Boolean(item),
   );
@@ -132,17 +128,20 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
           </span>
           <span>NHS Service Hours</span>
         </Link>
-        <div className="flex items-center gap-3">
+        <Link
+          href="/profile"
+          aria-label="Open My Profile"
+          className="flex items-center gap-3 rounded-md p-1 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <div className="hidden text-right sm:block">
             <p className="text-sm font-semibold">{viewer.profile.full_name}</p>
-            <p className="text-xs text-muted-foreground">{roleLabel(viewer)}</p>
           </div>
           <Avatar className="size-9">
             <AvatarFallback className="bg-secondary text-xs font-bold text-secondary-foreground">
               {initials(viewer.profile.full_name)}
             </AvatarFallback>
           </Avatar>
-        </div>
+        </Link>
       </header>
 
       <aside className="fixed bottom-0 left-0 top-20 z-30 hidden w-[292px] flex-col border-r bg-sidebar lg:flex">
