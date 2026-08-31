@@ -100,7 +100,6 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
     ...(viewer.canReview ? reviewerNavigation : []),
     ...(viewer.isTeacherAdmin ? teacherAdminNavigation : []),
     ...(viewer.isPlatformOwner ? [rolePreviewNavigation] : []),
-    ...(viewer.isMember ? [profileNavigation] : []),
   ];
   const bottomNavigation = adminOnly
     ? [
@@ -168,6 +167,7 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
                 : (viewer.activeMembership?.school_year.label ?? "No active year")}
             </p>
           </div>
+          {viewer.isMember ? <NavLink item={profileNavigation} /> : null}
           <form action={signOutAction}>
             <Button type="submit" variant="ghost" className="w-full justify-start">
               <LogOut data-icon="inline-start" aria-hidden="true" />
