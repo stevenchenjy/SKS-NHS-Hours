@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { CheckCircle2, Save } from "lucide-react";
 
 import { saveHourRequestAction, type HourRequestFormState } from "@/app/actions/hour-actions";
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,6 +20,26 @@ import { formatRoleLabel } from "@/lib/domain/roles";
 import type { HourRequest, ReviewerOption, ServiceCategory } from "@/lib/types";
 
 const initialState: HourRequestFormState = {};
+
+interface HourRequestFormValues {
+  category_id: string;
+  requested_approver_membership_id: string;
+  title: string;
+  description: string;
+  service_date: string;
+  hours: string;
+}
+
+function initialValues(request?: HourRequest): HourRequestFormValues {
+  return {
+    category_id: request?.category_id ?? "",
+    requested_approver_membership_id: request?.requested_approver_membership_id ?? "",
+    title: request?.title ?? "",
+    description: request?.description ?? "",
+    service_date: request?.service_date ?? "",
+    hours: request?.hours?.toString() ?? "",
+  };
+}
 
 export function HourRequestForm({
   schoolYearId,
@@ -37,8 +57,7 @@ export function HourRequestForm({
   request?: HourRequest;
 }) {
   const [state, action, pending] = useActionState(saveHourRequestAction, initialState);
-  const currentCategory = request?.category_id ?? undefined;
-  const currentReviewer = request?.requested_approver_membership_id ?? undefined;
+  const [values, setValues] = useState(() => initialValues(request));
   const today = new Date().toISOString().slice(0, 10);
   const categoryItems = Object.fromEntries(
     categories.map((category) => [category.id, category.name]),
@@ -74,28 +93,29 @@ export function HourRequestForm({
               name="title"
               required
               maxLength={120}
-              defaultValue={request?.title ?? ""}
+              value={values.title}
+              onChange={(event) =>
+                setValues((current) => ({ ...current, title: event.target.value }))
+              }
               placeholder="Example: Saturday food pantry shift"
               className="h-11"
             />
             <FieldError>{state.fieldErrors?.title?.[0]}</FieldError>
           </Field>
           <Field data-invalid={Boolean(state.fieldErrors?.description)}>
-            <FieldLabel htmlFor="description">What service did you perform?</FieldLabel>
+            <FieldLabel htmlFor="description">Description (optional)</FieldLabel>
             <Textarea
               id="description"
               name="description"
-              required
-              minLength={20}
               maxLength={2000}
               rows={6}
-              defaultValue={request?.description ?? ""}
-              placeholder="Describe what you did, whom it served, and your responsibilities."
+              value={values.description}
+              onChange={(event) =>
+                setValues((current) => ({ ...current, description: event.target.value }))
+              }
+              placeholder="Add any helpful details about the activity."
               className="min-h-36 resize-y text-base"
             />
-            <FieldDescription>
-              Be specific enough for a school leader to make a decision.
-            </FieldDescription>
             <FieldError>{state.fieldErrors?.description?.[0]}</FieldError>
           </Field>
           <div className="grid gap-5 sm:grid-cols-2">
@@ -103,7 +123,10 @@ export function HourRequestForm({
               <FieldLabel htmlFor="category_id">Service category</FieldLabel>
               <Select
                 name="category_id"
-                defaultValue={currentCategory}
+                value={values.category_id || undefined}
+                onValueChange={(value) =>
+                  setValues((current) => ({ ...current, category_id: value ?? "" }))
+                }
                 items={categoryItems}
                 required
               >
@@ -130,7 +153,10 @@ export function HourRequestForm({
                 type="date"
                 max={today}
                 required
-                defaultValue={request?.service_date ?? ""}
+                value={values.service_date}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, service_date: event.target.value }))
+                }
                 className="h-11"
               />
               <FieldError>{state.fieldErrors?.service_date?.[0]}</FieldError>
@@ -147,7 +173,10 @@ export function HourRequestForm({
               step="0.25"
               inputMode="decimal"
               required
-              defaultValue={request?.hours ?? ""}
+              value={values.hours}
+              onChange={(event) =>
+                setValues((current) => ({ ...current, hours: event.target.value }))
+              }
               className="h-11 max-w-44"
             />
             <FieldError>{state.fieldErrors?.hours?.[0]}</FieldError>
@@ -169,7 +198,13 @@ export function HourRequestForm({
           <FieldLabel htmlFor="requested_approver_membership_id">School leader</FieldLabel>
           <Select
             name="requested_approver_membership_id"
-            defaultValue={currentReviewer}
+            value={values.requested_approver_membership_id || undefined}
+            onValueChange={(value) =>
+              setValues((current) => ({
+                ...current,
+                requested_approver_membership_id: value ?? "",
+              }))
+            }
             items={reviewerItems}
             required
           >
@@ -199,6 +234,15 @@ export function HourRequestForm({
           className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
         >
           {state.error}
+        </p>
+      ) : null}
+      {state.fieldErrors ? (
+        <p
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+        >
+          Nothing was submitted. Your entries are still shown below—correct the highlighted fields
+          and try again.
         </p>
       ) : null}
 

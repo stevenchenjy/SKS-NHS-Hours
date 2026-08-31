@@ -22,12 +22,8 @@ const commonHourRequestSchema = z.object({
 
 const categorySchema = z.uuid("Choose a service category.");
 const reviewerSchema = z.uuid("Choose a requested approver.");
-const titleSchema = z.string().trim().min(3, "Use a specific activity title.").max(120);
-const descriptionSchema = z
-  .string()
-  .trim()
-  .min(20, "Explain the service you performed in at least 20 characters.")
-  .max(2_000);
+const titleSchema = z.string().trim().min(1, "Enter an activity title.").max(120);
+const descriptionSchema = z.string().trim().max(2_000);
 const serviceDateSchema = z.iso.date("Enter a valid service date.");
 const hoursSchema = z.coerce
   .number()
@@ -54,7 +50,7 @@ const hourRequestSchema = z.discriminatedUnion("intent", [
     category_id: categorySchema,
     requested_approver_membership_id: reviewerSchema,
     title: titleSchema,
-    description: descriptionSchema,
+    description: z.preprocess(blankToUndefined, descriptionSchema.optional()),
     service_date: serviceDateSchema,
     hours: hoursSchema,
   }),
@@ -63,7 +59,7 @@ const hourRequestSchema = z.discriminatedUnion("intent", [
     category_id: categorySchema,
     requested_approver_membership_id: reviewerSchema,
     title: titleSchema,
-    description: descriptionSchema,
+    description: z.preprocess(blankToUndefined, descriptionSchema.optional()),
     service_date: serviceDateSchema,
     hours: hoursSchema,
   }),
