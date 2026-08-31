@@ -113,9 +113,6 @@ export function ProgressSummary({
           <dd className="font-semibold text-foreground">{hours(pending)}</dd>
         </div>
       </dl>
-      <p className={compact ? "text-sm text-muted-foreground" : "text-base text-muted-foreground"}>
-        {summary}
-      </p>
     </div>
   );
 }

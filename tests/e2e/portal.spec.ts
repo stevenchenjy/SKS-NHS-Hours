@@ -64,7 +64,6 @@ async function expectProgressSummary(
 ) {
   const progress = page.getByRole("progressbar", { name: "Approved service-hour progress" });
   await expect(progress).toHaveAttribute("aria-valuetext", summary);
-  await expect(page.getByText(summary, { exact: true })).toBeVisible();
   await expect(
     page.getByText(`${approvedPercentage}% approved · ${pendingPercentage}% pending`, {
       exact: true,
