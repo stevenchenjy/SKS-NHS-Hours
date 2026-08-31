@@ -213,7 +213,7 @@ describe("getViewer role loading", () => {
       roles: ["member", "president_vice_president"],
       globalAccessLevel: null,
       isMember: true,
-      canReview: true,
+      canReview: false,
       isTeacherAdmin: false,
       isPlatformOwner: false,
     });

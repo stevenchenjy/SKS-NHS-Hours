@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { Viewer } from "@/lib/types";
+
 export const SCHOOL_YEAR_ROLES = [
   "member",
   "committee_head",
@@ -7,11 +9,7 @@ export const SCHOOL_YEAR_ROLES = [
   "teacher_admin",
 ] as const;
 
-export const REVIEW_CAPABLE_ROLES = [
-  "committee_head",
-  "president_vice_president",
-  "teacher_admin",
-] as const;
+export const REVIEW_CAPABLE_ROLES = ["committee_head", "teacher_admin"] as const;
 
 export const MEMBERSHIP_STATUSES = ["active", "expired", "suspended", "archived"] as const;
 
@@ -38,6 +36,10 @@ export function hasReviewCapability(roles: readonly SchoolYearRole[]): boolean {
 
 export function hasTeacherAdminCapability(roles: readonly SchoolYearRole[]): boolean {
   return roles.includes("teacher_admin");
+}
+
+export function canViewMemberProgress(viewer: Pick<Viewer, "isTeacherAdmin" | "roles">): boolean {
+  return viewer.isTeacherAdmin || viewer.roles.includes("president_vice_president");
 }
 
 export function formatRoleLabel(role: SchoolYearRole): string {

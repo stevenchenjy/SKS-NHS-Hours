@@ -18,6 +18,7 @@ import { StatusBadge } from "@/components/portal/status-badge";
 import { ReviewDecisionPanel } from "@/components/review/review-decision-panel";
 import { Button } from "@/components/ui/button";
 import { requireReviewer } from "@/lib/dal/access";
+import { canViewMemberProgress } from "@/lib/domain/roles";
 import { getHourRequest, getProgress, listActiveReviewers, listCategories } from "@/lib/dal/portal";
 import type { HourRequest } from "@/lib/types";
 
@@ -66,9 +67,10 @@ export default async function ReviewRequestPage({
   } catch {
     notFound();
   }
+  const progressAccess = canViewMemberProgress(viewer);
   const [progress, allReviewers, categories] = await Promise.all([
-    getProgress(request.member_membership_id),
-    listActiveReviewers(request.school_year_id),
+    progressAccess ? getProgress(request.member_membership_id) : Promise.resolve(null),
+    viewer.isTeacherAdmin ? listActiveReviewers(request.school_year_id) : Promise.resolve([]),
     listCategories(request.school_year_id),
   ]);
   const member = profileFromMembership(request.memberMembership);
@@ -107,6 +109,14 @@ export default async function ReviewRequestPage({
           className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
         >
           The requested approver was changed and the reassignment was recorded.
+        </p>
+      ) : null}
+      {notice === "decision-recorded" ? (
+        <p
+          role="status"
+          className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
+        >
+          Your decision was recorded. The immutable request history is shown below.
         </p>
       ) : null}
 
@@ -203,17 +213,21 @@ export default async function ReviewRequestPage({
                   <p className="mt-1 text-sm text-muted-foreground">{memberEmail}</p>
                 ) : null}
               </div>
-              <Button
-                render={<Link href={`/admin/members/${member?.id ?? progress.profile_id}`} />}
-                variant="ghost"
-                size="sm"
-              >
-                Profile
-              </Button>
+              {progressAccess && member?.id ? (
+                <Button
+                  render={<Link href={`/admin/members/${member.id}`} />}
+                  variant="ghost"
+                  size="sm"
+                >
+                  Profile
+                </Button>
+              ) : null}
             </div>
-            <div className="mt-6 border-t pt-5">
-              <ProgressSummary progress={progress} compact />
-            </div>
+            {progressAccess && progress ? (
+              <div className="mt-6 border-t pt-5">
+                <ProgressSummary progress={progress} compact />
+              </div>
+            ) : null}
             {actualReviewer ? (
               <p className="mt-4 text-sm text-muted-foreground">
                 Actual reviewer:{" "}
@@ -252,12 +266,14 @@ export default async function ReviewRequestPage({
                 Record a decision
               </h2>
               <p className="mb-5 text-sm leading-6 text-muted-foreground">
-                Your identity becomes the actual reviewer, even when someone else was requested.
+                Teacher administrators may review any pending request. Committee heads may review
+                only requests assigned to them.
               </p>
               <ReviewDecisionPanel
                 requestId={request.id}
                 reviewers={reviewers}
                 currentReviewerMembershipId={request.requested_approver_membership_id}
+                canReassign={viewer.isTeacherAdmin}
               />
             </section>
           )}

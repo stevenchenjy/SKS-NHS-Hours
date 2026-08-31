@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CalendarDays, Mail } from "lucide-react";
 
 import { PageHeader } from "@/components/portal/page-header";
@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requireReviewer } from "@/lib/dal/access";
+import { canViewMemberProgress } from "@/lib/domain/roles";
 import {
   getProfileRecord,
   getProgress,
@@ -41,7 +42,8 @@ export default async function MemberProfilePage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireReviewer();
+  const viewer = await requireReviewer();
+  if (!canViewMemberProgress(viewer)) redirect("/admin/requests?notice=not-authorized");
   const { id } = await params;
   const yearValue = (await searchParams).year;
   const requestedYear = Array.isArray(yearValue) ? yearValue[0] : yearValue;

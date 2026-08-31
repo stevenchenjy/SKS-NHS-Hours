@@ -155,7 +155,7 @@ describe("review authorization invariants", () => {
     });
   });
 
-  it.each(["committee_head", "president_vice_president", "teacher_admin"] as const)(
+  it.each(["committee_head", "teacher_admin"] as const)(
     "recognizes %s as a review-capable role",
     (role) => {
       expect(
@@ -169,13 +169,21 @@ describe("review authorization invariants", () => {
     },
   );
 
-  it("rejects inactive, wrong-year, and member-only requested approvers", () => {
+  it("rejects inactive, wrong-year, member-only, and president-only requested approvers", () => {
     expect(
       isEligibleRequestedApprover({
         membershipStatus: "suspended",
         membershipSchoolYearId: SCHOOL_YEAR_ID,
         requestSchoolYearId: SCHOOL_YEAR_ID,
         roles: ["teacher_admin"],
+      }),
+    ).toBe(false);
+    expect(
+      isEligibleRequestedApprover({
+        membershipStatus: "active",
+        membershipSchoolYearId: SCHOOL_YEAR_ID,
+        requestSchoolYearId: SCHOOL_YEAR_ID,
+        roles: ["president_vice_president"],
       }),
     ).toBe(false);
     expect(

@@ -12,7 +12,6 @@ const password = process.env.E2E_PASSWORD ?? "LocalOnly123!";
 const assignedTitle = `E2E Park Inventory ${Date.now()}`;
 const openQueueTitle = `E2E Food Drive ${Date.now()}`;
 const concurrentReviewTitle = `E2E Concurrent Review ${Date.now()}`;
-const selfReviewTitle = `E2E Leader Service ${Date.now()}`;
 const overRequirementTitle = `E2E Over Requirement ${Date.now()}`;
 const rolloverLabel = "2027-2028";
 const activeSchoolYearId = "10000000-0000-4000-8000-000000000001";
@@ -223,7 +222,8 @@ test("requested leader processes the assigned request and progress updates", asy
   await openQueueRequest(page, assignedTitle);
   await expect(page.getByRole("heading", { name: "Review request" })).toBeVisible();
   await page.getByRole("button", { name: "Approve request" }).click();
-  await page.waitForURL(/\/admin\/requests\?notice=decision-recorded/);
+  await page.waitForURL(/\/admin\/requests\/.+\?notice=decision-recorded/);
+  await expect(page.getByRole("status")).toContainText("immutable request history");
 
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
@@ -239,12 +239,12 @@ test("requested leader processes the assigned request and progress updates", asy
   );
 });
 
-test("a different eligible leader processes a request from all pending", async ({ page }) => {
+test("a teacher administrator processes a request from all pending", async ({ page }) => {
   await login(page, syntheticAccounts.member.email);
   await submitRequest(page, openQueueTitle);
   const openQueueRequestPath = new URL(page.url()).pathname;
-  await login(page, syntheticAccounts.presidentVicePresident.email);
-  await expect(page.locator("header").getByText("President / Vice President")).toBeVisible();
+  await login(page, syntheticAccounts.platformOwner.email);
+  await expect(page.getByRole("link", { name: "Open My Profile" })).toBeVisible();
   await page.goto(`/admin/requests?scope=all&search=${encodeURIComponent(openQueueTitle)}`);
   await openQueueRequest(page, openQueueTitle);
   await expect(page.getByText(openQueueTitle)).toBeVisible();
@@ -257,7 +257,7 @@ test("a different eligible leader processes a request from all pending", async (
     syntheticAccounts.committeeHead.fullName,
   );
   await expect(page.getByText("Actual reviewer", { exact: true }).locator("..")).toContainText(
-    syntheticAccounts.presidentVicePresident.fullName,
+    syntheticAccounts.platformOwner.fullName,
   );
 });
 
@@ -271,26 +271,26 @@ test("simultaneous reviewers serialize to one decision", async ({ browser, baseU
   const requestPath = `/admin/requests/${requestId}`;
 
   const reviewerContext = await browser.newContext({ baseURL });
-  const leaderContext = await browser.newContext({ baseURL });
+  const teacherContext = await browser.newContext({ baseURL });
   try {
     const reviewerPage = await reviewerContext.newPage();
-    const leaderPage = await leaderContext.newPage();
+    const teacherPage = await teacherContext.newPage();
     await Promise.all([
       login(reviewerPage, syntheticAccounts.committeeHead.email),
-      login(leaderPage, syntheticAccounts.presidentVicePresident.email),
+      login(teacherPage, syntheticAccounts.platformOwner.email),
     ]);
-    await Promise.all([reviewerPage.goto(requestPath), leaderPage.goto(requestPath)]);
+    await Promise.all([reviewerPage.goto(requestPath), teacherPage.goto(requestPath)]);
     await Promise.all([
       expect(reviewerPage.getByText(concurrentReviewTitle)).toBeVisible(),
-      expect(leaderPage.getByText(concurrentReviewTitle)).toBeVisible(),
+      expect(teacherPage.getByText(concurrentReviewTitle)).toBeVisible(),
     ]);
 
     await Promise.all([
       reviewerPage.getByRole("button", { name: "Approve request" }).click(),
-      leaderPage.getByRole("button", { name: "Approve request" }).click(),
+      teacherPage.getByRole("button", { name: "Approve request" }).click(),
     ]);
 
-    const pages = [reviewerPage, leaderPage];
+    const pages = [reviewerPage, teacherPage];
     await expect
       .poll(() => pages.filter((candidate) => candidate.url().includes("decision-recorded")).length)
       .toBe(1);
@@ -309,7 +309,7 @@ test("simultaneous reviewers serialize to one decision", async ({ browser, baseU
       })
       .toBe(1);
   } finally {
-    await Promise.all([reviewerContext.close(), leaderContext.close()]);
+    await Promise.all([reviewerContext.close(), teacherContext.close()]);
   }
 
   await page.goto(`/hours/${requestId}`);
@@ -317,18 +317,17 @@ test("simultaneous reviewers serialize to one decision", async ({ browser, baseU
   await expect(requestHistory.getByText("approved", { exact: true })).toHaveCount(1);
   await expect(page.getByText("Actual reviewer", { exact: true }).locator("..")).toContainText(
     new RegExp(
-      `${syntheticAccounts.committeeHead.fullName}|${syntheticAccounts.presidentVicePresident.fullName}`,
+      `${syntheticAccounts.committeeHead.fullName}|${syntheticAccounts.platformOwner.fullName}`,
     ),
   );
 });
 
-test("self-review controls are denied for a leader's own request", async ({ page }) => {
+test("president and vice president cannot open the review queue without committee-head access", async ({
+  page,
+}) => {
   await login(page, syntheticAccounts.leaderMember.email);
-  await submitRequest(page, selfReviewTitle);
-  await page.goto(`/admin/requests?scope=all&search=${encodeURIComponent(selfReviewTitle)}`);
-  await openQueueRequest(page, selfReviewTitle);
-  await expect(page.getByRole("heading", { name: "Self-review is prohibited" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve request" })).toHaveCount(0);
+  await page.goto("/admin/requests");
+  await expect(page).toHaveURL(/\/dashboard\?notice=not-authorized/);
 });
 
 test("changes-requested activity returns to the member for editing and resubmission", async ({
@@ -389,8 +388,8 @@ test("platform owner receives global admin navigation and opens a member profile
 }) => {
   await login(page, syntheticAccounts.platformOwner.email);
   await expect(page).toHaveURL(/\/admin\/members(?:\?|$)/);
-  await expect(page.locator("header").getByText("Platform owner", { exact: true })).toBeVisible();
-  await expect(page.getByText("All school years", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open My Profile" })).toBeVisible();
+  await expect(page.getByText("All school years", { exact: true })).toHaveCount(0);
   const primaryNavigation = page.getByRole("navigation", { name: "Primary navigation" });
   await expect(primaryNavigation.getByRole("link", { name: "Dashboard" })).toHaveCount(0);
   await expect(primaryNavigation.getByRole("link", { name: "Log Hours" })).toHaveCount(0);

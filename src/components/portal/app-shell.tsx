@@ -20,6 +20,7 @@ import {
 import { signOutAction } from "@/app/actions/auth-actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { canViewMemberProgress } from "@/lib/domain/roles";
 import { cn } from "@/lib/utils";
 import type { Viewer } from "@/lib/types";
 
@@ -40,10 +41,17 @@ const profileNavigation: NavigationItem = {
   icon: UserRound,
 };
 
-const reviewerNavigation: NavigationItem[] = [
-  { href: "/admin/requests", label: "Review requests", icon: FileClock },
-  { href: "/admin/members", label: "Member progress", icon: UsersRound },
-];
+const reviewRequestsNavigation: NavigationItem = {
+  href: "/admin/requests",
+  label: "Review requests",
+  icon: FileClock,
+};
+
+const memberProgressNavigation: NavigationItem = {
+  href: "/admin/members",
+  label: "Member progress",
+  icon: UsersRound,
+};
 
 const teacherAdminNavigation: NavigationItem[] = [
   { href: "/admin/accounts", label: "Accounts", icon: BadgeCheck },
@@ -95,22 +103,33 @@ function NavLink({ item, compact = false }: { item: NavigationItem; compact?: bo
 
 export function AppShell({ viewer, children }: { viewer: Viewer; children: ReactNode }) {
   const adminOnly = viewer.isTeacherAdmin && !viewer.isMember;
+  const progressAccess = canViewMemberProgress(viewer);
   const navigation = [
     ...(viewer.isMember ? memberNavigation : []),
-    ...(viewer.canReview ? reviewerNavigation : []),
+    ...(viewer.canReview ? [reviewRequestsNavigation] : []),
+    ...(progressAccess ? [memberProgressNavigation] : []),
     ...(viewer.isTeacherAdmin ? teacherAdminNavigation : []),
     ...(viewer.isPlatformOwner ? [rolePreviewNavigation] : []),
   ];
   const bottomNavigation = adminOnly
     ? [
-        reviewerNavigation[0],
-        reviewerNavigation[1],
+        reviewRequestsNavigation,
+        ...(progressAccess ? [memberProgressNavigation] : []),
         teacherAdminNavigation[0],
         ...(viewer.isPlatformOwner ? [rolePreviewNavigation] : []),
       ]
     : viewer.canReview
-      ? [memberNavigation[0], memberNavigation[1], reviewerNavigation[0]]
-      : [...memberNavigation, profileNavigation];
+      ? [
+          memberNavigation[0],
+          memberNavigation[1],
+          reviewRequestsNavigation,
+          ...(progressAccess ? [memberProgressNavigation] : []),
+        ]
+      : [
+          ...memberNavigation,
+          ...(progressAccess ? [memberProgressNavigation] : []),
+          profileNavigation,
+        ];
   const safeBottomNavigation = bottomNavigation.filter((item): item is NavigationItem =>
     Boolean(item),
   );
@@ -157,16 +176,6 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
           ))}
         </nav>
         <div className="border-t p-4">
-          <div className="mb-3 rounded-lg bg-background/70 px-4 py-3">
-            <p className="text-xs text-muted-foreground">
-              {viewer.isTeacherAdmin ? "Access" : "School year"}
-            </p>
-            <p className="mt-0.5 text-sm font-semibold">
-              {viewer.isTeacherAdmin
-                ? "All school years"
-                : (viewer.activeMembership?.school_year.label ?? "No active year")}
-            </p>
-          </div>
           {viewer.isMember ? <NavLink item={profileNavigation} /> : null}
           <form action={signOutAction}>
             <Button type="submit" variant="ghost" className="w-full justify-start">

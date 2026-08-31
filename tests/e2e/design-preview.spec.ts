@@ -57,14 +57,21 @@ test("local design previews have no serious accessibility violations or horizont
   await expect(adminNavigation.getByRole("link", { name: "Dashboard" })).toHaveCount(0);
   await expect(adminNavigation.getByRole("link", { name: "Log Hours" })).toHaveCount(0);
   await expect(adminNavigation.getByRole("link", { name: "My Profile" })).toHaveCount(0);
-  await expect(page.locator("header").getByText("Global teacher administrator")).toBeVisible();
-  await expect(page.getByText("All school years", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open My Profile" })).toBeVisible();
+  await expect(page.getByText("All school years", { exact: true })).toHaveCount(0);
 
   await page.goto("/design-preview?screen=review&role=president_vice_president");
   const leaderNavigation = page.getByRole("navigation", { name: "Primary navigation" });
   await expect(leaderNavigation.getByRole("link", { name: "Dashboard" })).toBeVisible();
   await expect(leaderNavigation.getByRole("link", { name: "Log Hours" })).toBeVisible();
-  await expect(page.locator("header").getByText("President / Vice President")).toBeVisible();
+  await expect(leaderNavigation.getByRole("link", { name: "Review requests" })).toHaveCount(0);
+  await expect(leaderNavigation.getByRole("link", { name: "Member progress" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open My Profile" })).toBeVisible();
+
+  await page.goto("/design-preview?screen=review&role=committee_head");
+  const committeeNavigation = page.getByRole("navigation", { name: "Primary navigation" });
+  await expect(committeeNavigation.getByRole("link", { name: "Review requests" })).toBeVisible();
+  await expect(committeeNavigation.getByRole("link", { name: "Member progress" })).toHaveCount(0);
 
   const toolbar = page.getByRole("complementary", { name: "Read-only role preview" });
   for (const label of [

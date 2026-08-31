@@ -80,19 +80,20 @@ select extensions.is(
   'ordinary member cannot read CSV export rows'
 );
 
--- The vice president is eligible to process a request assigned to the committee head.
+-- A teacher administrator may process any pending request, including one
+-- assigned to a committee head.
 reset role;
 set local role authenticated;
-select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa006', true);
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config(
   'request.jwt.claims',
-  '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa006","role":"authenticated","email":"vice-president@example.edu"}',
+  '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001","role":"authenticated","email":"admin@example.edu"}',
   true
 );
 select extensions.lives_ok(
   $$ select public.review_hour_request('40000000-0000-4000-8000-000000000002', 'approve') $$,
-  'an eligible reviewer can process an item assigned to another reviewer'
+  'a teacher administrator can process an item assigned to another reviewer'
 );
 select extensions.is(
   (
@@ -107,8 +108,8 @@ select extensions.is(
     select actual_reviewer_membership_id
     from public.hour_requests where id = '40000000-0000-4000-8000-000000000002'
   ),
-  '20000000-0000-4000-8000-000000000006'::uuid,
-  'actual reviewer records the eligible reviewer who acted'
+  '20000000-0000-4000-8000-000000000001'::uuid,
+  'actual reviewer records the teacher administrator who acted'
 );
 
 reset role;

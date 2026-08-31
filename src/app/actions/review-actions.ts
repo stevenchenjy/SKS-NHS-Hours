@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { requireReviewer } from "@/lib/dal/access";
+import { requireReviewer, requireTeacherAdmin } from "@/lib/dal/access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface ReviewFormState {
@@ -65,7 +65,7 @@ export async function reviewHourRequestAction(
   revalidatePath("/admin/requests");
   revalidatePath(`/admin/requests/${parsed.data.request_id}`);
   revalidatePath("/dashboard");
-  redirect("/admin/requests?notice=decision-recorded");
+  redirect(`/admin/requests/${parsed.data.request_id}?notice=decision-recorded`);
 }
 
 const reassignSchema = z.object({
@@ -78,7 +78,7 @@ export async function reassignHourRequestAction(
   _previous: ReviewFormState,
   formData: FormData,
 ): Promise<ReviewFormState> {
-  await requireReviewer();
+  await requireTeacherAdmin();
   const parsed = reassignSchema.safeParse({
     request_id: formData.get("request_id"),
     new_reviewer_membership_id: formData.get("new_reviewer_membership_id"),

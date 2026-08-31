@@ -6,11 +6,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { GlobalAccessLevel, Membership, RoleSlug, SchoolYear, Viewer } from "@/lib/types";
 
-const reviewerRoles = new Set<RoleSlug>([
-  "committee_head",
-  "president_vice_president",
-  "teacher_admin",
-]);
+const reviewerRoles = new Set<RoleSlug>(["committee_head", "teacher_admin"]);
 
 type MembershipRow = Omit<Membership, "school_year" | "roles"> & {
   school_years: SchoolYear | SchoolYear[];

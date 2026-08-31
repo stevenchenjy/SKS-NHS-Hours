@@ -319,7 +319,7 @@ select set_config(
 
 select extensions.ok(
   (select count(*) >= 2 from public.pending_review_queue),
-  'active reviewer sees the shared pending queue'
+  'active reviewer sees their assigned pending queue'
 );
 select extensions.ok(
   (select bool_and(assigned_to_current_user) from public.pending_review_queue),
@@ -368,7 +368,7 @@ select extensions.lives_ok(
     select public.create_hour_request_draft(
       p_school_year_id => '10000000-0000-4000-8000-000000000001',
       p_title => 'Leader Owned Request',
-      p_description => 'A review-capable member still cannot self-review.',
+      p_description => 'A president or vice president may still submit service hours.',
       p_category_id => '30000000-0000-4000-8000-000000000005',
       p_service_date => '2026-08-25',
       p_hours => 1.00,
@@ -376,7 +376,7 @@ select extensions.lives_ok(
       p_client_submission_key => 'leader-self-review'
     )
   $$,
-  'review-capable member can create their own draft as a member'
+  'president or vice president can create their own draft as a member'
 );
 select extensions.lives_ok(
   $$
@@ -385,7 +385,7 @@ select extensions.lives_ok(
       1
     )
   $$,
-  'review-capable member can submit their own request'
+  'president or vice president can submit their own request'
 );
 select set_config(
   'test.leader_self_review_request_id',
@@ -404,8 +404,8 @@ select extensions.throws_ok(
     )
   $$,
   '42501',
-  'A reviewer cannot process their own request',
-  'review-capable members cannot self-approve'
+  'An active review-capable role is required',
+  'a president or vice president without the committee-head role cannot approve hours'
 );
 
 reset role;

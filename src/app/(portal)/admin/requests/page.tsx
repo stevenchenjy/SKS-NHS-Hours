@@ -30,10 +30,19 @@ export default async function ReviewQueuePage({
 }) {
   const viewer = await requireReviewer();
   const params = await searchParams;
-  const scope = value(params.scope) === "assigned" ? "assigned" : "all";
+  const canViewAllPending = viewer.isTeacherAdmin;
+  const scope = canViewAllPending
+    ? value(params.scope) === "assigned"
+      ? "assigned"
+      : "all"
+    : "assigned";
   const search = value(params.search).trim().toLowerCase();
   const notice = value(params.notice);
-  const all = await listPendingQueue(viewer.activeMembership.school_year_id);
+  const all = await listPendingQueue(
+    viewer.activeMembership.school_year_id,
+    canViewAllPending ? undefined : viewer.activeMembership.id,
+  );
+  const assigned = all.filter((item) => item.assigned_to_current_user);
   const queue = all.filter(
     (request) =>
       (scope === "all" || request.assigned_to_current_user) &&
@@ -60,25 +69,26 @@ export default async function ReviewQueuePage({
       ) : null}
 
       <div className="mb-5 flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="inline-flex w-fit rounded-lg bg-muted p-1">
-          <Button
-            render={<Link href="/admin/requests?scope=all" />}
-            variant={scope === "all" ? "default" : "ghost"}
-            size="sm"
-          >
-            All pending <span className="ml-1 tabular-nums">({all.length})</span>
-          </Button>
-          <Button
-            render={<Link href="/admin/requests?scope=assigned" />}
-            variant={scope === "assigned" ? "default" : "ghost"}
-            size="sm"
-          >
-            Assigned to me{" "}
-            <span className="ml-1 tabular-nums">
-              ({all.filter((item) => item.assigned_to_current_user).length})
-            </span>
-          </Button>
-        </div>
+        {canViewAllPending ? (
+          <div className="inline-flex w-fit rounded-lg bg-muted p-1">
+            <Button
+              render={<Link href="/admin/requests?scope=all" />}
+              variant={scope === "all" ? "default" : "ghost"}
+              size="sm"
+            >
+              All pending <span className="ml-1 tabular-nums">({all.length})</span>
+            </Button>
+            <Button
+              render={<Link href="/admin/requests?scope=assigned" />}
+              variant={scope === "assigned" ? "default" : "ghost"}
+              size="sm"
+            >
+              Assigned to me <span className="ml-1 tabular-nums">({assigned.length})</span>
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm font-semibold">Assigned to me ({assigned.length})</p>
+        )}
         <form className="flex w-full gap-2 lg:max-w-md">
           <input type="hidden" name="scope" value={scope} />
           <label htmlFor="search" className="sr-only">

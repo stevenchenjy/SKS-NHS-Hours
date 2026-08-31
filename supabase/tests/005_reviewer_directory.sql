@@ -171,8 +171,8 @@ select extensions.is(
     select count(*)
     from public.list_eligible_reviewers('10000000-0000-4000-8000-000000000001')
   ),
-  5::bigint,
-  'the directory returns each of the five seeded active review-capable memberships'
+  3::bigint,
+  'the directory returns only active committee-head reviewers, excluding the owner and president-only accounts'
 );
 select extensions.is(
   (
@@ -180,22 +180,19 @@ select extensions.is(
     from public.list_eligible_reviewers('10000000-0000-4000-8000-000000000001')
   ),
   array[
-    '20000000-0000-4000-8000-000000000001'::uuid,
     '20000000-0000-4000-8000-000000000002'::uuid,
     '20000000-0000-4000-8000-000000000004'::uuid,
-    '20000000-0000-4000-8000-000000000006'::uuid,
     '20000000-0000-4000-8000-000000000007'::uuid
   ],
-  'the ordinary member sees exactly the eligible same-year reviewer memberships'
+  'the ordinary member sees exactly the eligible same-year committee-head memberships'
 );
-select extensions.is(
-  (
-    select role_keys
+select extensions.ok(
+  not exists (
+    select 1
     from public.list_eligible_reviewers('10000000-0000-4000-8000-000000000001')
     where membership_id = '20000000-0000-4000-8000-000000000001'
   ),
-  array['teacher_admin']::text[],
-  'the directory includes the teacher-only administrator anchor without exposing email'
+  'the platform owner is excluded from the member-facing reviewer directory'
 );
 select extensions.is(
   (

@@ -100,7 +100,7 @@ const presidentViewer: Viewer = {
     ? { ...memberViewer.activeMembership, roles: ["member", "president_vice_president"] }
     : null,
   roles: ["member", "president_vice_president"],
-  canReview: true,
+  canReview: false,
 };
 presidentViewer.memberships = presidentViewer.activeMembership
   ? [presidentViewer.activeMembership]
@@ -475,7 +475,13 @@ function AdminDashboardPreview() {
   );
 }
 
-function ReviewRequestPreview() {
+function ReviewRequestPreview({
+  canReview,
+  canReassign,
+}: {
+  canReview: boolean;
+  canReassign: boolean;
+}) {
   return (
     <div className="page-container">
       <PageHeader
@@ -575,17 +581,29 @@ function ReviewRequestPreview() {
               />
             </div>
           </section>
-          <section className="rounded-xl border p-5 shadow-[0_1px_8px_rgba(11,23,54,0.05)]">
-            <h2 className="mb-1 text-xl font-bold">Record a decision</h2>
-            <p className="mb-5 text-sm leading-6 text-muted-foreground">
-              Your identity becomes the actual reviewer, even when someone else was requested.
-            </p>
-            <ReviewDecisionPanel
-              requestId="50000000-0000-4000-8000-000000000001"
-              reviewers={reviewers}
-              currentReviewerMembershipId={reviewers[0]?.membershipId ?? null}
-            />
-          </section>
+          {canReview ? (
+            <section className="rounded-xl border p-5 shadow-[0_1px_8px_rgba(11,23,54,0.05)]">
+              <h2 className="mb-1 text-xl font-bold">Record a decision</h2>
+              <p className="mb-5 text-sm leading-6 text-muted-foreground">
+                Teacher administrators may review any pending request. Committee heads may review
+                only requests assigned to them.
+              </p>
+              <ReviewDecisionPanel
+                requestId="50000000-0000-4000-8000-000000000001"
+                reviewers={reviewers}
+                currentReviewerMembershipId={reviewers[0]?.membershipId ?? null}
+                canReassign={canReassign}
+              />
+            </section>
+          ) : (
+            <section className="rounded-xl border bg-muted/45 p-5">
+              <h2 className="font-semibold">Review access is not assigned</h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                President / Vice President accounts can view member progress but cannot approve
+                service hours unless they also hold the Committee Head role.
+              </p>
+            </section>
+          )}
         </aside>
       </div>
     </div>
@@ -747,7 +765,10 @@ export default async function DesignPreviewPage({
           {screen === "admin" ? (
             <AdminDashboardPreview />
           ) : screen === "review" ? (
-            <ReviewRequestPreview />
+            <ReviewRequestPreview
+              canReview={viewer.canReview}
+              canReassign={viewer.isTeacherAdmin}
+            />
           ) : screen === "log" ? (
             <LogHoursPreview />
           ) : (

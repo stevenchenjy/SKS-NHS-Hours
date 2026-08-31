@@ -28,10 +28,12 @@ export function ReviewDecisionPanel({
   requestId,
   reviewers,
   currentReviewerMembershipId,
+  canReassign,
 }: {
   requestId: string;
   reviewers: ReviewerOption[];
   currentReviewerMembershipId: string | null;
+  canReassign: boolean;
 }) {
   const [reviewState, reviewAction, reviewing] = useActionState(
     reviewHourRequestAction,
@@ -47,10 +49,12 @@ export function ReviewDecisionPanel({
 
   return (
     <Tabs defaultValue="decision" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="decision">Decision</TabsTrigger>
-        <TabsTrigger value="reassign">Reassign</TabsTrigger>
-      </TabsList>
+      {canReassign ? (
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="decision">Decision</TabsTrigger>
+          <TabsTrigger value="reassign">Reassign</TabsTrigger>
+        </TabsList>
+      ) : null}
       <TabsContent value="decision" className="pt-5">
         <form action={reviewAction} className="space-y-5">
           <input type="hidden" name="request_id" value={requestId} />
@@ -107,58 +111,60 @@ export function ReviewDecisionPanel({
           </div>
         </form>
       </TabsContent>
-      <TabsContent value="reassign" className="pt-5">
-        <form action={reassignAction} className="space-y-5">
-          <input type="hidden" name="request_id" value={requestId} />
-          <Field data-invalid={Boolean(reassignState.fieldErrors?.new_reviewer_membership_id)}>
-            <FieldLabel htmlFor="new_reviewer_membership_id">New requested approver</FieldLabel>
-            <Select
-              name="new_reviewer_membership_id"
-              defaultValue={currentReviewerMembershipId ?? undefined}
-              items={reviewerItems}
-              required
+      {canReassign ? (
+        <TabsContent value="reassign" className="pt-5">
+          <form action={reassignAction} className="space-y-5">
+            <input type="hidden" name="request_id" value={requestId} />
+            <Field data-invalid={Boolean(reassignState.fieldErrors?.new_reviewer_membership_id)}>
+              <FieldLabel htmlFor="new_reviewer_membership_id">New requested approver</FieldLabel>
+              <Select
+                name="new_reviewer_membership_id"
+                defaultValue={currentReviewerMembershipId ?? undefined}
+                items={reviewerItems}
+                required
+              >
+                <SelectTrigger id="new_reviewer_membership_id" className="h-11 w-full">
+                  <SelectValue placeholder="Choose a reviewer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {reviewers.map((reviewer) => (
+                      <SelectItem key={reviewer.membershipId} value={reviewer.membershipId}>
+                        {reviewer.fullName}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <FieldError>{reassignState.fieldErrors?.new_reviewer_membership_id?.[0]}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="reassignment_comment">Reassignment note</FieldLabel>
+              <Textarea
+                id="reassignment_comment"
+                name="reassignment_comment"
+                rows={4}
+                maxLength={2000}
+              />
+            </Field>
+            {reassignState.error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {reassignState.error}
+              </p>
+            ) : null}
+            <Button
+              type="submit"
+              variant="outline"
+              size="lg"
+              className="w-full"
+              disabled={reassigning}
             >
-              <SelectTrigger id="new_reviewer_membership_id" className="h-11 w-full">
-                <SelectValue placeholder="Choose a reviewer" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {reviewers.map((reviewer) => (
-                    <SelectItem key={reviewer.membershipId} value={reviewer.membershipId}>
-                      {reviewer.fullName}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <FieldError>{reassignState.fieldErrors?.new_reviewer_membership_id?.[0]}</FieldError>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="reassignment_comment">Reassignment note</FieldLabel>
-            <Textarea
-              id="reassignment_comment"
-              name="reassignment_comment"
-              rows={4}
-              maxLength={2000}
-            />
-          </Field>
-          {reassignState.error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {reassignState.error}
-            </p>
-          ) : null}
-          <Button
-            type="submit"
-            variant="outline"
-            size="lg"
-            className="w-full"
-            disabled={reassigning}
-          >
-            <Send data-icon="inline-start" aria-hidden="true" />
-            {reassigning ? "Reassigning…" : "Reassign request"}
-          </Button>
-        </form>
-      </TabsContent>
+              <Send data-icon="inline-start" aria-hidden="true" />
+              {reassigning ? "Reassigning…" : "Reassign request"}
+            </Button>
+          </form>
+        </TabsContent>
+      ) : null}
     </Tabs>
   );
 }
