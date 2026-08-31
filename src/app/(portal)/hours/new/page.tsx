@@ -6,7 +6,7 @@ import { HourRequestForm } from "@/components/hours/hour-request-form";
 import { PageHeader } from "@/components/portal/page-header";
 import { Button } from "@/components/ui/button";
 import { requireActiveViewer } from "@/lib/dal/access";
-import { listActiveReviewers, listCategories } from "@/lib/dal/portal";
+import { listActiveCommitteeHeads, listCategories } from "@/lib/dal/portal";
 
 export const metadata: Metadata = { title: "Log service hours" };
 
@@ -26,12 +26,12 @@ export default async function NewHourRequestPage() {
     );
   }
 
-  const [categories, allReviewers] = await Promise.all([
+  const [categories, allCommitteeHeads] = await Promise.all([
     listCategories(viewer.activeMembership.school_year_id),
-    listActiveReviewers(viewer.activeMembership.school_year_id),
+    listActiveCommitteeHeads(viewer.activeMembership.school_year_id),
   ]);
-  const reviewers = allReviewers.filter(
-    (reviewer) => reviewer.membershipId !== viewer.activeMembership.id,
+  const committeeHeads = allCommitteeHeads.filter(
+    (committeeHead) => committeeHead.membershipId !== viewer.activeMembership.id,
   );
 
   return (
@@ -46,11 +46,11 @@ export default async function NewHourRequestPage() {
         title="Log service hours"
         description="Save an editable draft or submit a complete activity for review."
       />
-      {categories.length === 0 || reviewers.length === 0 ? (
+      {categories.length === 0 || committeeHeads.length === 0 ? (
         <div className="rounded-xl border border-[var(--status-pending)]/30 bg-[var(--status-pending-bg)] p-5">
           <h2 className="font-semibold">Submissions are not ready</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            An active service category and at least one other active school leader are required.
+            An active service category and at least one other active committee head are required.
             Contact the NHS adviser.
           </p>
         </div>
@@ -59,7 +59,7 @@ export default async function NewHourRequestPage() {
           schoolYearId={viewer.activeMembership.school_year_id}
           schoolYearLabel={viewer.activeMembership.school_year.label}
           categories={categories}
-          reviewers={reviewers}
+          reviewers={committeeHeads}
           submissionKey={crypto.randomUUID()}
         />
       )}

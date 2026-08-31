@@ -21,7 +21,7 @@ const commonHourRequestSchema = z.object({
 });
 
 const categorySchema = z.uuid("Choose a service category.");
-const reviewerSchema = z.uuid("Choose a requested approver.");
+const reviewerSchema = z.uuid("Choose a committee head for the first approval.");
 const titleSchema = z.string().trim().min(1, "Enter an activity title.").max(120);
 const descriptionSchema = z.string().trim().max(2_000);
 const serviceDateSchema = z.iso.date("Enter a valid service date.");
@@ -68,7 +68,9 @@ const hourRequestSchema = z.discriminatedUnion("intent", [
 function rpcError(error: { message: string; code?: string } | null): string {
   if (!error) return "The request could not be saved.";
   if (error.message.includes("future")) return "The service date cannot be in the future.";
-  if (error.message.includes("reviewer")) return "Choose an active reviewer for this school year.";
+  if (error.message.includes("approver") || error.message.includes("committee head")) {
+    return "Choose an active committee head for this school year.";
+  }
   if (error.message.includes("category")) return "This service category is not available.";
   if (error.message.includes("revision") || error.message.includes("concurrent")) {
     return "This request changed in another session. Reload it before saving again.";

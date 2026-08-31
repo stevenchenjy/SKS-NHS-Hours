@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BadgeCheck,
+  CalendarDays,
   Download,
   Eye,
   FileClock,
@@ -37,6 +38,7 @@ export interface AppShellPreview {
 
 const previewSectionsByRoute: Record<string, string> = {
   "/dashboard": "dashboard",
+  "/events": "events",
   "/hours/new": "log",
   "/profile": "profile",
   "/admin/requests": "review-requests",
@@ -56,8 +58,11 @@ function previewHref(preview: AppShellPreview, href: string): string {
 
 const memberNavigation: NavigationItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
+  { href: "/events", label: "Events", icon: CalendarDays },
   { href: "/hours/new", label: "Log Hours", icon: PencilLine },
 ];
+
+const eventsNavigation = memberNavigation[1]!;
 
 const profileNavigation: NavigationItem = {
   href: "/profile",
@@ -157,7 +162,7 @@ export function AppShell({
     ...teacherAdminNavigation.slice(1),
   ];
   const navigation = [
-    ...(viewer.isMember ? memberNavigation : []),
+    ...(viewer.isMember ? memberNavigation : [eventsNavigation]),
     ...(viewer.canReview ? [reviewRequestsNavigation] : []),
     ...(progressAccess ? [memberProgressNavigation] : []),
     ...(viewer.isTeacherAdmin ? teacherAdministrationNavigation : []),
@@ -165,21 +170,24 @@ export function AppShell({
   ];
   const bottomNavigation = adminOnly
     ? [
+        eventsNavigation,
         reviewRequestsNavigation,
         ...(progressAccess ? [memberProgressNavigation] : []),
         teacherAdminNavigation[0]!,
         ...(viewer.isPlatformOwner ? [auditTrailNavigation] : []),
-        ...(viewer.isPlatformOwner ? [rolePreviewNavigation] : []),
       ]
     : viewer.canReview
       ? [
           memberNavigation[0],
-          memberNavigation[1],
+          eventsNavigation,
+          memberNavigation[2],
           reviewRequestsNavigation,
           ...(progressAccess ? [memberProgressNavigation] : []),
         ]
       : [
-          ...memberNavigation,
+          memberNavigation[0],
+          eventsNavigation,
+          memberNavigation[2],
           ...(progressAccess ? [memberProgressNavigation] : []),
           profileNavigation,
         ];

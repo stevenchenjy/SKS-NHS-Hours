@@ -141,7 +141,8 @@ export default async function DashboardPage({
                 your changes
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Review the leader’s comment, update the activity, and resubmit it.
+                Review the approver’s comment, update the activity, and resubmit it. Both approval
+                stages will restart.
               </p>
             </div>
           </div>
@@ -267,7 +268,15 @@ export default async function DashboardPage({
                       <TableCell>{date(request.service_date)}</TableCell>
                       <TableCell>{requestHours(request.hours)}</TableCell>
                       <TableCell>
-                        <StatusBadge status={request.status} />
+                        <StatusBadge
+                          status={
+                            request.status === "pending"
+                              ? request.committee_head_approved_at
+                                ? "pending_teacher_approval"
+                                : "pending_committee_approval"
+                              : request.status
+                          }
+                        />
                       </TableCell>
                       <TableCell className="pr-5 text-right">
                         <Button
@@ -311,7 +320,15 @@ export default async function DashboardPage({
                         {relationName(request.category)} · {date(request.service_date)}
                       </p>
                     </div>
-                    <StatusBadge status={request.status} />
+                    <StatusBadge
+                      status={
+                        request.status === "pending"
+                          ? request.committee_head_approved_at
+                            ? "pending_teacher_approval"
+                            : "pending_committee_approval"
+                          : request.status
+                      }
+                    />
                   </div>
                   <p className="mt-4 text-sm font-semibold">
                     {request.hours == null ? "—" : `${requestHours(request.hours)} hours`}

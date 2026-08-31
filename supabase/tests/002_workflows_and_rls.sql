@@ -327,22 +327,24 @@ select extensions.ok(
 );
 select extensions.lives_ok(
   $$ select public.review_hour_request('40000000-0000-4000-8000-000000000002', 'approve') $$,
-  'active reviewer can approve a pending request'
+  'the selected committee head can complete the first approval'
 );
 select extensions.ok(
   exists (
     select 1 from public.hour_requests
     where id = '40000000-0000-4000-8000-000000000002'
-      and status = 'approved'
-      and actual_reviewer_membership_id = '20000000-0000-4000-8000-000000000002'
+      and status = 'pending'
+      and committee_head_reviewer_membership_id = '20000000-0000-4000-8000-000000000002'
+      and committee_head_approved_at is not null
+      and actual_reviewer_membership_id is null
   ),
-  'approval records the actual reviewer separately from assignment'
+  'committee-head approval keeps hours pending and opens the teacher stage'
 );
 select extensions.throws_ok(
   $$ select public.review_hour_request('40000000-0000-4000-8000-000000000002', 'approve') $$,
-  '40001',
-  'Request is no longer pending',
-  'a second review attempt fails closed'
+  '42501',
+  'An active teacher administrator must complete the final approval',
+  'a committee head cannot complete the teacher stage'
 );
 select extensions.lives_ok(
   $$
@@ -351,7 +353,7 @@ select extensions.lives_ok(
       'approve'
     )
   $$,
-  'approval is not blocked by a retired per-category cap'
+  'committee-head approval is not blocked by a retired per-category cap'
 );
 
 reset role;

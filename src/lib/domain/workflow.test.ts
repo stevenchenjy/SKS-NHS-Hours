@@ -21,6 +21,7 @@ const OTHER_SCHOOL_YEAR_ID = "20000000-0000-4000-8000-000000000002";
 const APPROVER_MEMBERSHIP_ID = "30000000-0000-4000-8000-000000000001";
 
 const ELIGIBLE_REVIEW: ReviewEligibilityInput = {
+  approvalStage: "committee_head",
   requestStatus: "pending",
   submitterUserId: MEMBER_USER_ID,
   reviewerUserId: REVIEWER_USER_ID,
@@ -35,6 +36,7 @@ describe("hour-request finite state machine", () => {
     ["draft", "edit", "draft"],
     ["draft", "submit", "pending"],
     ["pending", "withdraw", "withdrawn"],
+    ["pending", "committee_approve", "pending"],
     ["pending", "approve", "approved"],
     ["pending", "request_changes", "changes_requested"],
     ["pending", "reject", "rejected"],
@@ -62,6 +64,7 @@ describe("hour-request finite state machine", () => {
   it("exposes only actions valid for the current state", () => {
     expect(allowedRequestActions("pending")).toEqual([
       "withdraw",
+      "committee_approve",
       "approve",
       "request_changes",
       "reject",
@@ -155,19 +158,41 @@ describe("review authorization invariants", () => {
     });
   });
 
-  it.each(["committee_head", "teacher_admin"] as const)(
-    "recognizes %s as a review-capable role",
-    (role) => {
-      expect(
-        isEligibleRequestedApprover({
-          membershipStatus: "active",
-          membershipSchoolYearId: SCHOOL_YEAR_ID,
-          requestSchoolYearId: SCHOOL_YEAR_ID,
-          roles: [role],
-        }),
-      ).toBe(true);
-    },
-  );
+  it("allows only committee heads to be selected for first approval", () => {
+    expect(
+      isEligibleRequestedApprover({
+        membershipStatus: "active",
+        membershipSchoolYearId: SCHOOL_YEAR_ID,
+        requestSchoolYearId: SCHOOL_YEAR_ID,
+        roles: ["committee_head"],
+      }),
+    ).toBe(true);
+    expect(
+      isEligibleRequestedApprover({
+        membershipStatus: "active",
+        membershipSchoolYearId: SCHOOL_YEAR_ID,
+        requestSchoolYearId: SCHOOL_YEAR_ID,
+        roles: ["teacher_admin"],
+      }),
+    ).toBe(false);
+  });
+
+  it("requires the role for the current approval stage", () => {
+    expect(
+      evaluateReviewEligibility({
+        ...ELIGIBLE_REVIEW,
+        approvalStage: "teacher",
+        reviewerRoles: ["committee_head"],
+      }),
+    ).toEqual({ allowed: false, reasons: ["missing_review_role"] });
+    expect(
+      evaluateReviewEligibility({
+        ...ELIGIBLE_REVIEW,
+        approvalStage: "teacher",
+        reviewerRoles: ["teacher_admin"],
+      }),
+    ).toEqual({ allowed: true, reasons: [] });
+  });
 
   it("rejects inactive, wrong-year, member-only, and president-only requested approvers", () => {
     expect(

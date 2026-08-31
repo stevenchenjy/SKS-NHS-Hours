@@ -96,13 +96,13 @@ Deactivate or make a category unavailable instead of deleting one referenced by 
 
 Review-capable users work in `/admin/requests`:
 
-1. **Assigned to me** focuses the requested assignment; **All pending** is the eligible shared queue.
-2. Verify the member, service facts, requested approver, current status, and history.
-3. Approve, request changes, reject, or reassign. Changes requested and rejection require a useful comment.
-4. Never process your own request. Self-review is enforced in the database.
-5. If a request is no longer pending, reload; another eligible reviewer may have completed the locked transaction.
+1. The member selects one committee head. Only that committee head sees and can complete the first approval.
+2. Committee-head approval keeps the hours pending and sends the request to every teacher's shared final-approval queue.
+3. One teacher approves, requests changes, or rejects. Only teacher approval changes the request to approved and counts the hours.
+4. Verify the member, service facts, selected committee head, current stage, and immutable history. Changes requested and rejection require a useful comment.
+5. Never process your own request. If a request changed concurrently, reload before acting again.
 
-The actual reviewer is recorded separately from the requested approver. Teacher administrators can review through a technical attribution anchor, but that anchor never makes them a member or gives them progress.
+The selected committee head, first approval, and final teacher reviewer are recorded separately. Teacher administrators act through a technical attribution anchor, but that anchor never makes them a member or gives them progress.
 
 ## Read progress correctly
 

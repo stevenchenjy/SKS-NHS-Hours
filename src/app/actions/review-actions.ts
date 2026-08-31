@@ -35,6 +35,9 @@ function decisionError(message: string): string {
   if (message.includes("pending") || message.includes("concurrent")) {
     return "This request is no longer pending. Another reviewer may have processed it.";
   }
+  if (message.includes("committee head") || message.includes("teacher administrator")) {
+    return "This request is waiting for a different approval stage or approver.";
+  }
   if (message.includes("active") || message.includes("permission")) {
     return "Your active school-year role does not permit this review.";
   }
@@ -70,7 +73,7 @@ export async function reviewHourRequestAction(
 
 const reassignSchema = z.object({
   request_id: z.uuid(),
-  new_reviewer_membership_id: z.uuid("Choose an active reviewer."),
+  new_reviewer_membership_id: z.uuid("Choose an active committee head."),
   comment: z.string().trim().max(2_000).default(""),
 });
 

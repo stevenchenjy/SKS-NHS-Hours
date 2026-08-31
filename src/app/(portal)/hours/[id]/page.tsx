@@ -18,7 +18,7 @@ function reviewerDisplayName(
   fullName: string | null,
   emptyLabel: string,
 ): string {
-  return membershipId ? (fullName ?? "School leader") : emptyLabel;
+  return membershipId ? (fullName ?? "Committee head") : emptyLabel;
 }
 
 function categoryName(value: HourRequest["category"]): string {
@@ -33,6 +33,10 @@ function formatDate(value: string | null): string {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value.length === 10 ? `${value}T12:00:00` : value));
+}
+
+function historyActionLabel(action: string): string {
+  return action === "committee_approved" ? "Committee head approved" : action.replaceAll("_", " ");
 }
 
 export default async function HourRequestPage({
@@ -79,7 +83,15 @@ export default async function HourRequestPage({
         title={request.title ?? "Untitled draft"}
         description={
           <span className="inline-flex flex-wrap items-center gap-3">
-            <StatusBadge status={request.status} />
+            <StatusBadge
+              status={
+                request.status === "pending"
+                  ? request.committee_head_approved_at
+                    ? "pending_teacher_approval"
+                    : "pending_committee_approval"
+                  : request.status
+              }
+            />
             <span>
               {categoryName(request.category)} ·{" "}
               {request.hours == null ? "Hours not entered" : `${request.hours} hours`}
@@ -102,7 +114,7 @@ export default async function HourRequestPage({
           className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
         >
           {notice === "submitted"
-            ? "Request submitted. Pending hours appear separately until a leader approves them."
+            ? "Request submitted. Your selected committee head must approve it first; then any teacher can give the final approval."
             : notice === "withdrawn"
               ? "The pending request was withdrawn and remains in your history."
               : "The request status was updated."}
@@ -133,7 +145,9 @@ export default async function HourRequestPage({
                 <dd className="mt-1 font-semibold">{request.hours ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-muted-foreground">Requested approver</dt>
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Selected committee head
+                </dt>
                 <dd className="mt-1 font-semibold">
                   {reviewerDisplayName(
                     request.requested_approver_membership_id,
@@ -143,7 +157,19 @@ export default async function HourRequestPage({
                 </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-muted-foreground">Actual reviewer</dt>
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Committee-head approval
+                </dt>
+                <dd className="mt-1 font-semibold">
+                  {request.committee_head_approved_at
+                    ? `Approved ${formatDate(request.committee_head_approved_at)}`
+                    : "Waiting for approval"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Final teacher reviewer
+                </dt>
                 <dd className="mt-1 font-semibold">
                   {reviewerDisplayName(
                     request.actual_reviewer_membership_id,
@@ -183,7 +209,7 @@ export default async function HourRequestPage({
                       </span>
                       <div>
                         <p className="font-semibold capitalize">
-                          {review.action.replaceAll("_", " ")}
+                          {historyActionLabel(review.action)}
                         </p>
                         <p className="mt-1 text-sm text-muted-foreground">
                           {formatDate(review.created_at)}
@@ -211,7 +237,9 @@ export default async function HourRequestPage({
             <h2 className="font-semibold">Request state</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {request.status === "pending"
-                ? "A school leader can approve, request changes, reject, or reassign this request."
+                ? request.committee_head_approved_at
+                  ? "The committee head approved this request. It is now available to every teacher for final approval."
+                  : "The selected committee head must complete the first approval before the request goes to the teachers."
                 : request.status === "approved"
                   ? "This approved record is locked. A teacher administrator must use the traceable correction process for any change."
                   : request.status === "changes_requested"

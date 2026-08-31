@@ -11,7 +11,9 @@ type Status =
   | "closed"
   | "upcoming"
   | "at_goal"
-  | "below_goal";
+  | "below_goal"
+  | "pending_committee_approval"
+  | "pending_teacher_approval";
 
 const presentation: Record<
   Status,
@@ -24,6 +26,16 @@ const presentation: Record<
   },
   pending: {
     label: "Pending",
+    className: "bg-[var(--status-pending-bg)] text-[var(--status-pending)]",
+    icon: Clock3,
+  },
+  pending_committee_approval: {
+    label: "Pending committee head",
+    className: "bg-[var(--status-pending-bg)] text-[var(--status-pending)]",
+    icon: Clock3,
+  },
+  pending_teacher_approval: {
+    label: "Pending teacher approval",
     className: "bg-[var(--status-pending-bg)] text-[var(--status-pending)]",
     icon: Clock3,
   },

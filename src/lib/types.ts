@@ -12,15 +12,18 @@ export type MembershipStatus = "active" | "expired" | "suspended" | "archived";
 export type SchoolYearStatus = "draft" | "active" | "closed" | "archived";
 export type HourRequestStatus =
   "draft" | "pending" | "changes_requested" | "approved" | "rejected" | "withdrawn";
+export type HourApprovalStage = "committee_head" | "teacher";
 export type HourReviewAction =
   | "submitted"
   | "resubmitted"
+  | "committee_approved"
   | "approved"
   | "changes_requested"
   | "rejected"
   | "reassigned"
   | "withdrawn"
   | "corrected";
+export type ServiceEventRegistrationStatus = "confirmed" | "waitlisted" | "withdrawn";
 
 export interface Profile {
   id: string;
@@ -131,6 +134,8 @@ export interface HourRequest {
   service_date: string | null;
   hours: number | string | null;
   requested_approver_membership_id: string | null;
+  committee_head_reviewer_membership_id: string | null;
+  committee_head_approved_at: string | null;
   actual_reviewer_membership_id: string | null;
   status: HourRequestStatus;
   client_submission_key?: string | null;
@@ -177,6 +182,7 @@ export interface PendingQueueItem extends HourRequest {
   member_email?: string;
   category_name: string;
   requested_approver_name: string;
+  approval_stage: HourApprovalStage;
   assigned_to_current_user: boolean;
   waiting_since: string;
   waiting_days: number;
@@ -195,4 +201,38 @@ export interface RoleRecord {
   is_review_capable: boolean;
   is_teacher_admin: boolean;
   display_order: number;
+}
+
+export interface ServiceEvent {
+  id: string;
+  school_year_id: string;
+  school_year_label: string;
+  title: string;
+  description: string;
+  location: string;
+  volunteer_audience: string;
+  starts_at: string;
+  ends_at: string;
+  contact_name: string;
+  contact_email: string;
+  capacity: number;
+  organizer_name: string;
+  confirmed_count: number;
+  waitlist_count: number;
+  spots_remaining: number;
+  is_expired: boolean;
+  my_registration_status: ServiceEventRegistrationStatus | null;
+  my_waitlist_position: number | null;
+  can_manage: boolean;
+}
+
+export interface ServiceEventRosterEntry {
+  registration_id: number;
+  member_membership_id: string;
+  full_name: string;
+  email: string;
+  status: Exclude<ServiceEventRegistrationStatus, "withdrawn">;
+  joined_at: string;
+  promoted_at: string | null;
+  waitlist_position: number | null;
 }

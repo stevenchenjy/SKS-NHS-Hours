@@ -45,8 +45,9 @@ erDiagram
 
     SCHOOL_YEAR_MEMBERSHIPS ||--o{ HOUR_REQUESTS : submits
     SCHOOL_YEAR_CATEGORIES ||--o{ HOUR_REQUESTS : categorizes
-    SCHOOL_YEAR_MEMBERSHIPS ||--o{ HOUR_REQUESTS : requested_approver
-    SCHOOL_YEAR_MEMBERSHIPS ||--o{ HOUR_REQUESTS : actual_reviewer
+    SCHOOL_YEAR_MEMBERSHIPS ||--o{ HOUR_REQUESTS : selected_committee_head
+    SCHOOL_YEAR_MEMBERSHIPS ||--o{ HOUR_REQUESTS : committee_head_reviewer
+    SCHOOL_YEAR_MEMBERSHIPS ||--o{ HOUR_REQUESTS : final_teacher_reviewer
     HOUR_REQUESTS ||--o{ HOUR_REVIEWS : history
     HOUR_REQUESTS ||--o{ HOUR_REQUEST_CORRECTIONS : corrected
 
@@ -98,12 +99,12 @@ Changing a row's status updates `status_changed_at`. Renewal creates a new row; 
 
 `roles` contains the fixed keys:
 
-| Key                        | Review capable | Purpose                                           |
-| -------------------------- | -------------- | ------------------------------------------------- |
-| `member`                   | No             | Annual service participation                      |
-| `committee_head`           | Yes            | Annual member leadership                          |
-| `president_vice_president` | Yes            | Combined annual President / Vice President choice |
-| `teacher_admin`            | Yes            | Technical attribution anchor for a global grant   |
+| Key                        | Review capable | Purpose                                              |
+| -------------------------- | -------------- | ---------------------------------------------------- |
+| `member`                   | No             | Annual service participation                         |
+| `committee_head`           | First stage    | Annual member leadership and selected first approval |
+| `president_vice_president` | No             | Combined annual President / Vice President choice    |
+| `teacher_admin`            | Final stage    | Technical attribution anchor for a global grant      |
 
 `membership_roles` is the many-to-many assignment table with assignment actor/time and primary key `(membership_id, role_id)`. Committee head and President / Vice President include the baseline member role. Global administrator anchors contain only `teacher_admin`; all other combinations with that role are rejected. Role definitions are fixed after migration.
 
@@ -133,14 +134,14 @@ The current service record contains:
 
 - owner membership and school year;
 - category through the year/category mapping;
-- requested approver membership and actual reviewer membership as separate columns;
+- selected committee-head membership, completed first-stage reviewer/time, and final teacher reviewer/time as separate columns;
 - title (maximum 160), description (maximum 4,000), service date, and exact hours;
 - status, optional client submission/idempotency key, and monotonic revision;
 - created/submitted/updated/decided/withdrawn timestamps.
 
 Statuses are `draft`, `pending`, `changes_requested`, `approved`, `rejected`, and `withdrawn`.
 
-Non-drafts require complete service data and a submission timestamp. Requested/actual reviewer cannot be the owner membership. Terminal/changes decisions require actual reviewer and decision time; withdrawn requires withdrawal time; a draft has no submission time. Hours are 0.25–24.00 in quarter-hour increments.
+Non-drafts require complete service data and a submission timestamp. The selected and acting reviewers cannot be the owner membership. A completed first stage records the selected committee head while status remains `pending`; terminal/changes decisions require an actual reviewer and decision time. Withdrawn requires withdrawal time; a draft has no submission time. Hours are 0.25–24.00 in quarter-hour increments.
 
 The row-protection trigger rejects deletion, requires authorized functions for creation/status/protected-field changes, and prevents ordinary changes to approved records. `revision` and the optional member/client-key unique index support stale-write and replay protection.
 
@@ -151,7 +152,7 @@ Append-only workflow history. Each event references the request/year, actor memb
 Actions are:
 
 - member actions: `submitted`, `resubmitted`, `withdrawn`;
-- reviewer actions: `approved`, `changes_requested`, `rejected`, `reassigned`; and
+- reviewer actions: `committee_approved`, `approved`, `changes_requested`, `rejected`, `reassigned`; and
 - teacher-admin history action: `corrected`.
 
 Changes-requested and rejection comments are mandatory. Trigger validation aligns actor/reviewer with the request and prevents self-review. Updates and deletes are rejected.
@@ -203,18 +204,22 @@ Security never depends on a scheduled transition. Even if a member row still say
 stateDiagram-v2
     [*] --> draft
     draft --> draft: save
-    draft --> pending: submit
-    pending --> pending: reassign
-    pending --> withdrawn: member withdraws
-    pending --> changes_requested: reviewer requests changes
+    draft --> pending_head: submit to selected committee head
+    pending_head --> pending_head: teacher reassigns committee head
+    pending_head --> pending_teacher: selected committee head approves
+    pending_head --> withdrawn: member withdraws
+    pending_head --> changes_requested: committee head requests changes
+    pending_teacher --> withdrawn: member withdraws
+    pending_teacher --> changes_requested: teacher requests changes
     changes_requested --> changes_requested: member edits
-    changes_requested --> pending: member resubmits
-    pending --> approved: reviewer approves
-    pending --> rejected: reviewer rejects
+    changes_requested --> pending_head: member resubmits
+    pending_head --> rejected: committee head rejects
+    pending_teacher --> approved: one teacher approves
+    pending_teacher --> rejected: teacher rejects
     approved --> approved: teacher-admin correction + immutable history
 ```
 
-Rejected and withdrawn are terminal in the current workflow. Only a pending request can receive a reviewer decision. Reassignment leaves it pending. A database transaction locks and rechecks the row for review/reassignment/correction.
+`pending_head` and `pending_teacher` are conceptual stages stored as `status = 'pending'` plus the committee-approval fields, so progress continues to count both as pending. Rejected and withdrawn are terminal. Resubmission restarts at the committee-head stage. A database transaction locks and rechecks the row for review/reassignment/correction.
 
 ## Transactional public API
 
@@ -247,7 +252,7 @@ Administrative functions follow the same actor-derived pattern:
 | `upsert_service_category`, `set_school_year_category`                    | Teacher-admin category identity/state and year availability; obsolete order/cap arguments are neutralized                                                                                      |
 | `set_app_setting`                                                        | Teacher-admin update to an allowlisted non-secret setting                                                                                                                                      |
 | `record_export`                                                          | Teacher-admin-only audit event for a bounded export result                                                                                                                                     |
-| `list_eligible_reviewers`                                                | Minimal directory for an active same-year member: eligible reviewer membership/profile IDs, full name, and role keys; caller and email excluded                                                |
+| `list_eligible_reviewers`                                                | Minimal directory for an active same-year member: active committee-head membership/profile IDs, full name, and role keys; caller, teachers, and email excluded                                 |
 
 `prepare_invitation_send(uuid)` returns only `(invitation_id uuid, email text, full_name text)` after rechecking current teacher-admin authority and invitation/year state. `record_invitation_send_success(uuid, uuid, timestamptz)` returns the updated `invitations` row and classifies the first accepted send as `invitation.sent` and later accepted sends as `invitation.resent`. The per-send UUID is carried as non-secret Auth metadata (`invitation_send_id`) and stored as audit metadata (`send_idempotency_key`) for reconciliation; a partial unique audit index enforces one receipt per invitation/key. The removed pre-provider `resend_invitation` function must not be reintroduced.
 
@@ -260,7 +265,7 @@ The migration defines five `security_invoker` views so underlying table RLS rema
 | View                     | Purpose                                                                                                                                                                    |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `member_progress`        | Fixed 20-hour target, member/leadership roles, status totals, remaining/over-goal hours, last activity, and uncapped approved percentage; global admins excluded           |
-| `pending_review_queue`   | Pending service details, member/category/requested-reviewer context, assignment-to-current-user flag, and pending age                                                      |
+| `pending_review_queue`   | Stage-aware pending service details: selected head only at stage one, all teachers at stage two, plus member/category context and stage age                                |
 | `category_totals`        | Approved/pending totals per membership/category; compatibility cap/remaining columns are null                                                                              |
 | `school_year_summary`    | Membership and request counts plus approved/pending totals by school year                                                                                                  |
 | `export_service_records` | Teacher-admin-filtered service rows with stable IDs, member/category/reviewer context, status, revision, newest non-null `latest_review_comment`, and lifecycle timestamps |

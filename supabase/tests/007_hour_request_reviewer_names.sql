@@ -72,7 +72,7 @@ select extensions.is(
       '40000000-0000-4000-8000-000000000001'
     )
   ),
-  'Riley Reviewer|Riley Reviewer',
+  'Riley Reviewer|Ada Administrator',
   'the owner can read requested and actual reviewer names for an approved request'
 );
 select extensions.is(
@@ -129,7 +129,7 @@ select extensions.is(
       '40000000-0000-4000-8000-000000000001'
     )
   ),
-  'Riley Reviewer|Riley Reviewer',
+  'Riley Reviewer|Ada Administrator',
   'historical reviewer attribution remains visible after the reviewer expires'
 );
 

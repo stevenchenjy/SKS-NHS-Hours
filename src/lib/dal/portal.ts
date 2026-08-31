@@ -104,12 +104,12 @@ export async function listCategories(schoolYearId: string): Promise<ServiceCateg
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
 
-export async function listActiveReviewers(schoolYearId: string): Promise<ReviewerOption[]> {
+export async function listActiveCommitteeHeads(schoolYearId: string): Promise<ReviewerOption[]> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("list_eligible_reviewers", {
     p_school_year_id: schoolYearId,
   });
-  const rows = requireData(data, error, "Unable to load reviewers") as unknown as Array<{
+  const rows = requireData(data, error, "Unable to load committee heads") as unknown as Array<{
     membership_id: string;
     profile_id: string;
     full_name: string;
@@ -222,7 +222,7 @@ export async function listPendingQueue(
     >
   ).map((row) => ({
     ...row,
-    waiting_since: row.submitted_at ?? row.created_at,
+    waiting_since: row.waiting_since ?? row.submitted_at ?? row.created_at,
     waiting_days: Number(row.days_pending ?? 0),
   }));
 }

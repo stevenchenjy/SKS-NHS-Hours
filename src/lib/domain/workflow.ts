@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-import {
-  hasReviewCapability,
-  membershipStatusSchema,
-  schoolYearRoleSchema,
-  type SchoolYearRole,
-} from "./roles";
+import { membershipStatusSchema, schoolYearRoleSchema, type SchoolYearRole } from "./roles";
 
 export const HOUR_REQUEST_STATUSES = [
   "draft",
@@ -21,6 +16,7 @@ export const HOUR_REQUEST_ACTIONS = [
   "submit",
   "resubmit",
   "withdraw",
+  "committee_approve",
   "approve",
   "request_changes",
   "reject",
@@ -45,6 +41,7 @@ const TRANSITIONS = {
   },
   pending: {
     withdraw: "withdrawn",
+    committee_approve: "pending",
     approve: "approved",
     request_changes: "changes_requested",
     reject: "rejected",
@@ -167,6 +164,7 @@ export type ReviewDenialReason = z.infer<typeof reviewDenialReasonSchema>;
 
 export const reviewEligibilityInputSchema = z
   .object({
+    approvalStage: z.enum(["committee_head", "teacher"]),
     requestStatus: hourRequestStatusSchema,
     submitterUserId: z.string().uuid(),
     reviewerUserId: z.string().uuid(),
@@ -218,7 +216,11 @@ export function evaluateReviewEligibility(input: ReviewEligibilityInput): Review
     reasons.push("different_school_year");
   }
 
-  if (!hasReviewCapability(value.reviewerRoles)) {
+  const hasStageRole =
+    value.approvalStage === "committee_head"
+      ? value.reviewerRoles.includes("committee_head")
+      : value.reviewerRoles.includes("teacher_admin");
+  if (!hasStageRole) {
     reasons.push("missing_review_role");
   }
 
@@ -248,6 +250,6 @@ export function isEligibleRequestedApprover(candidate: RequestedApproverCandidat
   return (
     membershipStatus === "active" &&
     membershipSchoolYearId === requestSchoolYearId &&
-    hasReviewCapability(roles)
+    roles.includes("committee_head")
   );
 }

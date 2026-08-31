@@ -30,26 +30,18 @@ export default async function ReviewQueuePage({
 }) {
   const viewer = await requireReviewer();
   const params = await searchParams;
-  const canViewAllPending = viewer.isTeacherAdmin;
-  const scope = canViewAllPending
-    ? value(params.scope) === "assigned"
-      ? "assigned"
-      : "all"
-    : "assigned";
   const search = value(params.search).trim().toLowerCase();
   const notice = value(params.notice);
   const all = await listPendingQueue(
     viewer.activeMembership.school_year_id,
-    canViewAllPending ? undefined : viewer.activeMembership.id,
+    viewer.isTeacherAdmin ? undefined : viewer.activeMembership.id,
   );
-  const assigned = all.filter((item) => item.assigned_to_current_user);
   const queue = all.filter(
     (request) =>
-      (scope === "all" || request.assigned_to_current_user) &&
-      (!search ||
-        request.member_name.toLowerCase().includes(search) ||
-        request.title.toLowerCase().includes(search) ||
-        request.category_name.toLowerCase().includes(search)),
+      !search ||
+      request.member_name.toLowerCase().includes(search) ||
+      request.title.toLowerCase().includes(search) ||
+      request.category_name.toLowerCase().includes(search),
   );
 
   return (
@@ -57,7 +49,11 @@ export default async function ReviewQueuePage({
       <PageHeader
         eyebrow={viewer.activeMembership.school_year.label}
         title="Review requests"
-        description="Process a complete request from one screen. Concurrent decisions are serialized by the database."
+        description={
+          viewer.isTeacherAdmin
+            ? "These requests already have committee-head approval. One teacher decision completes the review."
+            : "Complete the first approval for requests that members assigned to you. Approved requests move automatically to all teachers."
+        }
       />
       {notice ? (
         <p
@@ -69,28 +65,10 @@ export default async function ReviewQueuePage({
       ) : null}
 
       <div className="mb-5 flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-center lg:justify-between">
-        {canViewAllPending ? (
-          <div className="inline-flex w-fit rounded-lg bg-muted p-1">
-            <Button
-              render={<Link href="/admin/requests?scope=all" />}
-              variant={scope === "all" ? "default" : "ghost"}
-              size="sm"
-            >
-              All pending <span className="ml-1 tabular-nums">({all.length})</span>
-            </Button>
-            <Button
-              render={<Link href="/admin/requests?scope=assigned" />}
-              variant={scope === "assigned" ? "default" : "ghost"}
-              size="sm"
-            >
-              Assigned to me <span className="ml-1 tabular-nums">({assigned.length})</span>
-            </Button>
-          </div>
-        ) : (
-          <p className="text-sm font-semibold">Assigned to me ({assigned.length})</p>
-        )}
+        <p className="text-sm font-semibold">
+          {viewer.isTeacherAdmin ? "Teacher approval queue" : "Assigned to me"} ({all.length})
+        </p>
         <form className="flex w-full gap-2 lg:max-w-md">
-          <input type="hidden" name="scope" value={scope} />
           <label htmlFor="search" className="sr-only">
             Search pending requests
           </label>
@@ -122,7 +100,8 @@ export default async function ReviewQueuePage({
               <TableHead>Category</TableHead>
               <TableHead>Service date</TableHead>
               <TableHead>Hours</TableHead>
-              <TableHead>Requested approver</TableHead>
+              <TableHead>Approval stage</TableHead>
+              <TableHead>Selected committee head</TableHead>
               <TableHead className="pr-5 text-right">
                 <span className="sr-only">Review</span>
               </TableHead>
@@ -145,12 +124,16 @@ export default async function ReviewQueuePage({
                   <TableCell>{request.service_date}</TableCell>
                   <TableCell>{request.hours}</TableCell>
                   <TableCell>
-                    {request.assigned_to_current_user ? (
-                      <StatusBadge status="pending" className="whitespace-nowrap" />
-                    ) : (
-                      request.requested_approver_name
-                    )}
+                    <StatusBadge
+                      status={
+                        request.approval_stage === "teacher"
+                          ? "pending_teacher_approval"
+                          : "pending_committee_approval"
+                      }
+                      className="whitespace-nowrap"
+                    />
                   </TableCell>
+                  <TableCell>{request.requested_approver_name}</TableCell>
                   <TableCell className="pr-5 text-right">
                     <Button render={<Link href={`/admin/requests/${request.id}`} />} size="sm">
                       Review
@@ -160,7 +143,7 @@ export default async function ReviewQueuePage({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-36 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-36 text-center text-muted-foreground">
                   No pending requests match this view.
                 </TableCell>
               </TableRow>

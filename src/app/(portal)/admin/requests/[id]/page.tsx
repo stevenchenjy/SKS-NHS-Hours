@@ -19,7 +19,12 @@ import { ReviewDecisionPanel } from "@/components/review/review-decision-panel";
 import { Button } from "@/components/ui/button";
 import { requireReviewer } from "@/lib/dal/access";
 import { canViewMemberProgress } from "@/lib/domain/roles";
-import { getHourRequest, getProgress, listActiveReviewers, listCategories } from "@/lib/dal/portal";
+import {
+  getHourRequest,
+  getProgress,
+  listActiveCommitteeHeads,
+  listCategories,
+} from "@/lib/dal/portal";
 import type { HourRequest } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Review request" };
@@ -50,6 +55,10 @@ function date(value: string | null): string {
   }).format(new Date(value.length === 10 ? `${value}T12:00:00` : value));
 }
 
+function historyActionLabel(action: string): string {
+  return action === "committee_approved" ? "Committee head approved" : action.replaceAll("_", " ");
+}
+
 export default async function ReviewRequestPage({
   params,
   searchParams,
@@ -68,9 +77,18 @@ export default async function ReviewRequestPage({
     notFound();
   }
   const progressAccess = canViewMemberProgress(viewer);
-  const [progress, allReviewers, categories] = await Promise.all([
+  const approvalStage = request.committee_head_approved_at ? "teacher" : "committee_head";
+  const canDecide =
+    request.status === "pending" &&
+    (approvalStage === "teacher"
+      ? viewer.isTeacherAdmin
+      : viewer.roles.includes("committee_head") &&
+        viewer.activeMembership.id === request.requested_approver_membership_id);
+  const canReassign =
+    request.status === "pending" && approvalStage === "committee_head" && viewer.isTeacherAdmin;
+  const [progress, allCommitteeHeads, categories] = await Promise.all([
     progressAccess ? getProgress(request.member_membership_id) : Promise.resolve(null),
-    viewer.isTeacherAdmin ? listActiveReviewers(request.school_year_id) : Promise.resolve([]),
+    canReassign ? listActiveCommitteeHeads(request.school_year_id) : Promise.resolve([]),
     listCategories(request.school_year_id),
   ]);
   const member = profileFromMembership(request.memberMembership);
@@ -79,8 +97,8 @@ export default async function ReviewRequestPage({
   const requestedApprover = profileFromMembership(request.requestedApproverMembership);
   const actualReviewer = profileFromMembership(request.actualReviewerMembership);
   const selfReview = viewer.activeMembership.id === request.member_membership_id;
-  const reviewers = allReviewers.filter(
-    (reviewer) => reviewer.membershipId !== request.member_membership_id,
+  const committeeHeads = allCommitteeHeads.filter(
+    (committeeHead) => committeeHead.membershipId !== request.member_membership_id,
   );
 
   return (
@@ -98,7 +116,15 @@ export default async function ReviewRequestPage({
             <span className="font-semibold text-foreground">
               {request.title ?? "Untitled draft"}
             </span>
-            <StatusBadge status={request.status} />
+            <StatusBadge
+              status={
+                request.status === "pending"
+                  ? approvalStage === "teacher"
+                    ? "pending_teacher_approval"
+                    : "pending_committee_approval"
+                  : request.status
+              }
+            />
           </span>
         }
       />
@@ -116,7 +142,9 @@ export default async function ReviewRequestPage({
           role="status"
           className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
         >
-          Your decision was recorded. The immutable request history is shown below.
+          {request.status === "pending" && request.committee_head_approved_at
+            ? "The committee-head approval was recorded. The request is now in every teacher’s final-approval queue."
+            : "Your decision was recorded. The immutable request history is shown below."}
         </p>
       ) : null}
 
@@ -156,13 +184,25 @@ export default async function ReviewRequestPage({
                 </div>
                 <div>
                   <dt className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <UserRound className="size-4" aria-hidden="true" /> Requested approver
+                    <UserRound className="size-4" aria-hidden="true" /> Selected committee head
                   </dt>
                   <dd className="mt-1 font-semibold">
                     {requestedApprover?.full_name ?? "Unassigned"}
                   </dd>
                 </div>
               </dl>
+              <div className="mt-6 rounded-lg bg-muted/55 p-4 text-sm">
+                <p className="font-semibold">
+                  {request.committee_head_approved_at
+                    ? `Committee-head approval completed ${date(request.committee_head_approved_at)}`
+                    : "Waiting for committee-head approval"}
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  {request.committee_head_approved_at
+                    ? "All teachers can now review this request. One teacher decision completes the process."
+                    : "The request will enter the shared teacher queue after the selected committee head approves it."}
+                </p>
+              </div>
             </div>
           </section>
 
@@ -181,7 +221,7 @@ export default async function ReviewRequestPage({
                     <li key={review.id} className="p-6">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="font-semibold capitalize">
-                          {review.action.replaceAll("_", " ")}
+                          {historyActionLabel(review.action)}
                         </p>
                         <time className="text-sm text-muted-foreground">
                           {date(review.created_at)}
@@ -230,7 +270,7 @@ export default async function ReviewRequestPage({
             ) : null}
             {actualReviewer ? (
               <p className="mt-4 text-sm text-muted-foreground">
-                Actual reviewer:{" "}
+                Final teacher reviewer:{" "}
                 <span className="font-medium text-foreground">{actualReviewer.full_name}</span>
               </p>
             ) : null}
@@ -253,28 +293,47 @@ export default async function ReviewRequestPage({
             <section className="rounded-xl border border-destructive/30 bg-destructive/5 p-5">
               <h2 className="font-semibold text-destructive">Self-review is prohibited</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                You submitted this request under your own membership. Another active leader must
+                You submitted this request under your own membership. Another eligible approver must
                 process it.
               </p>
             </section>
-          ) : (
+          ) : canDecide || canReassign ? (
             <section
               aria-labelledby="decision-heading"
               className="rounded-xl border p-5 shadow-[0_1px_8px_rgba(11,23,54,0.05)]"
             >
               <h2 id="decision-heading" className="mb-1 text-xl font-bold">
-                Record a decision
+                {canDecide ? "Record a decision" : "Assign a committee head"}
               </h2>
               <p className="mb-5 text-sm leading-6 text-muted-foreground">
-                Teacher administrators may review any pending request. Committee heads may review
-                only requests assigned to them.
+                {approvalStage === "committee_head"
+                  ? canDecide
+                    ? "Your approval sends this request to the shared teacher queue; it does not approve the hours yet."
+                    : "This legacy request needs an active committee head before the two-stage review can continue."
+                  : "This committee-head-approved request is available to every teacher. The first teacher decision completes the review."}
               </p>
               <ReviewDecisionPanel
                 requestId={request.id}
-                reviewers={reviewers}
+                reviewers={committeeHeads}
                 currentReviewerMembershipId={request.requested_approver_membership_id}
-                canReassign={viewer.isTeacherAdmin}
+                approvalStage={approvalStage}
+                canDecide={canDecide}
+                canReassign={canReassign}
               />
+            </section>
+          ) : (
+            <section className="rounded-xl border bg-muted/45 p-5">
+              <div className="flex gap-3">
+                <Clock3 className="mt-0.5 size-5 text-muted-foreground" aria-hidden="true" />
+                <div>
+                  <h2 className="font-semibold">Waiting for the next approver</h2>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    {approvalStage === "committee_head"
+                      ? "Only the committee head selected by the member can complete this first stage."
+                      : "Only a teacher can complete the final approval."}
+                  </p>
+                </div>
+              </div>
             </section>
           )}
           {request.status === "approved" && viewer.isTeacherAdmin ? (

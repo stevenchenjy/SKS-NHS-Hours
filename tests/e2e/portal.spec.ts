@@ -10,9 +10,9 @@ test.describe.configure({ mode: "serial", retries: 0 });
 
 const password = process.env.E2E_PASSWORD ?? "LocalOnly123!";
 const assignedTitle = `E2E Park Inventory ${Date.now()}`;
-const openQueueTitle = `E2E Food Drive ${Date.now()}`;
 const concurrentReviewTitle = `E2E Concurrent Review ${Date.now()}`;
 const overRequirementTitle = `E2E Over Requirement ${Date.now()}`;
+const volunteerEventTitle = `E2E Volunteer Shift ${Date.now()}`;
 const rolloverLabel = "2027-2028";
 const activeSchoolYearId = "10000000-0000-4000-8000-000000000001";
 let assignedRequestPath = "";
@@ -147,7 +147,7 @@ async function submitRequest(
   await choose(page, "Service category", "Green Team");
   await page.getByLabel("Service date").fill("2026-08-28");
   await page.getByLabel("Hours").fill(hours);
-  await choose(page, "School leader", reviewer);
+  await choose(page, "Committee head", reviewer);
   await page.getByRole("button", { name: "Submit request" }).click();
   await page.waitForURL(/\/hours\/[0-9a-f-]+\?notice=submitted/);
 }
@@ -171,12 +171,12 @@ test("member login, dashboard, submission, approver selection, and pending total
   );
   assignedRequestPath = new URL(page.url()).pathname;
   await expect(page.getByText("Request submitted.")).toBeVisible();
-  await expect(page.getByText("Requested approver", { exact: true }).locator("..")).toContainText(
-    syntheticAccounts.committeeHead.fullName,
-  );
-  await expect(page.getByText("Actual reviewer", { exact: true }).locator("..")).toContainText(
-    "Not yet reviewed",
-  );
+  await expect(
+    page.getByText("Selected committee head", { exact: true }).locator(".."),
+  ).toContainText(syntheticAccounts.committeeHead.fullName);
+  await expect(
+    page.getByText("Final teacher reviewer", { exact: true }).locator(".."),
+  ).toContainText("Not yet reviewed");
   await page.goto("/dashboard");
   await expectProgressSummary(
     page,
@@ -215,14 +215,42 @@ test("member dashboard renders and edits an intentionally partial draft", async 
   await expect(page.getByLabel("Hours")).toHaveValue("");
 });
 
-test("requested leader processes the assigned request and progress updates", async ({ page }) => {
+test("selected committee head completes the first approval without approving hours", async ({
+  page,
+}) => {
   await login(page, syntheticAccounts.committeeHead.email);
   await page.goto(`/admin/requests?scope=assigned&search=${encodeURIComponent(assignedTitle)}`);
   await openQueueRequest(page, assignedTitle);
   await expect(page.getByRole("heading", { name: "Review request" })).toBeVisible();
-  await page.getByRole("button", { name: "Approve request" }).click();
+  await page.getByRole("button", { name: "Approve and send to teachers" }).click();
   await page.waitForURL(/\/admin\/requests\/.+\?notice=decision-recorded/);
   await expect(page.getByRole("status")).toContainText("immutable request history");
+
+  await login(page, syntheticAccounts.member.email);
+  await expectProgressSummary(
+    page,
+    "12.5 of 20 approved · 6.5 pending · 7.5 approved hours remaining",
+    62.5,
+    32.5,
+  );
+  if (!assignedRequestPath) throw new Error("The assigned request path was not captured.");
+  await page.goto(assignedRequestPath);
+  await expect(
+    page.getByText("Committee-head approval", { exact: true }).locator(".."),
+  ).toContainText("Approved");
+  await expect(
+    page.getByText("Final teacher reviewer", { exact: true }).locator(".."),
+  ).toContainText("Not yet reviewed");
+});
+
+test("a teacher gives final approval from the shared teacher queue", async ({ page }) => {
+  await login(page, syntheticAccounts.platformOwner.email);
+  await expect(page.getByRole("link", { name: "Open My Profile" })).toBeVisible();
+  await page.goto(`/admin/requests?search=${encodeURIComponent(assignedTitle)}`);
+  await openQueueRequest(page, assignedTitle);
+  await expect(page.getByText(assignedTitle)).toBeVisible();
+  await page.getByRole("button", { name: "Give final approval" }).click();
+  await page.waitForURL(/decision-recorded/);
 
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
@@ -233,31 +261,12 @@ test("requested leader processes the assigned request and progress updates", asy
   );
   if (!assignedRequestPath) throw new Error("The assigned request path was not captured.");
   await page.goto(assignedRequestPath);
-  await expect(page.getByText("Actual reviewer", { exact: true }).locator("..")).toContainText(
-    syntheticAccounts.committeeHead.fullName,
-  );
-});
-
-test("a teacher administrator processes a request from all pending", async ({ page }) => {
-  await login(page, syntheticAccounts.member.email);
-  await submitRequest(page, openQueueTitle);
-  const openQueueRequestPath = new URL(page.url()).pathname;
-  await login(page, syntheticAccounts.platformOwner.email);
-  await expect(page.getByRole("link", { name: "Open My Profile" })).toBeVisible();
-  await page.goto(`/admin/requests?scope=all&search=${encodeURIComponent(openQueueTitle)}`);
-  await openQueueRequest(page, openQueueTitle);
-  await expect(page.getByText(openQueueTitle)).toBeVisible();
-  await page.getByRole("button", { name: "Approve request" }).click();
-  await page.waitForURL(/decision-recorded/);
-
-  await login(page, syntheticAccounts.member.email);
-  await page.goto(openQueueRequestPath);
-  await expect(page.getByText("Requested approver", { exact: true }).locator("..")).toContainText(
-    syntheticAccounts.committeeHead.fullName,
-  );
-  await expect(page.getByText("Actual reviewer", { exact: true }).locator("..")).toContainText(
-    syntheticAccounts.platformOwner.fullName,
-  );
+  await expect(
+    page.getByText("Selected committee head", { exact: true }).locator(".."),
+  ).toContainText(syntheticAccounts.committeeHead.fullName);
+  await expect(
+    page.getByText("Final teacher reviewer", { exact: true }).locator(".."),
+  ).toContainText(syntheticAccounts.platformOwner.fullName);
 });
 
 test("simultaneous reviewers serialize to one decision", async ({ browser, baseURL, page }) => {
@@ -269,27 +278,32 @@ test("simultaneous reviewers serialize to one decision", async ({ browser, baseU
   if (!requestId) throw new Error("Submitted request URL did not contain a request ID.");
   const requestPath = `/admin/requests/${requestId}`;
 
-  const reviewerContext = await browser.newContext({ baseURL });
-  const teacherContext = await browser.newContext({ baseURL });
+  await login(page, syntheticAccounts.committeeHead.email);
+  await page.goto(requestPath);
+  await page.getByRole("button", { name: "Approve and send to teachers" }).click();
+  await page.waitForURL(/decision-recorded/);
+
+  const firstTeacherContext = await browser.newContext({ baseURL });
+  const secondTeacherContext = await browser.newContext({ baseURL });
   try {
-    const reviewerPage = await reviewerContext.newPage();
-    const teacherPage = await teacherContext.newPage();
+    const firstTeacherPage = await firstTeacherContext.newPage();
+    const secondTeacherPage = await secondTeacherContext.newPage();
     await Promise.all([
-      login(reviewerPage, syntheticAccounts.committeeHead.email),
-      login(teacherPage, syntheticAccounts.platformOwner.email),
+      login(firstTeacherPage, syntheticAccounts.platformOwner.email),
+      login(secondTeacherPage, syntheticAccounts.platformOwner.email),
     ]);
-    await Promise.all([reviewerPage.goto(requestPath), teacherPage.goto(requestPath)]);
+    await Promise.all([firstTeacherPage.goto(requestPath), secondTeacherPage.goto(requestPath)]);
     await Promise.all([
-      expect(reviewerPage.getByText(concurrentReviewTitle)).toBeVisible(),
-      expect(teacherPage.getByText(concurrentReviewTitle)).toBeVisible(),
-    ]);
-
-    await Promise.all([
-      reviewerPage.getByRole("button", { name: "Approve request" }).click(),
-      teacherPage.getByRole("button", { name: "Approve request" }).click(),
+      expect(firstTeacherPage.getByText(concurrentReviewTitle)).toBeVisible(),
+      expect(secondTeacherPage.getByText(concurrentReviewTitle)).toBeVisible(),
     ]);
 
-    const pages = [reviewerPage, teacherPage];
+    await Promise.all([
+      firstTeacherPage.getByRole("button", { name: "Give final approval" }).click(),
+      secondTeacherPage.getByRole("button", { name: "Give final approval" }).click(),
+    ]);
+
+    const pages = [firstTeacherPage, secondTeacherPage];
     await expect
       .poll(() => pages.filter((candidate) => candidate.url().includes("decision-recorded")).length)
       .toBe(1);
@@ -308,17 +322,15 @@ test("simultaneous reviewers serialize to one decision", async ({ browser, baseU
       })
       .toBe(1);
   } finally {
-    await Promise.all([reviewerContext.close(), teacherContext.close()]);
+    await Promise.all([firstTeacherContext.close(), secondTeacherContext.close()]);
   }
 
   await page.goto(`/hours/${requestId}`);
   const requestHistory = page.getByRole("region", { name: "Request history" });
   await expect(requestHistory.getByText("approved", { exact: true })).toHaveCount(1);
-  await expect(page.getByText("Actual reviewer", { exact: true }).locator("..")).toContainText(
-    new RegExp(
-      `${syntheticAccounts.committeeHead.fullName}|${syntheticAccounts.platformOwner.fullName}`,
-    ),
-  );
+  await expect(
+    page.getByText("Final teacher reviewer", { exact: true }).locator(".."),
+  ).toContainText(syntheticAccounts.platformOwner.fullName);
 });
 
 test("president and vice president cannot open the review queue without committee-head access", async ({
@@ -368,7 +380,13 @@ test("above-target member sees accurate totals while the stacked visual remains 
     `/admin/requests?scope=assigned&search=${encodeURIComponent(overRequirementTitle)}`,
   );
   await openQueueRequest(page, overRequirementTitle);
-  await page.getByRole("button", { name: "Approve request" }).click();
+  await page.getByRole("button", { name: "Approve and send to teachers" }).click();
+  await page.waitForURL(/decision-recorded/);
+
+  await login(page, syntheticAccounts.platformOwner.email);
+  await page.goto(`/admin/requests?search=${encodeURIComponent(overRequirementTitle)}`);
+  await openQueueRequest(page, overRequirementTitle);
+  await page.getByRole("button", { name: "Give final approval" }).click();
   await page.waitForURL(/decision-recorded/);
 
   await login(page, syntheticAccounts.leaderMember.email);
@@ -382,6 +400,59 @@ test("above-target member sees accurate totals while the stacked visual remains 
   );
 });
 
+test("committee head publishes an event and the FIFO waitlist promotes after a drop", async ({
+  page,
+}) => {
+  await login(page, syntheticAccounts.committeeHead.email);
+  await page.goto("/events");
+  await expect(page.getByRole("heading", { name: "Volunteer events" })).toBeVisible();
+  await expect(page.getByText("Fall Festival Setup & Welcome Team")).toBeVisible();
+  await page.getByRole("link", { name: "Publish event" }).first().click();
+  await page.getByLabel("Event title").fill(volunteerEventTitle);
+  await page
+    .getByLabel("What help is needed?")
+    .fill("Set up donation stations and organize supplies for the community collection.");
+  await page.getByLabel("Location").fill("School library");
+  await page.getByLabel("Starts").fill("2026-09-24T15:00");
+  await page.getByLabel("Ends").fill("2026-09-24T17:00");
+  await page.getByLabel("People needed").fill("1");
+  await page.getByRole("button", { name: "Publish event" }).click();
+  await page.waitForURL(/\/events\/[0-9a-f-]+\?notice=created/);
+  const eventPath = new URL(page.url()).pathname;
+  await expect(page.getByRole("status")).toContainText("visible to everyone");
+
+  await login(page, syntheticAccounts.member.email);
+  await page.goto(eventPath);
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.waitForURL(/notice=confirmed/);
+  await expect(page.getByText("You’re confirmed", { exact: true })).toBeVisible();
+
+  await login(page, syntheticAccounts.leaderMember.email);
+  await page.goto(eventPath);
+  await page.getByRole("button", { name: "Join waitlist", exact: true }).click();
+  await page.waitForURL(/notice=waitlisted/);
+  await expect(page.getByText("Waitlist #1", { exact: true })).toBeVisible();
+
+  await login(page, syntheticAccounts.member.email);
+  await page.goto(eventPath);
+  await page.getByRole("button", { name: "Drop spot", exact: true }).click();
+  await page.waitForURL(/notice=dropped/);
+
+  await login(page, syntheticAccounts.leaderMember.email);
+  await page.goto(eventPath);
+  await expect(page.getByText("You’re confirmed", { exact: true })).toBeVisible();
+
+  await login(page, syntheticAccounts.committeeHead.email);
+  await page.goto(eventPath);
+  const promotedMember = page.getByRole("row").filter({
+    hasText: syntheticAccounts.leaderMember.fullName,
+  });
+  await expect(promotedMember).toContainText("Confirmed");
+
+  await page.goto("/events?view=past");
+  await expect(page.getByText("Freshman Orientation Guides")).toBeVisible();
+});
+
 test("platform owner receives global admin navigation and opens a member profile", async ({
   page,
 }) => {
@@ -392,6 +463,7 @@ test("platform owner receives global admin navigation and opens a member profile
   const primaryNavigation = page.getByRole("navigation", { name: "Primary navigation" });
   await expect(primaryNavigation.getByRole("link", { name: "Dashboard" })).toHaveCount(0);
   await expect(primaryNavigation.getByRole("link", { name: "Log Hours" })).toHaveCount(0);
+  await expect(primaryNavigation.getByRole("link", { name: "Events" })).toBeVisible();
   await expect(primaryNavigation.getByRole("link", { name: "My Profile" })).toHaveCount(0);
   await expect(primaryNavigation.getByRole("link", { name: "Member progress" })).toBeVisible();
   await expect(primaryNavigation.getByRole("link", { name: "Audit trail" })).toBeVisible();
@@ -492,7 +564,7 @@ test("@mobile member submission and leader approval remain usable", async ({ pag
   await login(page, syntheticAccounts.committeeHead.email);
   await page.goto(`/admin/requests?scope=assigned&search=${encodeURIComponent(mobileTitle)}`);
   await openQueueRequest(page, mobileTitle);
-  const approveButton = page.getByRole("button", { name: "Approve request" });
+  const approveButton = page.getByRole("button", { name: "Approve and send to teachers" });
   await approveButton.scrollIntoViewIfNeeded();
   await expect(approveButton).toBeInViewport();
   await approveButton.click();

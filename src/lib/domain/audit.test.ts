@@ -48,6 +48,7 @@ describe("audit action taxonomy", () => {
     "category.updated",
     "school_year.target_updated",
     "membership.target_updated",
+    "hour_request.committee_approved",
     "hour_request.corrected",
     "export.generated",
     "teacher_admin.bootstrapped",

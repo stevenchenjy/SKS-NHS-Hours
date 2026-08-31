@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { HourRequestForm } from "@/components/hours/hour-request-form";
 import { PageHeader } from "@/components/portal/page-header";
 import { requireActiveViewer } from "@/lib/dal/access";
-import { getHourRequest, listActiveReviewers, listCategories } from "@/lib/dal/portal";
+import { getHourRequest, listActiveCommitteeHeads, listCategories } from "@/lib/dal/portal";
 
 export const metadata: Metadata = { title: "Edit service request" };
 
@@ -37,12 +37,12 @@ export default async function EditHourRequestPage({
     .sort((left, right) => right.created_at.localeCompare(left.created_at))
     .find((review) => review.action === "changes_requested" && review.comment);
 
-  const [categories, allReviewers] = await Promise.all([
+  const [categories, allCommitteeHeads] = await Promise.all([
     listCategories(request.school_year_id),
-    listActiveReviewers(request.school_year_id),
+    listActiveCommitteeHeads(request.school_year_id),
   ]);
-  const reviewers = allReviewers.filter(
-    (reviewer) => reviewer.membershipId !== request.member_membership_id,
+  const committeeHeads = allCommitteeHeads.filter(
+    (committeeHead) => committeeHead.membershipId !== request.member_membership_id,
   );
 
   return (
@@ -97,7 +97,7 @@ export default async function EditHourRequestPage({
           )?.school_year.label ?? "Selected school year"
         }
         categories={categories}
-        reviewers={reviewers}
+        reviewers={committeeHeads}
         submissionKey={request.client_submission_key ?? crypto.randomUUID()}
         request={request}
       />

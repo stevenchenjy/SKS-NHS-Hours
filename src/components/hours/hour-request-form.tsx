@@ -187,15 +187,15 @@ export function HourRequestForm({
       <section aria-labelledby="reviewer-fields" className="space-y-5 border-t pt-8">
         <div>
           <h2 id="reviewer-fields" className="text-xl font-bold">
-            Requested approver
+            First approver
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            The request appears in this leader’s assigned queue and every active leader’s pending
-            queue.
+            Choose one committee head for the first approval. After they approve, the request is
+            automatically sent to all teachers for the final approval.
           </p>
         </div>
         <Field data-invalid={Boolean(state.fieldErrors?.requested_approver_membership_id)}>
-          <FieldLabel htmlFor="requested_approver_membership_id">School leader</FieldLabel>
+          <FieldLabel htmlFor="requested_approver_membership_id">Committee head</FieldLabel>
           <Select
             name="requested_approver_membership_id"
             value={values.requested_approver_membership_id || undefined}
@@ -212,7 +212,7 @@ export function HourRequestForm({
               id="requested_approver_membership_id"
               className="h-11 w-full sm:max-w-xl"
             >
-              <SelectValue placeholder="Choose a reviewer" />
+              <SelectValue placeholder="Choose a committee head" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>

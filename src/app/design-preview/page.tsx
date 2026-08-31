@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CalendarDays, Clock3, History, Plus, Tag, UserRound } from "lucide-react";
 
 import { HourRequestForm } from "@/components/hours/hour-request-form";
+import { ServiceEventCard } from "@/components/events/service-event-card";
 import { AppShell } from "@/components/portal/app-shell";
 import { MetricRail } from "@/components/portal/metric-rail";
 import { PageHeader } from "@/components/portal/page-header";
@@ -24,6 +25,7 @@ import type {
   HourRequestStatus,
   ProgressRecord,
   ReviewerOption,
+  ServiceEvent,
   ServiceCategory,
   Viewer,
 } from "@/lib/types";
@@ -220,6 +222,60 @@ const historyRows: Array<{
     status: "draft",
   },
 ];
+
+const previewServiceEvent: ServiceEvent = {
+  id: "70000000-0000-4000-8000-000000000001",
+  school_year_id: "30000000-0000-4000-8000-000000000001",
+  school_year_label: "2026–2027",
+  title: "Fall festival setup & welcome team",
+  description:
+    "Help arrange activity tables, welcome families at the main entrance, and reset the gym after the festival.",
+  location: "Main gym and front entrance",
+  volunteer_audience: "All active NHS members",
+  starts_at: "2026-09-18T15:30:00",
+  ends_at: "2026-09-18T19:00:00",
+  contact_name: "Riley Reviewer",
+  contact_email: "reviewer@example.edu",
+  capacity: 12,
+  organizer_name: "Riley Reviewer",
+  confirmed_count: 9,
+  waitlist_count: 0,
+  spots_remaining: 3,
+  is_expired: false,
+  my_registration_status: null,
+  my_waitlist_position: null,
+  can_manage: false,
+};
+
+function EventsPreview({ viewer }: { viewer: Viewer }) {
+  const canPublish = viewer.isTeacherAdmin || viewer.roles.includes("committee_head");
+  const event = {
+    ...previewServiceEvent,
+    can_manage: canPublish,
+    my_registration_status: viewer.isMember && !canPublish ? ("confirmed" as const) : null,
+  };
+  return (
+    <div className="page-container">
+      <PageHeader
+        eyebrow="2026–2027"
+        title="Volunteer events"
+        description="Find open opportunities, see remaining spots, and manage your signup. Full events use a first-come waitlist that promotes the next student automatically."
+        actions={canPublish ? <Button>Publish event</Button> : undefined}
+      />
+      <div className="mb-6 inline-flex rounded-lg bg-muted p-1">
+        <Button size="sm">
+          Active <span className="ml-1">(1)</span>
+        </Button>
+        <Button size="sm" variant="ghost">
+          Past <span className="ml-1">(2)</span>
+        </Button>
+      </div>
+      <div className="max-w-3xl">
+        <ServiceEventCard event={event} viewerCanSignUp={viewer.isMember} />
+      </div>
+    </div>
+  );
+}
 
 function MemberDashboardPreview() {
   return (
@@ -586,7 +642,9 @@ function ReviewRequestPreview({
                 <h2 className="mt-1 text-2xl font-bold">Community garden shift</h2>
                 <p className="mt-1 text-sm text-muted-foreground">Submitted Aug 24, 2026</p>
               </div>
-              <StatusBadge status="pending" />
+              <StatusBadge
+                status={canReassign ? "pending_teacher_approval" : "pending_committee_approval"}
+              />
             </div>
             <div className="p-6">
               <p className="text-base leading-7">
@@ -618,7 +676,7 @@ function ReviewRequestPreview({
                 <div>
                   <dt className="flex items-center gap-2 text-sm text-muted-foreground">
                     <UserRound className="size-4" />
-                    Requested approver
+                    Selected committee head
                   </dt>
                   <dd className="mt-1 font-semibold">Jordan Lee</dd>
                 </div>
@@ -638,7 +696,9 @@ function ReviewRequestPreview({
                   <p className="font-semibold">Submitted</p>
                   <time className="text-sm text-muted-foreground">Aug 24, 2026</time>
                 </div>
-                <p className="mt-3 text-sm text-muted-foreground">Requested approver: Jordan Lee</p>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Selected committee head: Jordan Lee
+                </p>
               </li>
             </ol>
           </section>
@@ -673,14 +733,17 @@ function ReviewRequestPreview({
             <section className="rounded-xl border p-5 shadow-[0_1px_8px_rgba(11,23,54,0.05)]">
               <h2 className="mb-1 text-xl font-bold">Record a decision</h2>
               <p className="mb-5 text-sm leading-6 text-muted-foreground">
-                Teacher administrators may review any pending request. Committee heads may review
-                only requests assigned to them.
+                {canReassign
+                  ? "The committee head has approved this request. One teacher decision completes the review."
+                  : "Your approval sends this request to all teachers for the final decision."}
               </p>
               <ReviewDecisionPanel
                 requestId="50000000-0000-4000-8000-000000000001"
                 reviewers={reviewers}
                 currentReviewerMembershipId={reviewers[0]?.membershipId ?? null}
-                canReassign={canReassign}
+                approvalStage={canReassign ? "teacher" : "committee_head"}
+                canDecide
+                canReassign={false}
               />
             </section>
           ) : (
@@ -734,10 +797,17 @@ function localDesignPreviewEnabled(): boolean {
 type PreviewRole = "member" | "committee_head" | "president_vice_president" | "teacher_admin";
 
 const previewSectionsByRole: Record<PreviewRole, string[]> = {
-  member: ["dashboard", "log", "profile"],
-  committee_head: ["dashboard", "log", "profile", "review-requests"],
-  president_vice_president: ["dashboard", "log", "profile", "member-progress"],
-  teacher_admin: ["review-requests", "member-progress", "accounts", "exports", "settings"],
+  member: ["dashboard", "events", "log", "profile"],
+  committee_head: ["dashboard", "events", "log", "profile", "review-requests"],
+  president_vice_president: ["dashboard", "events", "log", "profile", "member-progress"],
+  teacher_admin: [
+    "events",
+    "review-requests",
+    "member-progress",
+    "accounts",
+    "exports",
+    "settings",
+  ],
 };
 
 function defaultSectionForRole(role: PreviewRole): string {
@@ -874,6 +944,8 @@ export default async function DesignPreviewPage({
             <ReviewRequestsPreview assignedOnly={role === "committee_head"} />
           ) : section === "member-progress" ? (
             <MemberProgressPreview />
+          ) : section === "events" ? (
+            <EventsPreview viewer={viewer} />
           ) : section === "profile" ? (
             <ProfilePreview viewer={viewer} />
           ) : section === "accounts" || section === "exports" || section === "settings" ? (

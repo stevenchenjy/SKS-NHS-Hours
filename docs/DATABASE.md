@@ -33,7 +33,7 @@ school_years ──* invitations ──* invitation_roles *── roles
 profiles/memberships ──* audit_events
 ```
 
-IDs are UUIDs except for append-only event/history identifiers where the migration chooses an identity value. Member and student-leadership roles belong to a school-year membership. Global `teacher_admin`/`platform_owner` authority belongs to a profile grant; teacher-only membership anchors exist solely for same-year reviewer and audit attribution. Service requests store membership-scoped owner, requested approver, and actual reviewer references so their school-year alignment can be enforced.
+IDs are UUIDs except for append-only event/history identifiers where the migration chooses an identity value. Member and student-leadership roles belong to a school-year membership. Global `teacher_admin`/`platform_owner` authority belongs to a profile grant; teacher-only membership anchors exist solely for same-year reviewer and audit attribution. Service requests store membership-scoped owner, selected committee head, completed committee-head approval, and final teacher reviewer references so their school-year alignment can be enforced.
 
 ## Integrity invariants
 
@@ -41,9 +41,9 @@ IDs are UUIDs except for append-only event/history identifiers where the migrati
 - A profile has at most one membership in a given school year.
 - Member access depends on membership status/expiration, profile status, school-year status/dates, and roles. Global administrator access depends on an active profile and platform grant, not a school-year date.
 - Every member target is fixed at exactly 20 approved hours. Request hours are positive quarter-hour increments and cannot exceed the universal 24-hour sanity limit.
-- Requested approver and actual reviewer are separate. Both references must align with the request's school year.
+- Selected committee head, first-stage reviewer, and final teacher reviewer are separate. Every reference aligns with the request's school year.
 - Self-review is rejected even when the user has several roles or is a teacher administrator.
-- Review and reassignment lock and recheck the pending request. A stale second decision fails.
+- Committee-head approval keeps the request pending; one teacher approval is required before hours count. Review and reassignment lock and recheck the row so stale competing decisions fail.
 - Approved rows cannot use the ordinary edit path. `correct_approved_request` records reason and before/after facts.
 - `hour_reviews`, `hour_request_corrections`, and `audit_events` are append-only.
 - Pending hours never count as approved completion. Categories have no ordering, per-request configuration, or approved-total caps.
@@ -54,19 +54,19 @@ IDs are UUIDs except for append-only event/history identifiers where the migrati
 
 Normal writes go through these public RPCs; direct table writes are intentionally not granted to authenticated callers.
 
-| Area                  | Functions                                                                                                                                     |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Member requests       | `create_hour_request_draft`, `save_hour_request_draft`, `submit_hour_request`, `withdraw_hour_request`                                        |
-| Review                | `review_hour_request`, `reassign_hour_request`                                                                                                |
-| Approved corrections  | `correct_approved_request`                                                                                                                    |
-| School years          | `create_school_year`, `activate_school_year`, `close_school_year`; the legacy `set_school_year_target` contract accepts only 20               |
-| Memberships and roles | `renew_memberships` (destination access), `set_membership_status`, `set_profile_status`, `assign_membership_role`, `remove_membership_role`   |
-| Global administration | `grant_teacher_admin`, `revoke_teacher_admin`, `transfer_platform_owner`; platform-owner-only                                                 |
-| Invitations           | `create_invitation`, `prepare_invitation_send`, `record_invitation_send_success`, `revoke_invitation`, `claim_invitation`                     |
-| Categories/settings   | `upsert_service_category`, `set_school_year_category`, `set_app_setting`                                                                      |
-| Reporting             | `record_export`                                                                                                                               |
-| Reviewer discovery    | `list_eligible_reviewers` returns only eligible IDs, full name, and role keys to an active same-year member; it excludes the caller and email |
-| Initial access        | `bootstrap_teacher_admin` (service role only, one time)                                                                                       |
+| Area                  | Functions                                                                                                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Member requests       | `create_hour_request_draft`, `save_hour_request_draft`, `submit_hour_request`, `withdraw_hour_request`                                                                |
+| Review                | `review_hour_request`, `reassign_hour_request`                                                                                                                        |
+| Approved corrections  | `correct_approved_request`                                                                                                                                            |
+| School years          | `create_school_year`, `activate_school_year`, `close_school_year`; the legacy `set_school_year_target` contract accepts only 20                                       |
+| Memberships and roles | `renew_memberships` (destination access), `set_membership_status`, `set_profile_status`, `assign_membership_role`, `remove_membership_role`                           |
+| Global administration | `grant_teacher_admin`, `revoke_teacher_admin`, `transfer_platform_owner`; platform-owner-only                                                                         |
+| Invitations           | `create_invitation`, `prepare_invitation_send`, `record_invitation_send_success`, `revoke_invitation`, `claim_invitation`                                             |
+| Categories/settings   | `upsert_service_category`, `set_school_year_category`, `set_app_setting`                                                                                              |
+| Reporting             | `record_export`                                                                                                                                                       |
+| Reviewer discovery    | `list_eligible_reviewers` returns only active committee-head IDs, full name, and role keys to an active same-year member; it excludes the caller, teachers, and email |
+| Initial access        | `bootstrap_teacher_admin` (service role only, one time)                                                                                                               |
 
 The invitation transport boundary is explicitly two phase. `prepare_invitation_send(uuid)` returns only `(invitation_id uuid, email text, full_name text)` and writes no send fact. After Auth accepts the email, `record_invitation_send_success(uuid, uuid, timestamptz)` returns the updated invitation, advances expiry/count/time once per idempotency UUID, and audits `invitation.sent` or `invitation.resent`. The migration asserts that the former pre-provider `resend_invitation` RPC is absent.
 
@@ -78,13 +78,13 @@ Function arguments are untrusted data, not proof of authority. Except for the fi
 
 Every view is declared `security_invoker`, so its underlying table policies still apply.
 
-| View                     | Authorized purpose                                                                                                                        |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `member_progress`        | Fixed target; member/leadership role keys; counts and totals for each request status; remaining/over-goal values; administrators excluded |
-| `pending_review_queue`   | Eligible pending service rows, requested assignment, age, and member/category context                                                     |
-| `category_totals`        | Approved and pending hours by category; legacy cap/remaining columns are always null                                                      |
-| `school_year_summary`    | Teacher-admin aggregate membership/request totals for one year                                                                            |
-| `export_service_records` | Teacher-admin service-record export shape, including `latest_review_comment` from the newest non-null reviewer comment                    |
+| View                     | Authorized purpose                                                                                                                                   |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `member_progress`        | Fixed target; member/leadership role keys; counts and totals for each request status; remaining/over-goal values; administrators excluded            |
+| `pending_review_queue`   | Stage-aware pending rows: only the selected committee head before first approval, then every teacher; includes stage age and member/category context |
+| `category_totals`        | Approved and pending hours by category; legacy cap/remaining columns are always null                                                                 |
+| `school_year_summary`    | Teacher-admin aggregate membership/request totals for one year                                                                                       |
+| `export_service_records` | Teacher-admin service-record export shape, including `latest_review_comment` from the newest non-null reviewer comment                               |
 
 Application queries must still bound and paginate result sets. A PostgREST response limit is not a safe export-completeness mechanism.
 

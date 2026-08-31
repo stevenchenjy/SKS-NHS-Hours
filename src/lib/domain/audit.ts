@@ -27,6 +27,7 @@ export const AUDIT_ACTION_ENTITY = {
   "hour_request.resubmitted": "hour_request",
   "hour_request.withdrawn": "hour_request",
   "hour_request.reassigned": "hour_request",
+  "hour_request.committee_approved": "hour_request",
   "hour_request.approved": "hour_request",
   "hour_request.changes_requested": "hour_request",
   "hour_request.rejected": "hour_request",

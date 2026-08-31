@@ -39,7 +39,7 @@ flowchart LR
 3. Annual student access is `member` plus any explicitly assigned annual leadership capabilities. Global teacher-administrator access is exclusive, independent of school years, and is never inferred from a browser claim.
 4. Authorization-sensitive mutations run server-side and end in a database transaction or narrowly scoped RPC.
 5. Row Level Security and explicit grants deny unauthorized direct Data API access.
-6. Requested approver, current assignment, and actual reviewer are separate facts.
+6. Selected committee head, completed first approval, and final teacher reviewer are separate facts. Hours require both approval stages.
 7. Only approved requests contribute to the fixed 20-hour requirement. Pending hours are a separately colored adjacent visual/text value; changes-requested hours remain separate.
 8. Reviews, corrections, and audit events are append-only. Approved facts are never silently overwritten.
 9. Historical identities and records survive school-year expiration, suspension, and transition.
@@ -133,20 +133,19 @@ Resending uses the same pending invitation and a fresh Auth Invite User message.
 
 ### Member draft and submission
 
-1. The member opens the form; the server returns active categories plus a deliberately minimal reviewer directory from `list_eligible_reviewers`. The directory requires the caller's active same-year membership, excludes the caller, returns only eligible reviewer membership/profile IDs, full name, and role keys, and exposes no reviewer email.
+1. The member opens the form; the server returns active categories plus a deliberately minimal committee-head directory from `list_eligible_reviewers`. The directory requires the caller's active same-year membership, excludes the caller and all teachers, returns only eligible committee-head membership/profile IDs, full name, and role keys, and exposes no email.
 2. Draft input is validated. The member ID comes from the session, and protected columns such as status and reviewer identity are not accepted from arbitrary client input.
 3. Draft save is limited to the owner and an eligible school year and must include the revision the member actually viewed.
-4. Submission validates the expected revision, category activity, service date, positive quarter-hour hours up to 24, active reviewer eligibility, and school-year acceptance.
-5. One database transaction changes the request to `pending`, records submission time and assignment, and appends an audit event.
+4. Submission validates the expected revision, category activity, service date, positive quarter-hour hours up to 24, active committee-head eligibility, and school-year acceptance.
+5. One database transaction changes the request to `pending`, records submission time and the selected first approver, clears any prior approval stages on resubmission, and appends an audit event.
 
-### Review, changes, rejection, and reassignment
+### Two-stage review, changes, rejection, and reassignment
 
-1. The server verifies either an active review-capable annual role or a global teacher-administrator grant. Global administrators use a teacher-only same-year attribution anchor.
-2. The database transaction locks the request row and rechecks that it is still `pending`.
-3. The transaction rejects self-review and stale/expired reviewer authority.
-4. Approval, changes requested, rejection, or reassignment appends immutable review history. Changes requested and rejection require a comment.
-5. A terminal decision records the actual reviewer separately from the originally requested approver.
-6. Competing review transactions cannot both succeed because only the first transaction sees an eligible locked state.
+1. While no committee-head approval is recorded, only the active committee head selected by the member can decide the request. A teacher may reassign a legacy/stale first-stage assignment to another active committee head but cannot approve it.
+2. Committee-head approval appends immutable `committee_approved` history, keeps status `pending`, and makes the request visible to every active teacher administrator.
+3. During the teacher stage, any teacher can approve, request changes, or reject. Only teacher approval changes status to `approved` and credits the hours.
+4. Changes requested and rejection require a comment. Resubmission clears both acting-reviewer fields and restarts with the currently selected committee head.
+5. Every decision transaction locks the row, rechecks stage and authority, rejects self-review, and records the acting membership. Competing final teacher transactions cannot both succeed.
 
 ### Approved-record correction
 

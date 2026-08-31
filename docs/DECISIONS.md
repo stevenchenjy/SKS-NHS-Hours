@@ -32,11 +32,11 @@ This log records decisions that materially affect security, data integrity, oper
 
 **Reason:** Exact numeric arithmetic avoids floating-point accumulation errors. A fixed target removes inconsistent exceptions and duplicate configuration workflows.
 
-## D-006 — Preserve requested and actual reviewers separately
+## D-006 — Require committee-head and teacher approval
 
-**Decision:** `hour_requests.requested_approver_membership_id` records assignment; immutable `hour_reviews.reviewer_membership_id` records the actor for each review/reassignment event; final reviewer/timestamp are derived or denormalized only by the transactional review function.
+**Decision:** A member selects one active committee head for the first approval. That approval keeps the request pending and sends it to the shared teacher queue. One teacher administrator must then approve before the hours count. The request stores the selected committee head, completed committee-head approval, and final teacher reviewer as separate facts; resubmission restarts both stages.
 
-**Reason:** Assignment and decision are different facts and both are required for queueing, reporting, auditability, and reassignment.
+**Reason:** The two independent approvals reflect school policy while keeping assignment, first approval, and final decision auditable.
 
 ## D-007 — Never silently update approved service facts
 

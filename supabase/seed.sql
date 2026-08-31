@@ -258,6 +258,69 @@ from (
 join public.roles role on role.role_key = seeded.role_key
 on conflict (membership_id, role_id) do nothing;
 
+insert into public.service_events (
+  id, school_year_id, title, description, location, volunteer_audience,
+  starts_at, ends_at, contact_name, contact_email, capacity,
+  created_by_profile_id, created_by_membership_id, created_at, updated_at
+)
+values
+  ('70000000-0000-4000-8000-000000000001',
+   '10000000-0000-4000-8000-000000000001',
+   'Fall Festival Setup & Welcome Team',
+   'Arrange activity tables, welcome families at the main entrance, and reset the gym after the festival.',
+   'Main gym and front entrance', 'All active NHS members',
+   '2026-09-18 15:30:00', '2026-09-18 19:00:00',
+   'Riley Reviewer', 'reviewer@example.edu', 2,
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa002',
+   '20000000-0000-4000-8000-000000000002',
+   '2026-08-29 15:00:00+00', '2026-08-29 15:00:00+00'),
+  ('70000000-0000-4000-8000-000000000002',
+   '10000000-0000-4000-8000-000000000001',
+   'Freshman Orientation Guides',
+   'Guided incoming students and families between check-in, classrooms, and the auditorium.',
+   'School auditorium lobby', 'Returning NHS members',
+   '2026-08-12 08:00:00', '2026-08-12 11:30:00',
+   'Ada Administrator', 'admin@example.edu', 6,
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001',
+   '20000000-0000-4000-8000-000000000001',
+   '2026-07-25 15:00:00+00', '2026-07-25 15:00:00+00')
+on conflict (id) do update
+set title = excluded.title,
+    description = excluded.description,
+    location = excluded.location,
+    volunteer_audience = excluded.volunteer_audience,
+    starts_at = excluded.starts_at,
+    ends_at = excluded.ends_at,
+    contact_name = excluded.contact_name,
+    contact_email = excluded.contact_email,
+    capacity = excluded.capacity,
+    updated_at = excluded.updated_at;
+
+insert into public.service_event_registrations (
+  id, event_id, school_year_id, member_membership_id, status,
+  joined_at, promoted_at, withdrawn_at, updated_at
+)
+overriding system value
+values
+  (-2001, '70000000-0000-4000-8000-000000000001',
+   '10000000-0000-4000-8000-000000000001',
+   '20000000-0000-4000-8000-000000000003', 'confirmed',
+   '2026-08-29 16:00:00+00', null, null, '2026-08-29 16:00:00+00'),
+  (-2002, '70000000-0000-4000-8000-000000000001',
+   '10000000-0000-4000-8000-000000000001',
+   '20000000-0000-4000-8000-000000000004', 'confirmed',
+   '2026-08-29 16:05:00+00', null, null, '2026-08-29 16:05:00+00'),
+  (-2003, '70000000-0000-4000-8000-000000000001',
+   '10000000-0000-4000-8000-000000000001',
+   '20000000-0000-4000-8000-000000000007', 'waitlisted',
+   '2026-08-29 16:10:00+00', null, null, '2026-08-29 16:10:00+00')
+on conflict on constraint service_event_registrations_event_member_unique do update
+set status = excluded.status,
+    joined_at = excluded.joined_at,
+    promoted_at = excluded.promoted_at,
+    withdrawn_at = excluded.withdrawn_at,
+    updated_at = excluded.updated_at;
+
 insert into public.service_categories (
   id, name, description, display_order, is_active, default_max_hours_per_request,
   created_by_profile_id
@@ -332,7 +395,8 @@ select set_config('nhs.allow_hour_request_transition', 'on', true);
 
 insert into public.hour_requests (
   id, member_membership_id, school_year_id, category_id,
-  requested_approver_membership_id, actual_reviewer_membership_id,
+  requested_approver_membership_id, committee_head_reviewer_membership_id,
+  committee_head_approved_at, actual_reviewer_membership_id,
   title, description, service_date, hours, status, client_submission_key,
   revision, created_at, submitted_at, updated_at, decided_at, withdrawn_at
 )
@@ -340,7 +404,8 @@ values
   ('40000000-0000-4000-8000-000000000001',
    '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001',
    '30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000002',
-   '20000000-0000-4000-8000-000000000002', 'Library Setup',
+   '20000000-0000-4000-8000-000000000002', '2026-08-06 17:00:00+00',
+   '20000000-0000-4000-8000-000000000001', 'Library Setup',
    'Prepared books and tables for the school library event.', '2026-08-05', 12.50,
    'approved', 'seed-member-approved', 1, '2026-08-05 18:00:00+00',
    '2026-08-05 18:05:00+00', '2026-08-06 18:00:00+00',
@@ -348,20 +413,20 @@ values
   ('40000000-0000-4000-8000-000000000002',
    '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001',
    '30000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000002',
-   null, 'Community Cleanup', 'Collected litter in a supervised park cleanup.',
+   null, null, null, 'Community Cleanup', 'Collected litter in a supervised park cleanup.',
    '2026-08-20', 3.25, 'pending', 'seed-member-pending', 1,
    '2026-08-20 18:00:00+00', '2026-08-20 18:05:00+00',
    '2026-08-20 18:05:00+00', null, null),
   ('40000000-0000-4000-8000-000000000003',
    '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001',
    '30000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002',
-   null, 'Tutoring Draft', 'Draft entry for peer tutoring.', '2026-08-22', 2.00,
+   null, null, null, 'Tutoring Draft', 'Draft entry for peer tutoring.', '2026-08-22', 2.00,
    'draft', 'seed-member-draft', 1, '2026-08-22 18:00:00+00', null,
    '2026-08-22 18:00:00+00', null, null),
   ('40000000-0000-4000-8000-000000000004',
    '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001',
    '30000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000002',
-   '20000000-0000-4000-8000-000000000002', 'Food Pantry',
+   null, null, '20000000-0000-4000-8000-000000000002', 'Food Pantry',
    'Sorted pantry donations after school.', '2026-08-12', 1.50,
    'changes_requested', 'seed-member-changes', 1, '2026-08-12 18:00:00+00',
    '2026-08-12 18:05:00+00', '2026-08-13 18:00:00+00',
@@ -369,7 +434,8 @@ values
   ('40000000-0000-4000-8000-000000000005',
    '20000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000001',
    '30000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000002',
-   '20000000-0000-4000-8000-000000000002', 'Summer Community Program',
+   '20000000-0000-4000-8000-000000000002', '2026-08-11 17:00:00+00',
+   '20000000-0000-4000-8000-000000000001', 'Summer Community Program',
    'Supported a multi-day youth program.', '2026-08-10', 12.00,
    'approved', 'seed-leader-approved', 1, '2026-08-10 18:00:00+00',
    '2026-08-10 18:05:00+00', '2026-08-11 18:00:00+00',
@@ -389,10 +455,17 @@ values
    'submitted', '20000000-0000-4000-8000-000000000003', null, 'draft', 'pending',
    null, '20000000-0000-4000-8000-000000000002', null, '2026-08-05 18:05:00+00'),
   (-1002, '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001',
-   'approved', '20000000-0000-4000-8000-000000000002',
-   '20000000-0000-4000-8000-000000000002', 'pending', 'approved',
+   'committee_approved', '20000000-0000-4000-8000-000000000002',
+   '20000000-0000-4000-8000-000000000002', 'pending', 'pending',
    '20000000-0000-4000-8000-000000000002',
-   '20000000-0000-4000-8000-000000000002', 'Verified.', '2026-08-06 18:00:00+00'),
+   '20000000-0000-4000-8000-000000000002', 'Verified by committee head.',
+   '2026-08-06 17:00:00+00'),
+  (-1006, '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001',
+   'approved', '20000000-0000-4000-8000-000000000001',
+   '20000000-0000-4000-8000-000000000001', 'pending', 'approved',
+   '20000000-0000-4000-8000-000000000002',
+   '20000000-0000-4000-8000-000000000002', 'Final teacher approval.',
+   '2026-08-06 18:00:00+00'),
   (-1003, '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001',
    'submitted', '20000000-0000-4000-8000-000000000003', null, 'draft', 'pending',
    null, '20000000-0000-4000-8000-000000000002', null, '2026-08-20 18:05:00+00'),
@@ -403,10 +476,17 @@ values
    '20000000-0000-4000-8000-000000000002',
    'Please add the supervising organization.', '2026-08-13 18:00:00+00'),
   (-1005, '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000001',
-   'approved', '20000000-0000-4000-8000-000000000002',
-   '20000000-0000-4000-8000-000000000002', 'pending', 'approved',
+   'committee_approved', '20000000-0000-4000-8000-000000000002',
+   '20000000-0000-4000-8000-000000000002', 'pending', 'pending',
    '20000000-0000-4000-8000-000000000002',
-   '20000000-0000-4000-8000-000000000002', 'Verified.', '2026-08-11 18:00:00+00')
+   '20000000-0000-4000-8000-000000000002', 'Verified by committee head.',
+   '2026-08-11 17:00:00+00'),
+  (-1007, '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000001',
+   'approved', '20000000-0000-4000-8000-000000000001',
+   '20000000-0000-4000-8000-000000000001', 'pending', 'approved',
+   '20000000-0000-4000-8000-000000000002',
+   '20000000-0000-4000-8000-000000000002', 'Final teacher approval.',
+   '2026-08-11 18:00:00+00')
 on conflict (id) do nothing;
 
 insert into public.audit_events (

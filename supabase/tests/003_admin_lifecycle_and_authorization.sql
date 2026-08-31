@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(37);
+select extensions.plan(38);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -80,8 +80,23 @@ select extensions.is(
   'ordinary member cannot read CSV export rows'
 );
 
--- A teacher administrator may process any pending request, including one
--- assigned to a committee head.
+-- The selected committee head must approve first.
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa002', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa002","role":"authenticated","email":"reviewer@example.edu"}',
+  true
+);
+select extensions.lives_ok(
+  $$ select public.review_hour_request('40000000-0000-4000-8000-000000000002', 'approve') $$,
+  'the selected committee head sends the request to the teacher queue'
+);
+
+-- Any teacher administrator may then complete the final approval even though
+-- the original assignment remains the committee head.
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001', true);
@@ -93,7 +108,7 @@ select set_config(
 );
 select extensions.lives_ok(
   $$ select public.review_hour_request('40000000-0000-4000-8000-000000000002', 'approve') $$,
-  'a teacher administrator can process an item assigned to another reviewer'
+  'a teacher administrator can complete a committee-head-approved request'
 );
 select extensions.is(
   (

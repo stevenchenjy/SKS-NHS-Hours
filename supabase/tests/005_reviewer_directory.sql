@@ -171,7 +171,7 @@ select extensions.is(
     select count(*)
     from public.list_eligible_reviewers('10000000-0000-4000-8000-000000000001')
   ),
-  3::bigint,
+  2::bigint,
   'the directory returns only active committee-head reviewers, excluding the owner and president-only accounts'
 );
 select extensions.is(
@@ -181,7 +181,6 @@ select extensions.is(
   ),
   array[
     '20000000-0000-4000-8000-000000000002'::uuid,
-    '20000000-0000-4000-8000-000000000004'::uuid,
     '20000000-0000-4000-8000-000000000007'::uuid
   ],
   'the ordinary member sees exactly the eligible same-year committee-head memberships'

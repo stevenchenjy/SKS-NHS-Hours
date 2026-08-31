@@ -94,10 +94,9 @@ Run every policy test as an explicit database role/session, not as the service r
 | `anon`                           | Auth-required surfaces return no application rows                                                        | Cannot read or mutate any application table/view/function                                                                          |
 | Unprovisioned authenticated user | Can establish Auth identity only                                                                         | Cannot read profiles, memberships, requests, roster, invites, audit, or exports                                                    |
 | Active member                    | Reads own profile/memberships/requests/progress; drafts/submits/withdraws/resubmits own eligible request | Cannot read another member's private data; cannot set owner/status/reviewer decision/audit fields; cannot submit to stale reviewer |
-| Active reviewer                  | Reads permitted roster/member logs and both pending queues; decides another member's pending request     | Cannot self-review; cannot decide a non-pending request; cannot manage accounts/roles/years/categories without teacher-admin role  |
-| Eligible reviewer not assigned   | Can process a request from all-pending and becomes actual reviewer                                       | Assignment does not hide the request or misattribute the decision                                                                  |
+| Active committee head            | Sees requests explicitly assigned to them and completes the first approval                               | Cannot act on another head's request or complete the teacher stage                                                                 |
 | Expired/suspended reviewer       | Historical access only where policy permits                                                              | Cannot view active leader surfaces, review, reassign, or regain authority through stale role rows                                  |
-| Global teacher administrator     | Manages years/access/roles/categories/invites; audits/exports; corrects and reviews with an anchor       | Has no member progress/target; cannot manage owner-only grants or bypass history                                                   |
+| Global teacher administrator     | Sees every committee-head-approved request, gives the final decision, and manages administration         | Cannot bypass the committee-head stage; has no member progress/target; cannot manage owner-only grants                             |
 | Platform owner                   | Teacher-admin abilities plus grant/revoke/transfer and synthetic role preview                            | Cannot impersonate a real user, combine global/member access, remove final admin, or leave no owner                                |
 | Service role                     | Used only in a narrowly scoped server test for intended Auth administration                              | No browser/client path or general application data path depends on it                                                              |
 
@@ -106,9 +105,9 @@ Required database behaviors:
 1. One profile per Auth UUID; one membership per user/year; one role assignment per membership/role.
 2. Five unique initial categories; alphabetical/cap-free policy; case-insensitive active-name uniqueness; referenced categories cannot be hard-deleted.
 3. Exact positive quarter-hour request values up to 24 and a fixed 20-hour target with null membership overrides.
-4. Requested reviewer belongs to the same school year and has a currently eligible review role.
-5. Review RPC locks/rechecks the pending request; two concurrent decisions yield exactly one success and one safe stale-state failure.
-6. Requested approver and actual reviewer remain distinct.
+4. The member-selected first approver belongs to the same school year and has an active committee-head role; teachers never appear in that picker.
+5. Committee-head approval keeps the request pending and exposes it to all teachers; only a teacher approval grants hour credit.
+6. Review RPC locks/rechecks the pending request; two concurrent final decisions yield exactly one success and one safe stale-state failure.
 7. Change/reject comments are required and every review is immutable.
 8. Approved fields cannot change through ordinary table writes; correction records capture actor, reason, before, after, and timestamp atomically.
 9. Approved rows alone contribute to completion; pending and changes-requested totals remain separate; global admins never appear in member progress/counts.
@@ -121,9 +120,9 @@ Required database behaviors:
 
 Automate at least:
 
-1. invited member login → dashboard → new request → reviewer selection → submit → pending total;
-2. assigned reviewer login → assigned queue → approve → actual reviewer/history → member approved progress;
-3. different eligible reviewer → all-pending → process the same kind of request;
+1. invited member login → dashboard → new request → committee-head selection → submit → pending total;
+2. selected committee head → first approval → request remains pending and enters the teacher queue;
+3. any teacher → shared queue → final approval → final reviewer/history → member approved progress;
 4. self-review attempt denied through the real UI/server/database path;
 5. reviewer requests changes with required comment → member edits → resubmits → review succeeds;
 6. approved/pending values produce adjacent colored segments and neutral remainder; several approvals exceed 20 → uncapped text and capped visual;
@@ -157,16 +156,16 @@ Tests should assert outcomes and persisted records, not only visible button stat
 
 - Dashboard separately labels approved, pending, changes requested, remaining, and over-goal hours.
 - Draft survives ordinary validation errors without changing protected fields.
-- Service date, category, hours, reviewer, title, and description show specific inline errors.
-- Submitted requests appear in history with requested approver and status.
+- Service date, category, hours, committee head, title, and description show specific inline errors.
+- Submitted requests appear in history with selected committee head and approval stage.
 - A pending eligible request can be withdrawn; forbidden states cannot.
 - Changes-requested shows the reviewer comment and permits only the intended edit/resubmit path.
 - Approved entries cannot be edited through UI, crafted form data, or direct Data API writes.
 
 ### Reviewer and teacher-admin workflow
 
-- Assigned and all-pending queues are distinct, searchable/filterable, correctly sorted, and paginate/bound results.
-- Review screen includes member context, activity, requested approver, current status, and immutable review history.
+- Committee heads see only their assigned first-stage queue; every teacher sees the shared final-stage queue.
+- Review screen includes member context, activity, selected committee head, current stage, and immutable review history.
 - Reject/change require a comment; approve comment is optional; reassignment preserves history.
 - Self-review is denied even for multi-role and teacher-admin users.
 - Roster includes every permitted active member; a leader can open full permitted profile/log history.
