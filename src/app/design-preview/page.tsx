@@ -1,15 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ArrowRight,
-  CalendarDays,
-  CheckCircle2,
-  Clock3,
-  History,
-  Plus,
-  Tag,
-  UserRound,
-} from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock3, History, Plus, Tag, UserRound } from "lucide-react";
 
 import { HourRequestForm } from "@/components/hours/hour-request-form";
 import { AppShell } from "@/components/portal/app-shell";
@@ -360,18 +351,13 @@ const adminMembers = [
   ["Liam Rivera", "22.5", "20", "112.5%", "2.5 hours over goal"],
 ];
 
-function AdminDashboardPreview() {
+function MemberProgressPreview() {
   return (
     <div className="page-container">
       <PageHeader
         eyebrow="2026–2027"
-        title="NHS overview"
-        description="Review current service activity and member progress for the active school year."
-        actions={
-          <Button>
-            Review requests <ArrowRight data-icon="inline-end" aria-hidden="true" />
-          </Button>
-        }
+        title="Member progress"
+        description="View approved progress for members in the active school year."
       />
       <MetricRail
         items={[
@@ -382,58 +368,6 @@ function AdminDashboardPreview() {
           { label: "Approved hours", value: "1,126.5", detail: "Across this school year" },
         ]}
       />
-      <section className="mt-10" aria-labelledby="queue-preview-heading">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <div>
-            <h2 id="queue-preview-heading" className="text-2xl font-bold">
-              Requests waiting longest
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Any active leader can process an eligible pending request.
-            </p>
-          </div>
-          <Button variant="ghost">View queue</Button>
-        </div>
-        <div className="overflow-hidden rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/60 hover:bg-muted/60">
-                <TableHead className="pl-5">Member</TableHead>
-                <TableHead>Activity</TableHead>
-                <TableHead>Hours</TableHead>
-                <TableHead>Waiting</TableHead>
-                <TableHead>Assignment</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[
-                ["Sofia Patel", "Community garden shift", "4", "8 days", "Jordan Lee"],
-                ["Maya Chen", "Freshman orientation guide", "2", "5 days", "Assigned to you"],
-                ["Owen Brooks", "Food pantry inventory", "3.25", "4 days", "Noah Williams"],
-              ].map((row) => (
-                <TableRow key={row[1]}>
-                  <TableCell className="pl-5 font-semibold">{row[0]}</TableCell>
-                  <TableCell>{row[1]}</TableCell>
-                  <TableCell>{row[2]}</TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center gap-1.5">
-                      <Clock3 className="size-4 text-muted-foreground" />
-                      {row[3]}
-                    </span>
-                  </TableCell>
-                  <TableCell>{row[4]}</TableCell>
-                  <TableCell className="text-right">
-                    <Button size="sm" variant="ghost">
-                      Review
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </section>
       <section className="mt-10" aria-labelledby="members-preview-heading">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
@@ -469,6 +403,160 @@ function AdminDashboardPreview() {
               ))}
             </TableBody>
           </Table>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ReviewRequestsPreview({ assignedOnly }: { assignedOnly: boolean }) {
+  const requests = assignedOnly
+    ? [["Maya Chen", "Freshman orientation guide", "2", "Assigned to you"]]
+    : [
+        ["Sofia Patel", "Community garden shift", "4", "Jordan Lee"],
+        ["Maya Chen", "Freshman orientation guide", "2", "Assigned to you"],
+        ["Owen Brooks", "Food pantry inventory", "3.25", "Noah Williams"],
+      ];
+
+  return (
+    <div className="page-container">
+      <PageHeader
+        eyebrow="2026–2027"
+        title="Review requests"
+        description={
+          assignedOnly
+            ? "Review service requests assigned to you."
+            : "Review any pending service request for the active school year."
+        }
+      />
+      <section className="rounded-xl border">
+        <div className="flex items-center justify-between gap-4 border-b px-5 py-4 sm:px-6">
+          <div>
+            <h2 className="font-semibold">{assignedOnly ? "Assigned to me" : "All pending"}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{requests.length} pending requests</p>
+          </div>
+          <Input aria-label="Search requests" className="max-w-64" placeholder="Search requests" />
+        </div>
+        <div className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/60 hover:bg-muted/60">
+                <TableHead className="pl-5">Member</TableHead>
+                <TableHead>Activity</TableHead>
+                <TableHead>Hours</TableHead>
+                <TableHead>Assigned to</TableHead>
+                <TableHead>
+                  <span className="sr-only">Open</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {requests.map((request) => (
+                <TableRow key={request[1]}>
+                  <TableCell className="pl-5 font-semibold">{request[0]}</TableCell>
+                  <TableCell>{request[1]}</TableCell>
+                  <TableCell>{request[2]}</TableCell>
+                  <TableCell>{request[3]}</TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="ghost">
+                      Open
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ProfilePreview({ viewer }: { viewer: Viewer }) {
+  const roleLabels = viewer.isTeacherAdmin
+    ? ["Teacher administrator"]
+    : viewer.roles.map((role) =>
+        role === "president_vice_president"
+          ? "President / Vice President"
+          : role === "committee_head"
+            ? "Committee Head"
+            : "Member",
+      );
+
+  return (
+    <div className="page-container max-w-[920px]">
+      <PageHeader title="My Profile" description="Your account and current NHS access." />
+      <section className="rounded-xl border p-6 sm:p-8">
+        <div className="flex items-center gap-4">
+          <div className="flex size-14 items-center justify-center rounded-full bg-secondary text-lg font-bold text-secondary-foreground">
+            {viewer.profile.full_name
+              .split(" ")
+              .map((part) => part[0])
+              .join("")}
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">{viewer.profile.full_name}</h2>
+            <p className="text-sm text-muted-foreground">{viewer.email}</p>
+          </div>
+        </div>
+        <div className="mt-7 border-t pt-6">
+          <p className="text-sm font-semibold text-muted-foreground">Current roles</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {roleLabels.map((role) => (
+              <span key={role} className="rounded-full border px-3 py-1 text-sm font-medium">
+                {role}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function AdministrationPreview({ section }: { section: "accounts" | "exports" | "settings" }) {
+  const content = {
+    accounts: {
+      title: "Accounts",
+      description: "Manage accounts, school-year access, roles, and invitations.",
+      heading: "Accounts and invitations",
+      detail: "Invite members or add existing accounts to the active school year.",
+    },
+    exports: {
+      title: "Exports",
+      description: "Prepare records for the active school year.",
+      heading: "Available exports",
+      detail: "Download approved service records and member progress when needed.",
+    },
+    settings: {
+      title: "Settings",
+      description: "Manage school-year dates and service categories.",
+      heading: "School years",
+      detail: "The active school year runs from Aug 29, 2026 through Sep 1, 2027.",
+    },
+  }[section];
+
+  return (
+    <div className="page-container max-w-[1080px]">
+      <PageHeader
+        eyebrow="Administration"
+        title={content.title}
+        description={content.description}
+      />
+      <section className="rounded-xl border p-6 sm:p-7">
+        <h2 className="text-xl font-bold">{content.heading}</h2>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">{content.detail}</p>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <p className="font-semibold">2026–2027</p>
+            <p className="mt-1 text-sm text-muted-foreground">Active school year</p>
+          </div>
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <p className="font-semibold">Read-only preview</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Controls are disabled in Role Preview.
+            </p>
+          </div>
         </div>
       </section>
     </div>
@@ -664,27 +752,40 @@ function localDesignPreviewEnabled(): boolean {
   }
 }
 
-function RolePreviewToolbar({ screen, role }: { screen: string; role: string | undefined }) {
+type PreviewRole = "member" | "committee_head" | "president_vice_president" | "teacher_admin";
+
+const previewSectionsByRole: Record<PreviewRole, string[]> = {
+  member: ["dashboard", "log", "profile"],
+  committee_head: ["dashboard", "log", "profile", "review-requests"],
+  president_vice_president: ["dashboard", "log", "profile", "member-progress"],
+  teacher_admin: ["review-requests", "member-progress", "accounts", "exports", "settings"],
+};
+
+function defaultSectionForRole(role: PreviewRole): string {
+  return role === "teacher_admin" ? "member-progress" : "dashboard";
+}
+
+function previewHref(role: PreviewRole, section: string): string {
+  return `/design-preview?role=${role}&section=${section}`;
+}
+
+function RolePreviewToolbar({ role, section }: { role: PreviewRole; section: string }) {
   const items = [
     {
-      href: "/design-preview?screen=dashboard",
+      role: "member" as const,
       label: "Member",
-      active: screen === "dashboard" || screen === "log",
     },
     {
-      href: "/design-preview?screen=review&role=committee_head",
+      role: "committee_head" as const,
       label: "Committee head",
-      active: screen === "review" && role !== "president_vice_president",
     },
     {
-      href: "/design-preview?screen=review&role=president_vice_president",
+      role: "president_vice_president" as const,
       label: "President / Vice President",
-      active: screen === "review" && role === "president_vice_president",
     },
     {
-      href: "/design-preview?screen=admin",
+      role: "teacher_admin" as const,
       label: "Teacher administrator",
-      active: screen === "admin",
     },
   ];
 
@@ -699,11 +800,16 @@ function RolePreviewToolbar({ screen, role }: { screen: string; role: string | u
       <nav aria-label="Preview a role" className="mt-2 flex gap-2 overflow-x-auto sm:flex-col">
         {items.map((item) => (
           <Link
-            key={item.href}
-            href={item.href}
-            aria-current={item.active ? "page" : undefined}
+            key={item.role}
+            href={previewHref(
+              item.role,
+              previewSectionsByRole[item.role].includes(section)
+                ? section
+                : defaultSectionForRole(item.role),
+            )}
+            aria-current={item.role === role ? "page" : undefined}
             className={
-              item.active
+              item.role === role
                 ? "shrink-0 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
                 : "shrink-0 rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
             }
@@ -725,51 +831,75 @@ function RolePreviewToolbar({ screen, role }: { screen: string; role: string | u
 export default async function DesignPreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ screen?: string; role?: string }>;
+  searchParams: Promise<{ screen?: string; role?: string; section?: string }>;
 }) {
   const localPreview = localDesignPreviewEnabled();
   if (!localPreview) await requirePlatformOwner();
 
-  const { screen = "dashboard", role } = await searchParams;
-  const viewer =
+  const { screen, role: requestedRole, section: requestedSection } = await searchParams;
+  const role: PreviewRole =
+    requestedRole === "teacher_admin" || screen === "admin"
+      ? "teacher_admin"
+      : requestedRole === "president_vice_president"
+        ? "president_vice_president"
+        : requestedRole === "committee_head" || screen === "review"
+          ? "committee_head"
+          : "member";
+  const legacySection =
     screen === "admin"
+      ? "member-progress"
+      : screen === "review"
+        ? "review-request"
+        : screen === "log"
+          ? "log"
+          : "dashboard";
+  const candidateSection = requestedSection ?? legacySection;
+  const section =
+    candidateSection === "review-request" || previewSectionsByRole[role].includes(candidateSection)
+      ? candidateSection
+      : defaultSectionForRole(role);
+  const viewer =
+    role === "teacher_admin"
       ? adminViewer
-      : screen === "review" && role === "president_vice_president"
+      : role === "president_vice_president"
         ? presidentViewer
-        : screen === "review"
+        : role === "committee_head"
           ? committeeHeadViewer
           : memberViewer;
   const previewName =
-    screen === "admin"
+    role === "teacher_admin"
       ? "Teacher administrator"
-      : screen === "review" && role === "president_vice_president"
+      : role === "president_vice_president"
         ? "President / Vice President"
-        : screen === "review"
+        : role === "committee_head"
           ? "Committee head"
           : "Member";
 
   return (
     <>
-      <RolePreviewToolbar screen={screen} role={role} />
+      <RolePreviewToolbar role={role} section={section} />
       {!localPreview ? (
         <p className="sr-only" aria-live="polite">
           Current synthetic preview: {previewName}. Interactive controls inside the preview are
           disabled.
         </p>
       ) : null}
-      <div
-        inert={!localPreview}
-        className={localPreview ? "pt-24 sm:pt-0" : "pointer-events-none pt-24 sm:pt-0"}
-      >
-        <AppShell viewer={viewer}>
-          {screen === "admin" ? (
-            <AdminDashboardPreview />
-          ) : screen === "review" ? (
+      <div className="pt-24 sm:pt-0">
+        <AppShell viewer={viewer} preview={{ role, section }}>
+          {section === "review-request" ? (
             <ReviewRequestPreview
               canReview={viewer.canReview}
               canReassign={viewer.isTeacherAdmin}
             />
-          ) : screen === "log" ? (
+          ) : section === "review-requests" ? (
+            <ReviewRequestsPreview assignedOnly={role === "committee_head"} />
+          ) : section === "member-progress" ? (
+            <MemberProgressPreview />
+          ) : section === "profile" ? (
+            <ProfilePreview viewer={viewer} />
+          ) : section === "accounts" || section === "exports" || section === "settings" ? (
+            <AdministrationPreview section={section} />
+          ) : section === "log" ? (
             <LogHoursPreview />
           ) : (
             <MemberDashboardPreview />

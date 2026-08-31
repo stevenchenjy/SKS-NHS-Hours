@@ -30,6 +30,30 @@ interface NavigationItem {
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 }
 
+export interface AppShellPreview {
+  role: "member" | "committee_head" | "president_vice_president" | "teacher_admin";
+  section: string;
+}
+
+const previewSectionsByRoute: Record<string, string> = {
+  "/dashboard": "dashboard",
+  "/hours/new": "log",
+  "/profile": "profile",
+  "/admin/requests": "review-requests",
+  "/admin/members": "member-progress",
+  "/admin/accounts": "accounts",
+  "/admin/exports": "exports",
+  "/admin/settings/school-years": "settings",
+  "/admin/audit": "audit",
+};
+
+function previewHref(preview: AppShellPreview, href: string): string {
+  const section = previewSectionsByRoute[href];
+  return section
+    ? `/design-preview?role=${preview.role}&section=${section}`
+    : "/design-preview?role=" + preview.role + "&section=" + preview.section;
+}
+
 const memberNavigation: NavigationItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/hours/new", label: "Log Hours", icon: PencilLine },
@@ -80,14 +104,24 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-function NavLink({ item, compact = false }: { item: NavigationItem; compact?: boolean }) {
+function NavLink({
+  item,
+  compact = false,
+  preview,
+}: {
+  item: NavigationItem;
+  compact?: boolean;
+  preview?: AppShellPreview;
+}) {
   const pathname = usePathname();
-  const active =
-    pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
+  const active = preview
+    ? previewSectionsByRoute[item.href] === preview.section
+    : pathname === item.href ||
+      (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
   const Icon = item.icon;
   return (
     <Link
-      href={item.href}
+      href={preview ? previewHref(preview, item.href) : item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
         compact
@@ -106,7 +140,15 @@ function NavLink({ item, compact = false }: { item: NavigationItem; compact?: bo
   );
 }
 
-export function AppShell({ viewer, children }: { viewer: Viewer; children: ReactNode }) {
+export function AppShell({
+  viewer,
+  children,
+  preview,
+}: {
+  viewer: Viewer;
+  children: ReactNode;
+  preview?: AppShellPreview;
+}) {
   const adminOnly = viewer.isTeacherAdmin && !viewer.isMember;
   const progressAccess = canViewMemberProgress(viewer);
   const teacherAdministrationNavigation = [
@@ -149,7 +191,13 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
     <div className="min-h-dvh bg-background">
       <header className="fixed inset-x-0 top-0 z-40 flex h-20 items-center justify-between border-b bg-background/96 px-5 backdrop-blur sm:px-7 lg:px-8">
         <Link
-          href={adminOnly ? "/admin/members" : "/dashboard"}
+          href={
+            preview
+              ? previewHref(preview, adminOnly ? "/admin/members" : "/dashboard")
+              : adminOnly
+                ? "/admin/members"
+                : "/dashboard"
+          }
           className="flex items-center gap-3 font-bold tracking-tight"
         >
           <span className="flex size-10 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
@@ -158,7 +206,7 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
           <span>NHS Service Hours</span>
         </Link>
         <Link
-          href="/profile"
+          href={preview ? previewHref(preview, "/profile") : "/profile"}
           aria-label="Open My Profile"
           className="flex items-center gap-3 rounded-md p-1 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
@@ -182,23 +230,36 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
                   Administration
                 </p>
               ) : null}
-              <NavLink item={item} />
+              <NavLink item={item} preview={preview} />
             </div>
           ))}
         </nav>
         <div className="border-t p-4">
-          {viewer.isMember ? <NavLink item={profileNavigation} /> : null}
-          <form action={signOutAction}>
-            <Button type="submit" variant="ghost" className="w-full justify-start">
+          {viewer.isMember ? <NavLink item={profileNavigation} preview={preview} /> : null}
+          {preview ? (
+            <Button type="button" variant="ghost" className="w-full justify-start" disabled>
               <LogOut data-icon="inline-start" aria-hidden="true" />
               Sign out
             </Button>
-          </form>
+          ) : (
+            <form action={signOutAction}>
+              <Button type="submit" variant="ghost" className="w-full justify-start">
+                <LogOut data-icon="inline-start" aria-hidden="true" />
+                Sign out
+              </Button>
+            </form>
+          )}
         </div>
       </aside>
 
       <main id="main-content" className="min-h-dvh pb-20 pt-20 lg:ml-[292px] lg:pb-0">
-        {children}
+        {preview ? (
+          <div inert className="pointer-events-none">
+            {children}
+          </div>
+        ) : (
+          children
+        )}
       </main>
 
       <nav
@@ -206,7 +267,7 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
         className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-background/97 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
         {safeBottomNavigation.map((item) => (
-          <NavLink key={item.href} item={item} compact />
+          <NavLink key={item.href} item={item} compact preview={preview} />
         ))}
       </nav>
     </div>

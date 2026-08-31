@@ -74,6 +74,25 @@ test("local design previews have no serious accessibility violations or horizont
   await expect(committeeNavigation.getByRole("link", { name: "Review requests" })).toBeVisible();
   await expect(committeeNavigation.getByRole("link", { name: "Member progress" })).toHaveCount(0);
 
+  await page.goto("/design-preview?role=teacher_admin&section=member-progress");
+  const previewNavigation = page.getByRole("navigation", { name: "Primary navigation" });
+  await previewNavigation.getByRole("link", { name: "Accounts" }).click();
+  await expect(page).toHaveURL(/\/design-preview\?role=teacher_admin&section=accounts/);
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+  await expect(previewNavigation.getByRole("link", { name: "Accounts" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await previewNavigation.getByRole("link", { name: "Exports" }).click();
+  await expect(page).toHaveURL(/\/design-preview\?role=teacher_admin&section=exports/);
+  await expect(page.getByRole("heading", { name: "Exports" })).toBeVisible();
+
+  await page.goto("/design-preview?role=committee_head&section=dashboard");
+  const committeePreviewNavigation = page.getByRole("navigation", { name: "Primary navigation" });
+  await committeePreviewNavigation.getByRole("link", { name: "Review requests" }).click();
+  await expect(page).toHaveURL(/\/design-preview\?role=committee_head&section=review-requests/);
+  await expect(page.getByRole("heading", { name: "Review requests" })).toBeVisible();
+
   const toolbar = page.getByRole("complementary", { name: "Read-only role preview" });
   for (const label of [
     "Member",
