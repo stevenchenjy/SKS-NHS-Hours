@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarDays, CheckCircle2, Clock3, History, Plus, Tag, UserRound } from "lucide-react";
+import { CalendarDays, Clock3, History, Plus, Tag, UserRound } from "lucide-react";
 
 import { HourRequestForm } from "@/components/hours/hour-request-form";
 import { AppShell } from "@/components/portal/app-shell";
@@ -700,41 +700,20 @@ function ReviewRequestPreview({
 
 function LogHoursPreview() {
   return (
-    <div className="page-container max-w-[1180px]">
+    <div className="page-container max-w-[920px]">
       <PageHeader
         eyebrow="2026–2027"
         title="Log service hours"
         description="Save a draft at any time, or submit a complete activity for leader review."
       />
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_310px]">
-        <div className="rounded-xl border bg-background p-5 sm:p-7">
-          <HourRequestForm
-            schoolYearId="30000000-0000-4000-8000-000000000001"
-            schoolYearLabel="2026–2027"
-            categories={categories}
-            reviewers={reviewers}
-            submissionKey="60000000-0000-4000-8000-000000000001"
-          />
-        </div>
-        <aside className="space-y-4">
-          <section className="rounded-xl border bg-muted/40 p-5">
-            <h2 className="flex items-center gap-2 font-semibold">
-              <CheckCircle2 className="size-5 text-primary" />
-              Before you submit
-            </h2>
-            <ul className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
-              <li>Use one request for one service date.</li>
-              <li>Enter time in quarter-hour increments.</li>
-              <li>Choose an active leader who can verify the activity.</li>
-              <li>Approved hours—not pending hours—count toward the annual target.</li>
-            </ul>
-          </section>
-          <section className="rounded-xl border p-5">
-            <p className="text-sm text-muted-foreground">Current approved progress</p>
-            <p className="mt-1 text-3xl font-bold">14.5 / 20</p>
-            <p className="mt-2 text-sm text-muted-foreground">3.25 hours are pending review.</p>
-          </section>
-        </aside>
+      <div className="rounded-xl border bg-background p-5 sm:p-7">
+        <HourRequestForm
+          schoolYearId="30000000-0000-4000-8000-000000000001"
+          schoolYearLabel="2026–2027"
+          categories={categories}
+          reviewers={reviewers}
+          submissionKey="60000000-0000-4000-8000-000000000001"
+        />
       </div>
     </div>
   );
