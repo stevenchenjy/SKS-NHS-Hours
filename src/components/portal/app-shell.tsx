@@ -149,10 +149,12 @@ export function AppShell({
   viewer,
   children,
   preview,
+  previewControls,
 }: {
   viewer: Viewer;
   children: ReactNode;
   preview?: AppShellPreview;
+  previewControls?: ReactNode;
 }) {
   const adminOnly = viewer.isTeacherAdmin && !viewer.isMember;
   const progressAccess = canViewMemberProgress(viewer);
@@ -262,8 +264,15 @@ export function AppShell({
 
       <main id="main-content" className="min-h-dvh pb-20 pt-20 lg:ml-[292px] lg:pb-0">
         {preview ? (
-          <div inert className="pointer-events-none">
-            {children}
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_18rem]">
+            <div inert className="pointer-events-none order-2 min-w-0 xl:order-1">
+              {children}
+            </div>
+            {previewControls ? (
+              <div className="order-1 min-w-0 border-b p-4 sm:px-7 xl:order-2 xl:sticky xl:top-20 xl:h-[calc(100dvh-5rem)] xl:border-b-0 xl:border-l xl:p-4">
+                {previewControls}
+              </div>
+            ) : null}
           </div>
         ) : (
           children

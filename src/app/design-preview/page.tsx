@@ -841,12 +841,12 @@ function RolePreviewToolbar({ role, section }: { role: PreviewRole; section: str
   return (
     <aside
       aria-label="Read-only role preview"
-      className="fixed inset-x-3 top-24 z-50 rounded-xl border bg-background/96 p-3 shadow-xl backdrop-blur sm:left-auto sm:right-4 sm:w-64"
+      className="min-w-0 rounded-xl border bg-background p-3 shadow-sm"
     >
       <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
         Read-only role preview
       </p>
-      <nav aria-label="Preview a role" className="mt-2 flex gap-2 overflow-x-auto sm:flex-col">
+      <nav aria-label="Preview a role" className="mt-2 flex gap-2 overflow-x-auto xl:flex-col">
         {items.map((item) => (
           <Link
             key={item.role}
@@ -926,15 +926,18 @@ export default async function DesignPreviewPage({
 
   return (
     <>
-      <RolePreviewToolbar role={role} section={section} />
       {!localPreview ? (
         <p className="sr-only" aria-live="polite">
           Current synthetic preview: {previewName}. Interactive controls inside the preview are
           disabled.
         </p>
       ) : null}
-      <div className="pt-24 sm:pt-0">
-        <AppShell viewer={viewer} preview={{ role, section }}>
+      <div>
+        <AppShell
+          viewer={viewer}
+          preview={{ role, section }}
+          previewControls={<RolePreviewToolbar role={role} section={section} />}
+        >
           {section === "review-request" ? (
             <ReviewRequestPreview
               canReview={viewer.canReview}
