@@ -1,31 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarDays, Mail, ShieldCheck } from "lucide-react";
+import { Mail, ShieldCheck } from "lucide-react";
 
 import { PageHeader } from "@/components/portal/page-header";
-import { ProgressSummary } from "@/components/portal/progress-summary";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requireActiveViewer } from "@/lib/dal/access";
-import { getProgress } from "@/lib/dal/portal";
-import { deriveAnnualAccessStatus } from "@/lib/domain";
 import { formatRoleLabel } from "@/lib/domain/roles";
 
 export const metadata: Metadata = { title: "My profile" };
 
 export default async function ProfilePage() {
   const viewer = await requireActiveViewer();
-  const today = new Date().toISOString().slice(0, 10);
-  const progressResults = await Promise.allSettled(
-    viewer.memberships.map((membership) => getProgress(membership.id)),
-  );
 
   return (
     <div className="page-container">
       <PageHeader
         title="My profile"
-        description="Your account identity, school-year memberships, roles, and progress history."
+        description="Your account identity and current roles."
         actions={<Button render={<Link href="/hours/new" />}>Log Hours</Button>}
       />
 
@@ -75,59 +68,6 @@ export default async function ProfilePage() {
             NHS adviser if anything is incorrect.
           </p>
         </aside>
-      </section>
-
-      <section aria-labelledby="membership-history" className="mt-8">
-        <div className="mb-5">
-          <h2 id="membership-history" className="text-2xl font-bold">
-            School-year history
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">Prior school years remain read-only.</p>
-        </div>
-        <div className="space-y-4">
-          {viewer.memberships.map((membership, index) => {
-            const result = progressResults[index];
-            const progress = result?.status === "fulfilled" ? result.value : null;
-            return (
-              <article key={membership.id} className="rounded-xl border p-5 sm:p-6">
-                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h3 className="text-xl font-bold">{membership.school_year.label}</h3>
-                    <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                      <CalendarDays className="size-4" aria-hidden="true" />
-                      {membership.school_year.start_date} through {membership.school_year.end_date}
-                    </p>
-                  </div>
-                  <StatusBadge
-                    status={deriveAnnualAccessStatus({
-                      profileStatus: viewer.profile.status,
-                      membershipStatus: membership.status,
-                      membershipExpirationDate: membership.expiration_date,
-                      schoolYearStatus: membership.school_year.status,
-                      schoolYearStartDate: membership.school_year.start_date,
-                      schoolYearEndDate: membership.school_year.end_date,
-                      onDate: today,
-                    })}
-                  />
-                </div>
-                <div className="mb-5 flex flex-wrap gap-2">
-                  {membership.roles.map((role) => (
-                    <Badge key={role} variant="outline" className="capitalize">
-                      {formatRoleLabel(role)}
-                    </Badge>
-                  ))}
-                </div>
-                {progress ? (
-                  <ProgressSummary progress={progress} compact />
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No progress record is available for this membership.
-                  </p>
-                )}
-              </article>
-            );
-          })}
-        </div>
       </section>
     </div>
   );

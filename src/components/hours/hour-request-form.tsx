@@ -150,7 +150,6 @@ export function HourRequestForm({
               defaultValue={request?.hours ?? ""}
               className="h-11 max-w-44"
             />
-            <FieldDescription>Use quarter-hour increments, from 0.25 through 24.</FieldDescription>
             <FieldError>{state.fieldErrors?.hours?.[0]}</FieldError>
           </Field>
         </FieldGroup>
@@ -202,15 +201,6 @@ export function HourRequestForm({
           {state.error}
         </p>
       ) : null}
-
-      <aside className="rounded-xl border bg-muted/45 p-5 text-sm leading-6 text-muted-foreground">
-        <p className="font-semibold text-foreground">What happens next</p>
-        <p className="mt-1">
-          {request?.status === "changes_requested"
-            ? "Saving keeps the request in changes requested so you can return later. Resubmitting locks the updated version while a leader reviews it."
-            : "Saving keeps the request editable as a draft. Submitting locks this version while a leader reviews it. Pending hours are shown separately and do not count toward the requirement."}
-        </p>
-      </aside>
 
       <div className="sticky bottom-[4.2rem] z-20 -mx-5 flex flex-col-reverse gap-3 border-t bg-background/97 px-5 py-4 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:px-0 lg:bottom-0">
         <Button
