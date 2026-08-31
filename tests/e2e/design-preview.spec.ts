@@ -57,6 +57,7 @@ test("local design previews have no serious accessibility violations or horizont
   await expect(adminNavigation.getByRole("link", { name: "Dashboard" })).toHaveCount(0);
   await expect(adminNavigation.getByRole("link", { name: "Log Hours" })).toHaveCount(0);
   await expect(adminNavigation.getByRole("link", { name: "My Profile" })).toHaveCount(0);
+  await expect(adminNavigation.getByRole("link", { name: "Audit trail" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Open My Profile" })).toBeVisible();
   await expect(page.getByText("All school years", { exact: true })).toHaveCount(0);
 

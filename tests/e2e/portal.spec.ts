@@ -394,6 +394,7 @@ test("platform owner receives global admin navigation and opens a member profile
   await expect(primaryNavigation.getByRole("link", { name: "Log Hours" })).toHaveCount(0);
   await expect(primaryNavigation.getByRole("link", { name: "My Profile" })).toHaveCount(0);
   await expect(primaryNavigation.getByRole("link", { name: "Member progress" })).toBeVisible();
+  await expect(primaryNavigation.getByRole("link", { name: "Audit trail" })).toBeVisible();
   await expect(primaryNavigation.getByRole("link", { name: "Role preview" })).toBeVisible();
 
   await page.goto("/admin/members?search=Morgan+Member");

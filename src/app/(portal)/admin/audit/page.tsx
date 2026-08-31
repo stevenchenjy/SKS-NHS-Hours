@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { requireTeacherAdmin } from "@/lib/dal/access";
+import { requirePlatformOwner } from "@/lib/dal/access";
 import { listAuditEvents } from "@/lib/dal/portal";
 
 export const metadata: Metadata = { title: "Audit trail" };
@@ -41,7 +41,7 @@ export default async function AuditPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const viewer = await requireTeacherAdmin();
+  const viewer = await requirePlatformOwner();
   const params = await searchParams;
   const search = param(params.search).trim().toLowerCase();
   const action = param(params.action).trim().toLowerCase();

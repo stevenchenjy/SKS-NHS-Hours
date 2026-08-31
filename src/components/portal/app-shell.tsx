@@ -53,9 +53,14 @@ const memberProgressNavigation: NavigationItem = {
   icon: UsersRound,
 };
 
+const auditTrailNavigation: NavigationItem = {
+  href: "/admin/audit",
+  label: "Audit trail",
+  icon: ShieldCheck,
+};
+
 const teacherAdminNavigation: NavigationItem[] = [
   { href: "/admin/accounts", label: "Accounts", icon: BadgeCheck },
-  { href: "/admin/audit", label: "Audit trail", icon: ShieldCheck },
   { href: "/admin/exports", label: "Exports", icon: Download },
   { href: "/admin/settings/school-years", label: "Settings", icon: Settings },
 ];
@@ -104,18 +109,24 @@ function NavLink({ item, compact = false }: { item: NavigationItem; compact?: bo
 export function AppShell({ viewer, children }: { viewer: Viewer; children: ReactNode }) {
   const adminOnly = viewer.isTeacherAdmin && !viewer.isMember;
   const progressAccess = canViewMemberProgress(viewer);
+  const teacherAdministrationNavigation = [
+    teacherAdminNavigation[0]!,
+    ...(viewer.isPlatformOwner ? [auditTrailNavigation] : []),
+    ...teacherAdminNavigation.slice(1),
+  ];
   const navigation = [
     ...(viewer.isMember ? memberNavigation : []),
     ...(viewer.canReview ? [reviewRequestsNavigation] : []),
     ...(progressAccess ? [memberProgressNavigation] : []),
-    ...(viewer.isTeacherAdmin ? teacherAdminNavigation : []),
+    ...(viewer.isTeacherAdmin ? teacherAdministrationNavigation : []),
     ...(viewer.isPlatformOwner ? [rolePreviewNavigation] : []),
   ];
   const bottomNavigation = adminOnly
     ? [
         reviewRequestsNavigation,
         ...(progressAccess ? [memberProgressNavigation] : []),
-        teacherAdminNavigation[0],
+        teacherAdminNavigation[0]!,
+        ...(viewer.isPlatformOwner ? [auditTrailNavigation] : []),
         ...(viewer.isPlatformOwner ? [rolePreviewNavigation] : []),
       ]
     : viewer.canReview
