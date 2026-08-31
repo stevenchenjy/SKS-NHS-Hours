@@ -704,7 +704,7 @@ function RolePreviewToolbar({ screen, role }: { screen: string; role: string | u
           </Link>
         ))}
         <Link
-          href="/admin"
+          href="/admin/members"
           className="shrink-0 rounded-md border px-3 py-2 text-sm font-semibold hover:bg-accent"
         >
           Back to administration

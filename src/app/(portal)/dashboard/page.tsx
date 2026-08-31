@@ -60,7 +60,7 @@ export default async function DashboardPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const viewer = await requirePortalViewer();
-  if (!viewer.isMember) redirect("/admin");
+  if (!viewer.isMember) redirect("/admin/members");
   const params = await searchParams;
   const selectedYearId = stringParam(params.year) ?? viewer.activeMembership.school_year_id;
   const selectedStatus = stringParam(params.status);

@@ -61,7 +61,7 @@ export async function reviewHourRequestAction(
   });
   if (error) return { error: decisionError(error.message) };
 
-  revalidatePath("/admin");
+  revalidatePath("/admin/members");
   revalidatePath("/admin/requests");
   revalidatePath(`/admin/requests/${parsed.data.request_id}`);
   revalidatePath("/dashboard");

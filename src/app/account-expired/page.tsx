@@ -14,7 +14,7 @@ export default async function AccountExpiredPage() {
   const viewer = await getViewer();
 
   if (viewer?.activeMembership) {
-    if (viewer.isTeacherAdmin) redirect("/admin");
+    if (viewer.isTeacherAdmin) redirect("/admin/members");
     if (viewer.isMember) redirect("/dashboard");
   }
 

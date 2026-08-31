@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BadgeCheck,
-  ClipboardCheck,
   Download,
   Eye,
   FileClock,
@@ -37,7 +36,6 @@ const memberNavigation: NavigationItem[] = [
 ];
 
 const reviewerNavigation: NavigationItem[] = [
-  { href: "/admin", label: "Admin overview", icon: ClipboardCheck },
   { href: "/admin/requests", label: "Review requests", icon: FileClock },
   { href: "/admin/members", label: "Member progress", icon: UsersRound },
 ];
@@ -77,8 +75,7 @@ function roleLabel(viewer: Viewer): string {
 function NavLink({ item, compact = false }: { item: NavigationItem; compact?: boolean }) {
   const pathname = usePathname();
   const active =
-    pathname === item.href ||
-    (item.href !== "/dashboard" && item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
+    pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
   const Icon = item.icon;
   return (
     <Link
@@ -117,7 +114,7 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
         ...(viewer.isPlatformOwner ? [rolePreviewNavigation] : []),
       ]
     : viewer.canReview
-      ? [memberNavigation[0], memberNavigation[1], reviewerNavigation[1]]
+      ? [memberNavigation[0], memberNavigation[1], reviewerNavigation[0]]
       : memberNavigation;
   const safeBottomNavigation = bottomNavigation.filter((item): item is NavigationItem =>
     Boolean(item),
@@ -127,7 +124,7 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
     <div className="min-h-dvh bg-background">
       <header className="fixed inset-x-0 top-0 z-40 flex h-20 items-center justify-between border-b bg-background/96 px-5 backdrop-blur sm:px-7 lg:px-8">
         <Link
-          href={adminOnly ? "/admin" : "/dashboard"}
+          href={adminOnly ? "/admin/members" : "/dashboard"}
           className="flex items-center gap-3 font-bold tracking-tight"
         >
           <span className="flex size-10 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
@@ -152,9 +149,9 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
         <nav aria-label="Primary navigation" className="flex-1 space-y-1 overflow-y-auto px-4 py-6">
           {navigation.map((item, index) => (
             <div key={item.href}>
-              {(item.href === "/admin" || item.href === "/admin/accounts") && index > 0 ? (
+              {item.href === "/admin/accounts" && index > 0 ? (
                 <p className="mb-2 mt-6 px-4 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                  {item.href === "/admin" ? "Leadership" : "Administration"}
+                  Administration
                 </p>
               ) : null}
               <NavLink item={item} />

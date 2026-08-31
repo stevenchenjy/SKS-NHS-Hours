@@ -388,7 +388,7 @@ test("platform owner receives global admin navigation and opens a member profile
   page,
 }) => {
   await login(page, syntheticAccounts.platformOwner.email);
-  await expect(page).toHaveURL(/\/admin(?:\?|$)/);
+  await expect(page).toHaveURL(/\/admin\/members(?:\?|$)/);
   await expect(page.locator("header").getByText("Platform owner", { exact: true })).toBeVisible();
   await expect(page.getByText("All school years", { exact: true })).toBeVisible();
   const primaryNavigation = page.getByRole("navigation", { name: "Primary navigation" });

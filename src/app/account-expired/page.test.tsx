@@ -40,7 +40,7 @@ describe("AccountExpiredPage", () => {
 
     await AccountExpiredPage();
 
-    expect(redirectMock).toHaveBeenCalledWith("/admin");
+    expect(redirectMock).toHaveBeenCalledWith("/admin/members");
   });
 
   it("keeps inactive members on the limited account screen", async () => {
