@@ -105,45 +105,23 @@ export default async function DashboardPage({
         <h2 id="progress-heading" className="sr-only">
           Approved-hours progress
         </h2>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div className="rounded-xl border bg-background p-5 shadow-[0_1px_8px_rgba(11,23,54,0.05)] sm:p-7">
-            <div className="mb-6 flex items-end justify-between gap-5">
-              <div>
-                <p className="text-sm font-semibold text-muted-foreground">Approved hours</p>
-                <p className="mt-1 text-5xl font-bold tracking-tight">
-                  {formatHours(Number(progress.approved_hours))}
-                  <span className="ml-2 text-xl font-medium text-muted-foreground">
-                    / {formatHours(Number(progress.target_hours))}
-                  </span>
-                </p>
-              </div>
-              <StatusBadge
-                status={Number(progress.remaining_hours) > 0 ? "below_goal" : "at_goal"}
-                className="hidden sm:inline-flex"
-              />
+        <div className="rounded-xl border bg-background p-5 shadow-[0_1px_8px_rgba(11,23,54,0.05)] sm:p-7">
+          <div className="mb-6 flex items-end justify-between gap-5">
+            <div>
+              <p className="text-sm font-semibold text-muted-foreground">Approved hours</p>
+              <p className="mt-1 text-5xl font-bold tracking-tight">
+                {formatHours(Number(progress.approved_hours))}
+                <span className="ml-2 text-xl font-medium text-muted-foreground">
+                  / {formatHours(Number(progress.target_hours))}
+                </span>
+              </p>
             </div>
-            <ProgressSummary progress={progress} />
+            <StatusBadge
+              status={Number(progress.remaining_hours) > 0 ? "below_goal" : "at_goal"}
+              className="hidden sm:inline-flex"
+            />
           </div>
-          <dl className="grid grid-cols-2 divide-x rounded-xl border lg:min-w-[310px]">
-            <div className="p-5">
-              <dt className="text-sm text-muted-foreground">Pending</dt>
-              <dd className="mt-1 text-3xl font-bold text-[var(--status-pending)]">
-                {formatHours(Number(progress.pending_hours))}
-              </dd>
-            </div>
-            <div className="p-5">
-              <dt className="text-sm text-muted-foreground">
-                {Number(progress.over_goal_hours) > 0 ? "Over goal" : "Remaining"}
-              </dt>
-              <dd className="mt-1 text-3xl font-bold">
-                {formatHours(
-                  Number(progress.over_goal_hours) > 0
-                    ? Number(progress.over_goal_hours)
-                    : Number(progress.remaining_hours),
-                )}
-              </dd>
-            </div>
-          </dl>
+          <ProgressSummary progress={progress} />
         </div>
       </section>
 

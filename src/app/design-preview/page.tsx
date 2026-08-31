@@ -243,7 +243,7 @@ function MemberDashboardPreview() {
           </Button>
         }
       />
-      <section className="grid gap-6 border-b pb-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+      <section className="border-b pb-8">
         <div className="rounded-xl border bg-background p-5 shadow-[0_1px_8px_rgba(11,23,54,0.05)] sm:p-7">
           <div className="mb-6 flex items-end justify-between gap-5">
             <div>
@@ -256,16 +256,6 @@ function MemberDashboardPreview() {
           </div>
           <ProgressSummary progress={progress} />
         </div>
-        <dl className="grid grid-cols-2 divide-x rounded-xl border lg:min-w-[310px]">
-          <div className="p-5">
-            <dt className="text-sm text-muted-foreground">Pending</dt>
-            <dd className="mt-1 text-3xl font-bold text-[var(--status-pending)]">3.25</dd>
-          </div>
-          <div className="p-5">
-            <dt className="text-sm text-muted-foreground">Remaining</dt>
-            <dd className="mt-1 text-3xl font-bold">5.5</dd>
-          </div>
-        </dl>
       </section>
       <section className="my-7 flex flex-col gap-4 rounded-xl border border-[var(--status-pending)]/30 bg-[var(--status-pending-bg)] p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
