@@ -416,7 +416,7 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
   await page.goto("/events");
   await expect(page.getByRole("heading", { name: "Volunteer events" })).toBeVisible();
   await expect(page.getByText("Fall Festival Setup & Welcome Team")).toBeVisible();
-  await page.getByRole("link", { name: "Publish event" }).first().click();
+  await page.getByRole("button", { name: "Publish event" }).first().click();
   await page.getByLabel("Event title").fill(volunteerEventTitle);
   await page
     .getByLabel("What help is needed?")
