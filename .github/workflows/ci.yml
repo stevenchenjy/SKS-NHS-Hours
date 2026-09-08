@@ -53,6 +53,7 @@ jobs:
       - run: supabase start
       - run: supabase db reset --local
       - run: supabase test db
+      - run: supabase db lint --local --schema public,private --level error --fail-on error
 
   browser:
     runs-on: ubuntu-latest
