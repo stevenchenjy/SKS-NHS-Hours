@@ -367,7 +367,7 @@ test("changes-requested activity returns to the member for editing and resubmiss
   );
   await page.getByRole("button", { name: "Resubmit request" }).click();
   await page.waitForURL(/notice=submitted/);
-  await expect(page.getByText("Pending", { exact: true })).toBeVisible();
+  await expect(page.getByText("Pending committee head", { exact: true })).toBeVisible();
 });
 
 test("above-target member sees accurate totals while the stacked visual remains capped", async ({
