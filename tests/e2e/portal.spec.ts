@@ -224,7 +224,7 @@ test("selected committee head completes the first approval without approving hou
   await expect(page.getByRole("heading", { name: "Review request" })).toBeVisible();
   await page.getByRole("button", { name: "Approve and send to teachers" }).click();
   await page.waitForURL(/\/admin\/requests\/.+\?notice=decision-recorded/);
-  await expect(page.getByRole("status")).toContainText("immutable request history");
+  await expect(page.getByRole("status")).toContainText("The committee-head approval was recorded.");
 
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
