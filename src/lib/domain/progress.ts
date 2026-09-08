@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { quarterHourUnitsToHours, requestHoursSchema, targetHoursSchema } from "./hours";
+import {
+  quarterHourUnitsToHours,
+  requestHoursSchema,
+  targetHoursSchema,
+} from "./hours";
 import { HOUR_REQUEST_STATUSES, hourRequestStatusSchema, type HourRequestStatus } from "./workflow";
 
 export const progressEntrySchema = z

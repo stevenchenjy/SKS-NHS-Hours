@@ -127,7 +127,7 @@ Review every filename in the dry run and confirm the project twice. Never use `-
 
 After the push, verify:
 
-- all 15 application tables have RLS enabled and forced;
+- all 14 application tables have RLS enabled and forced;
 - `anon` has no application access;
 - authenticated policy helper privileges remain narrowly sufficient for policy evaluation;
 - public function execution grants match `docs/DATABASE.md`;
