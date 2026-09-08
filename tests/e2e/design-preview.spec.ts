@@ -78,7 +78,7 @@ test("local design previews have no serious accessibility violations or horizont
   const previewNavigation = page.getByRole("navigation", { name: "Primary navigation" });
   await previewNavigation.getByRole("link", { name: "Accounts" }).click();
   await expect(page).toHaveURL(/\/design-preview\?role=teacher_admin&section=accounts/);
-  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Accounts", exact: true })).toBeVisible();
   await expect(previewNavigation.getByRole("link", { name: "Accounts" })).toHaveAttribute(
     "aria-current",
     "page",

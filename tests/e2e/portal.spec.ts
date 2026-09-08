@@ -142,7 +142,7 @@ async function submitRequest(
   await page.goto("/hours/new");
   await page.getByLabel("Activity title").fill(title);
   await page
-    .getByLabel("What service did you perform?")
+    .getByLabel("Description (optional)")
     .fill("Recorded and organized supplies for a supervised community service activity.");
   await choose(page, "Service category", "Green Team");
   await page.getByLabel("Service date").fill("2026-08-28");
@@ -350,13 +350,13 @@ test("changes-requested activity returns to the member for editing and resubmiss
   await expect(page.getByRole("heading", { name: "Reviewer feedback" })).toBeVisible();
   await expect(page.getByText("Please add the supervising organization.")).toBeVisible();
   await page
-    .getByLabel("What service did you perform?")
+    .getByLabel("Description (optional)")
     .fill("Sorted pantry donations after school under the supervision of Community Pantry staff.");
   await page.getByRole("button", { name: "Save changes" }).click();
   await page.waitForURL(/notice=changes-saved/);
   await expect(page.getByRole("status")).toContainText("Changes saved");
   await expect(page.getByText("Please add the supervising organization.")).toBeVisible();
-  await expect(page.getByLabel("What service did you perform?")).toHaveValue(
+  await expect(page.getByLabel("Description (optional)")).toHaveValue(
     "Sorted pantry donations after school under the supervision of Community Pantry staff.",
   );
   await page.getByRole("button", { name: "Resubmit request" }).click();
