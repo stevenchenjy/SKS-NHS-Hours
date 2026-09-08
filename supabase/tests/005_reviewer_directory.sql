@@ -117,13 +117,15 @@ values
   (
     '21111111-1111-4111-8111-111111111001',
     'cccccccc-cccc-4ccc-8ccc-ccccccccc001',
-    '10000000-0000-4000-8000-000000000001', 'active', current_date + 300,
+    '10000000-0000-4000-8000-000000000001', 'active',
+    (select end_date from public.school_years where id = '10000000-0000-4000-8000-000000000001'),
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'
   ),
   (
     '21111111-1111-4111-8111-111111111002',
     'cccccccc-cccc-4ccc-8ccc-ccccccccc002',
-    '10000000-0000-4000-8000-000000000001', 'suspended', current_date + 300,
+    '10000000-0000-4000-8000-000000000001', 'suspended',
+    (select end_date from public.school_years where id = '10000000-0000-4000-8000-000000000001'),
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'
   ),
   (
@@ -135,7 +137,8 @@ values
   (
     '21111111-1111-4111-8111-111111111004',
     'cccccccc-cccc-4ccc-8ccc-ccccccccc004',
-    '10000000-0000-4000-8000-000000000001', 'active', current_date + 300,
+    '10000000-0000-4000-8000-000000000001', 'active',
+    (select end_date from public.school_years where id = '10000000-0000-4000-8000-000000000001'),
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'
   );
 

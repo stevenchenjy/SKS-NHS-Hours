@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(51);
+select extensions.plan(52);
 
 select extensions.throws_ok(
   $$
@@ -406,8 +406,8 @@ select extensions.throws_ok(
     )
   $$,
   '42501',
-  'An active review-capable role is required',
-  'a president or vice president without the committee-head role cannot approve hours'
+  'A reviewer cannot process their own request',
+  'a president or vice president cannot approve their own hours'
 );
 
 reset role;
@@ -427,7 +427,7 @@ select extensions.throws_ok(
     )
   $$,
   '42501',
-  'An active review-capable role is required',
+  'An active reviewer membership is required',
   'expired former leaders cannot review requests'
 );
 
@@ -520,9 +520,16 @@ select set_config(
   true
 );
 select extensions.ok(
-  (select count(*) >= 6 from public.hour_requests where member_membership_id =
-    '20000000-0000-4000-8000-000000000003'),
-  'active reviewer can read member records for their school year'
+  exists (select 1 from public.hour_requests where member_membership_id =
+    '20000000-0000-4000-8000-000000000003' and requested_approver_membership_id =
+    '20000000-0000-4000-8000-000000000002'),
+  'active reviewer can read the member requests assigned to them'
+);
+select extensions.is(
+  (select count(*) from public.hour_requests where member_membership_id =
+    '20000000-0000-4000-8000-000000000003' and status = 'draft'),
+  0::bigint,
+  'reviewer access does not expose another member''s unsubmitted drafts'
 );
 select extensions.ok(
   exists (

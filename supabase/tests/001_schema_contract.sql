@@ -156,11 +156,10 @@ select extensions.results_eq(
     values
       ('member'::text),
       ('committee_head'::text),
-      ('president'::text),
-      ('vice_president'::text),
+      ('president_vice_president'::text),
       ('teacher_admin'::text)
   $$,
-  'all five fixed role definitions are present'
+  'all four fixed role definitions are present'
 );
 select extensions.is(
   (select count(*) from public.profiles),
@@ -253,8 +252,8 @@ select extensions.has_trigger(
   'audit log has an immutability trigger'
 );
 select extensions.has_trigger(
-  'public', 'membership_roles', 'membership_roles_protect_last_admin',
-  'role removal has a last-admin invariant trigger'
+  'public', 'platform_access_grants', 'platform_access_grants_protect_last',
+  'global access removal has a last-admin invariant trigger'
 );
 select extensions.has_trigger(
   'public', 'hour_requests', 'hour_requests_protect',

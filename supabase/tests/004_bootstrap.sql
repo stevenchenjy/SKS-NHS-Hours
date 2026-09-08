@@ -56,11 +56,14 @@ select extensions.throws_ok(
 );
 
 reset role;
-alter table public.membership_roles disable trigger membership_roles_protect_last_admin;
+-- Isolated fixture reset: bootstrap now checks global grants, not yearly roles.
+select set_config('nhs.allow_platform_access_change', 'on', true);
+delete from public.platform_access_grants;
+select set_config('nhs.allow_platform_access_change', 'off', true);
 delete from public.membership_roles membership_role
 using public.roles role
 where membership_role.role_id = role.id and role.role_key = 'teacher_admin';
-alter table public.membership_roles enable trigger membership_roles_protect_last_admin;
+
 
 set local role service_role;
 select set_config('request.jwt.claim.sub', '', true);
@@ -88,8 +91,8 @@ select extensions.is(
     where membership.profile_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbb020'
       and role.role_key in ('member', 'teacher_admin')
   ),
-  2::bigint,
-  'bootstrap creates the baseline member and teacher-admin role assignments'
+  1::bigint,
+  'bootstrap creates only the teacher-admin attribution role, not member access'
 );
 select extensions.ok(
   exists (
@@ -114,7 +117,7 @@ select extensions.throws_ok(
     )
   $$,
   '55000',
-  'A teacher administrator already exists',
+  'A global teacher administrator already exists',
   'bootstrap fails closed after the first administrator exists'
 );
 
