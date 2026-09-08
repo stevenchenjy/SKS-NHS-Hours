@@ -374,6 +374,9 @@ test("above-target member sees accurate totals while the stacked visual remains 
   page,
 }) => {
   await login(page, syntheticAccounts.leaderMember.email);
+  // This member has only approved seeded hours. Create an explicit pending
+  // request so the capped bar is tested while pending hours remain nonzero.
+  await submitRequest(page, `E2E Still Pending ${Date.now()}`);
   await submitRequest(
     page,
     overRequirementTitle,
