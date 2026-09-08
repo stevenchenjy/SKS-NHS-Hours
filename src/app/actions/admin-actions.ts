@@ -10,6 +10,7 @@ import {
   type InvitationDeliveryOutcome,
   type PreparedInvitationDelivery,
 } from "@/lib/auth/invitation-delivery";
+import { sendInvitationEmail } from "@/lib/auth/send-invitation-email";
 import { getServerEnvironment } from "@/lib/env";
 import { requireTeacherAdmin } from "@/lib/dal/access";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -149,17 +150,21 @@ async function sendPreparedInvitation(
   const environment = getServerEnvironment();
   return coordinateInvitationDelivery({
     prepare: () => prepareInvitationSend(supabase, input.invitationId),
-    send: async (invitation, idempotencyKey) => {
-      const admin = createSupabaseAdminClient();
-      const { error } = await admin.auth.admin.inviteUserByEmail(invitation.email, {
-        redirectTo: new URL("/update-password", environment.NEXT_PUBLIC_APP_URL).toString(),
-        data: {
-          invitation_id: invitation.invitationId,
-          full_name: invitation.fullName,
-          invitation_send_id: idempotencyKey,
-        },
+    send: (invitation, idempotencyKey) =>
+      sendInvitationEmail(
+        createSupabaseAdminClient(),
+        invitation,
+        idempotencyKey,
+        environment.NEXT_PUBLIC_APP_URL,
+      ),
+    onProviderError: (error) => {
+      // Keep credentials, tokens, email addresses, and provider message bodies out of logs.
+      const details = error as { code?: unknown; status?: unknown } | null;
+      console.error("Invitation email delivery failed", {
+        invitationId: input.invitationId,
+        code: typeof details?.code === "string" ? details.code : "unknown",
+        status: typeof details?.status === "number" ? details.status : undefined,
       });
-      if (error) throw error;
     },
     acknowledge: (idempotencyKey) =>
       recordInvitationSendSuccess(supabase, {
@@ -220,7 +225,7 @@ export async function inviteAccountAction(
   if (!invitationId) return { error: "The invitation record did not return an identifier." };
 
   const delivery = await sendPreparedInvitation(supabase, { invitationId, expiresAt });
-  if (delivery !== "sent") {
+  if (delivery !== "sent" && delivery !== "recovery-sent") {
     revalidatePath("/admin/accounts");
     return {
       error:
@@ -233,7 +238,12 @@ export async function inviteAccountAction(
   }
 
   revalidatePath("/admin/accounts");
-  return { message: `Invitation sent to ${invitation.email}.` };
+  return {
+    message:
+      delivery === "recovery-sent"
+        ? `This email already has an account. A password setup/recovery link was sent to ${invitation.email} to finish accepting the invitation.`
+        : `Invitation sent to ${invitation.email}.`,
+  };
 }
 
 export async function resendInvitationAction(invitationId: string, schoolYearId?: string) {
@@ -254,7 +264,13 @@ export async function resendInvitationAction(invitationId: string, schoolYearId?
   if (delivery === "record-failed")
     redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "resend-receipt-failed" }));
   revalidatePath("/admin/accounts");
-  redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "invitation-resent" }));
+  redirect(
+    accountsUrl({
+      schoolYearId,
+      view: "invitations",
+      notice: delivery === "recovery-sent" ? "invitation-recovery-sent" : "invitation-resent",
+    }),
+  );
 }
 
 export async function revokeInvitationAction(invitationId: string, schoolYearId?: string) {
@@ -823,7 +839,7 @@ export async function importRosterAction(
       invitationId,
       expiresAt: invitation.expiresAt,
     });
-    if (delivery !== "sent") {
+    if (delivery !== "sent" && delivery !== "recovery-sent") {
       errors.push(
         delivery === "record-failed"
           ? `line ${line}: provider accepted email but receipt recording failed`

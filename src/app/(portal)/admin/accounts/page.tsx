@@ -154,6 +154,33 @@ export default async function AccountsPage({
   const view = accountView(param(params.view));
   const search = param(params.search).toLowerCase().trim();
   const notice = param(params.notice);
+  const successNotice = [
+    "invitation-resent",
+    "invitation-recovery-sent",
+    "invitation-revoked",
+    "account-status-updated",
+    "membership-status-updated",
+    "role-assigned",
+    "role-removed",
+    "teacher-admin-granted",
+    "teacher-admin-revoked",
+    "platform-owner-transferred",
+  ].includes(notice);
+  const invitationNotices: Record<string, string> = {
+    "invitation-resent":
+      "Invitation email sent. Ask the recipient to check their inbox and spam folder.",
+    "invitation-recovery-sent":
+      "This email already has an account. A password setup/recovery email was sent so the recipient can finish accepting the invitation.",
+    "resend-email-failed":
+      "The email service could not send the invitation. The send count and expiration have not changed. Check the authentication logs before retrying.",
+    "resend-not-sendable":
+      "This invitation can no longer be resent. Refresh the page and check its status and school year.",
+    "resend-receipt-failed":
+      "The email service accepted the email, but its send receipt could not be saved. Check the audit trail before sending again.",
+    "invalid-invitation": "The invitation could not be identified. Refresh the page and try again.",
+    "revoke-failed": "The invitation could not be revoked. Refresh the page and try again.",
+    "invitation-revoked": "Invitation revoked.",
+  };
   const defaultProfileId = param(params.profile);
   const confirmTransferProfileId = param(params.confirm_transfer);
   const now = new Date();
@@ -210,10 +237,14 @@ export default async function AccountsPage({
 
       {notice ? (
         <p
-          role="status"
-          className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
+          role={successNotice ? "status" : "alert"}
+          className={
+            successNotice
+              ? "mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
+              : "mb-6 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+          }
         >
-          {notice.replaceAll("-", " ")}
+          {invitationNotices[notice] ?? notice.replaceAll("-", " ")}
         </p>
       ) : null}
 
