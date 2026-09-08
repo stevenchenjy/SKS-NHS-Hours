@@ -35,7 +35,13 @@ test.beforeAll(() => {
 });
 
 async function login(page: Page, email: string) {
-  const destination = /\/(dashboard|admin|account-expired)/;
+  // Wait for the final role-specific page, not an intermediate dashboard redirect.
+  const destination =
+    email === syntheticAccounts.platformOwner.email
+      ? /\/admin\/members(?:\?|$)/
+      : email === syntheticAccounts.expiredMember.email
+        ? /\/account-expired(?:\?|$)/
+        : /\/dashboard(?:\?|$)/;
   await page.goto("/login");
   await page.getByLabel("School email").fill(email);
   await page.getByLabel("Password").fill(password);
