@@ -81,6 +81,9 @@ function messageForDatabaseError(message: string): string {
   ) {
     return "This change would remove the final active teacher administrator.";
   }
+  if (normalized.includes("an account already exists for this email")) {
+    return "This person already has an account. Use Add accounts to give their existing account access to the school year.";
+  }
   if (
     normalized.includes("duplicate") ||
     normalized.includes("unique") ||
@@ -662,8 +665,8 @@ export async function correctApprovedRequestAction(
   const parsed = z
     .object({
       request_id: z.uuid(),
-      title: z.string().trim().min(3).max(120),
-      description: z.string().trim().min(20).max(2000),
+      title: z.string().trim().min(1, "Enter an activity title.").max(160),
+      description: z.string().trim().max(4000),
       category_id: z.uuid(),
       service_date: z.iso.date(),
       hours: z.coerce.number().positive().max(24),
@@ -853,6 +856,12 @@ export async function importRosterAction(
   }
   revalidatePath("/admin/accounts");
   return {
-    message: `${sent} invitation${sent === 1 ? "" : "s"} sent.${errors.length ? ` ${errors.length} row(s) need attention: ${errors.slice(0, 5).join("; ")}` : ""}`,
+    message:
+      sent > 0
+        ? `${sent} invitation or account-recovery email${sent === 1 ? "" : "s"} sent.`
+        : undefined,
+    error: errors.length
+      ? `${errors.length} row(s) need attention: ${errors.slice(0, 5).join("; ")}`
+      : undefined,
   };
 }

@@ -11,6 +11,7 @@ export interface HourRequestFormState {
   error?: string;
   message?: string;
   fieldErrors?: Record<string, string[]>;
+  savedRequest?: { id: string; revision: number };
 }
 
 const commonHourRequestSchema = z.object({
@@ -92,12 +93,15 @@ function returnedRequest(
 }
 
 export async function saveHourRequestAction(
-  _previous: HourRequestFormState,
+  previous: HourRequestFormState,
   formData: FormData,
 ): Promise<HourRequestFormState> {
   const viewer = await requireActiveViewer();
   if (!viewer.roles.includes("member")) {
-    return { error: "An active member role is required to submit personal service hours." };
+    return {
+      savedRequest: previous.savedRequest,
+      error: "An active member role is required to submit personal service hours.",
+    };
   }
 
   const parsed = hourRequestSchema.safeParse({
@@ -113,14 +117,21 @@ export async function saveHourRequestAction(
     client_submission_key: formData.get("client_submission_key"),
     intent: formData.get("intent"),
   });
-  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+  if (!parsed.success)
+    return { savedRequest: previous.savedRequest, fieldErrors: parsed.error.flatten().fieldErrors };
 
   const today = new Date().toISOString().slice(0, 10);
   if (parsed.data.service_date && parsed.data.service_date > today) {
-    return { fieldErrors: { service_date: ["The service date cannot be in the future."] } };
+    return {
+      savedRequest: previous.savedRequest,
+      fieldErrors: { service_date: ["The service date cannot be in the future."] },
+    };
   }
   if (parsed.data.school_year_id !== viewer.activeMembership.school_year_id) {
-    return { error: "You may submit hours only for your active school year." };
+    return {
+      savedRequest: previous.savedRequest,
+      error: "You may submit hours only for your active school year.",
+    };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -144,11 +155,15 @@ export async function saveHourRequestAction(
         p_client_submission_key: parsed.data.client_submission_key,
         ...values,
       });
-  if (result.error) return { error: rpcError(result.error) };
+  if (result.error) return { savedRequest: previous.savedRequest, error: rpcError(result.error) };
 
   const savedRequest = returnedRequest(result.data, parsed.data.request_id);
   if (!savedRequest) {
-    return { error: "The request was saved but its revision could not be confirmed." };
+    return {
+      savedRequest: previous.savedRequest,
+      error:
+        "The request was saved but its revision could not be confirmed. Reload your dashboard before trying again.",
+    };
   }
 
   if (parsed.data.intent === "submit") {
@@ -156,7 +171,14 @@ export async function saveHourRequestAction(
       p_request_id: savedRequest.id,
       p_expected_revision: savedRequest.revision,
     });
-    if (error) return { error: rpcError(error) };
+    if (error) {
+      revalidatePath("/dashboard");
+      revalidatePath(`/hours/${savedRequest.id}`);
+      return {
+        savedRequest,
+        error: `Your draft was saved, but it was not submitted. ${rpcError(error)}`,
+      };
+    }
   }
 
   revalidatePath("/dashboard");

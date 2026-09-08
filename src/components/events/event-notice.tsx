@@ -3,6 +3,8 @@ const notices: Record<string, string> = {
   confirmed: "You’re confirmed. Your spot has been added to the event roster.",
   waitlisted: "The event is full, so you’ve been added to the waitlist.",
   dropped: "You’ve left this event. If you held a spot, the next student was promoted.",
+  "signup-unconfirmed":
+    "The signup response could not be confirmed. Refresh the event to check your status before trying again.",
   "signup-failed": "Your signup could not be completed. The event may have just ended.",
   "drop-failed": "Your signup could not be changed. Refresh the page and try again.",
   "invalid-event": "That event could not be found.",
@@ -14,7 +16,12 @@ const notices: Record<string, string> = {
 export function EventNotice({ notice }: { notice?: string }) {
   const message = notice ? notices[notice] : undefined;
   if (!message) return null;
-  const isError = notice?.endsWith("failed") || notice === "invalid-event";
+  const isError =
+    notice?.endsWith("failed") ||
+    notice === "signup-unconfirmed" ||
+    notice === "invalid-event" ||
+    notice === "not-authorized" ||
+    notice === "publisher-required";
   return (
     <p
       role={isError ? "alert" : "status"}

@@ -17,6 +17,7 @@ function displayStatus(input: {
   endDate: string;
   today: string;
 }): string {
+  if (input.status === "closed") return "Closed";
   if (input.status === "archived") return "Archived";
   if (input.status === "draft") return "Setup";
   if (input.endDate < input.today) return "Ended";
@@ -24,9 +25,16 @@ function displayStatus(input: {
   return "Current";
 }
 
-export default async function SchoolYearsSettingsPage() {
+export default async function SchoolYearsSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireTeacherAdmin();
   const years = await listSchoolYears();
+  const rawNotice = (await searchParams).notice;
+  const notice = Array.isArray(rawNotice) ? rawNotice[0] : rawNotice;
+  const activated = notice === "school-year-activated";
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -36,6 +44,18 @@ export default async function SchoolYearsSettingsPage() {
         description="Set each school year's start and end dates. Access follows those dates automatically, so no manual year closure is required."
       />
 
+      {notice ? (
+        <p
+          role={activated ? "status" : "alert"}
+          className={
+            activated
+              ? "mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
+              : "mb-6 rounded-lg bg-destructive/10 p-4 text-sm text-destructive"
+          }
+        >
+          {activated ? "School year activated." : notice}
+        </p>
+      ) : null}
       <section aria-labelledby="year-list-heading" className="mb-10">
         <h2 id="year-list-heading" className="mb-4 text-2xl font-bold">
           School-year records

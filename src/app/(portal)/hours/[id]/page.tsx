@@ -110,14 +110,20 @@ export default async function HourRequestPage({
 
       {notice ? (
         <p
-          role="status"
-          className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
+          role={notice === "withdraw-failed" ? "alert" : "status"}
+          className={
+            notice === "withdraw-failed"
+              ? "mb-6 rounded-lg bg-destructive/10 p-4 text-sm text-destructive"
+              : "mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
+          }
         >
           {notice === "submitted"
             ? "Request submitted. Your selected committee head must approve it first; then any teacher can give the final approval."
             : notice === "withdrawn"
               ? "The pending request was withdrawn and remains in your history."
-              : "The request status was updated."}
+              : notice === "withdraw-failed"
+                ? "The request could not be withdrawn. It may have already been reviewed. Refresh this page to check its status."
+                : "The request status was updated."}
         </p>
       ) : null}
 

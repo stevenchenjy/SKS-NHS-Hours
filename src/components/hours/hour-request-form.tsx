@@ -58,6 +58,7 @@ export function HourRequestForm({
 }) {
   const [state, action, pending] = useActionState(saveHourRequestAction, initialState);
   const [values, setValues] = useState(() => initialValues(request));
+  const savedRequest = state.savedRequest ?? request;
   const today = new Date().toISOString().slice(0, 10);
   const categoryItems = Object.fromEntries(
     categories.map((category) => [category.id, category.name]),
@@ -73,8 +74,8 @@ export function HourRequestForm({
     <form action={action} className="space-y-8" noValidate>
       <input type="hidden" name="school_year_id" value={schoolYearId} />
       <input type="hidden" name="client_submission_key" value={submissionKey} />
-      <input type="hidden" name="revision" value={request?.revision ?? 0} />
-      {request ? <input type="hidden" name="request_id" value={request.id} /> : null}
+      <input type="hidden" name="revision" value={savedRequest?.revision ?? 0} />
+      {savedRequest ? <input type="hidden" name="request_id" value={savedRequest.id} /> : null}
 
       <section aria-labelledby="activity-fields" className="space-y-5">
         <div>

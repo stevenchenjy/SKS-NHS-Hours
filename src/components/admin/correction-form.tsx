@@ -29,13 +29,13 @@ export function CorrectionForm({
           <Input id="correction-title" name="title" defaultValue={request.title ?? ""} required />
         </Field>
         <Field>
-          <FieldLabel htmlFor="correction-description">Description</FieldLabel>
+          <FieldLabel htmlFor="correction-description">Description (optional)</FieldLabel>
           <Textarea
             id="correction-description"
             name="description"
             defaultValue={request.description ?? ""}
             rows={5}
-            required
+            maxLength={4000}
           />
         </Field>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -95,6 +95,15 @@ export function CorrectionForm({
           <FieldError>{state.fieldErrors?.reason?.[0]}</FieldError>
         </Field>
       </FieldGroup>
+      {state.fieldErrors ? (
+        <div role="alert" className="text-sm text-destructive">
+          {Object.entries(state.fieldErrors)
+            .filter(([field]) => field !== "reason")
+            .flatMap(([field, messages]) =>
+              messages.map((message) => <p key={`${field}-${message}`}>{message}</p>),
+            )}
+        </div>
+      ) : null}
       {state.error ? (
         <p role="alert" className="text-sm text-destructive">
           {state.error}

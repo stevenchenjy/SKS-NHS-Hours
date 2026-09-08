@@ -130,6 +130,7 @@ export async function signupForServiceEventAction(eventId: string, requestedPath
   revalidatePath("/events");
   revalidatePath(`/events/${parsedId.data}`);
   const status = returnedStatus(data);
+  if (!status) redirect(`${destination}?notice=signup-unconfirmed`);
   redirect(`${destination}?notice=${status === "waitlisted" ? "waitlisted" : "confirmed"}`);
 }
 

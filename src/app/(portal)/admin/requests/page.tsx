@@ -55,7 +55,7 @@ export default async function ReviewQueuePage({
             : "Complete the first approval for requests that members assigned to you. Approved requests move automatically to all teachers."
         }
       />
-      {notice ? (
+      {notice === "decision-recorded" ? (
         <p
           role="status"
           className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
