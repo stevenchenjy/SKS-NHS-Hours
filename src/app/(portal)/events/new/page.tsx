@@ -18,7 +18,7 @@ export default async function NewServiceEventPage() {
       <PageHeader
         eyebrow={viewer.activeMembership.school_year.label}
         title="Publish a volunteer event"
-        description="Share every detail students need. Signups confirm until capacity is reached, then continue on an automatic first-come waitlist."
+        description="Signups confirm until capacity is reached, then continue on an automatic first-come waitlist."
       />
       <Card>
         <CardContent>

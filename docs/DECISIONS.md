@@ -18,7 +18,7 @@ This log records decisions that materially affect security, data integrity, oper
 
 **Decision:** Put identity-derived, authorization-sensitive transitions in narrowly scoped PostgreSQL functions/RPCs; enable and force RLS on application tables; grant only the required operations; and retain a server-only data-access layer that rechecks permissions before invoking database mutations.
 
-**Reason:** UI hiding and page middleware cannot enforce resource authorization, prevent self-review, or serialize concurrent decisions. Database functions can lock the request row, validate its current state, write immutable history/audit rows, and commit atomically.
+**Reason:** UI hiding and page middleware cannot enforce resource authorization, enforce approval stages, or serialize concurrent decisions. Database functions can lock the request row, validate its current state, write immutable history/audit rows, and commit atomically.
 
 ## D-004 — Separate annual member roles from global administration
 
@@ -26,9 +26,9 @@ This log records decisions that materially affect security, data integrity, oper
 
 **Reason:** Student participation and leadership must expire/reassign annually, while staff administration must remain available across years without making staff members or giving them a service requirement. A single owner enables safe IT oversight and succession without database impersonation.
 
-## D-005 — Use exact quarter-hour numeric values
+## D-005 — Use whole-hour entry with exact numeric storage
 
-**Decision:** Store hours as exact numeric values, require positive quarter-hour increments with a universal 24-hour maximum per request, and fix every annual member requirement at 20 approved hours.
+**Decision:** Store hours as exact numeric values, require positive whole-hour increments with a universal 24-hour maximum per request, and fix every annual member requirement at 20 approved hours.
 
 **Reason:** Exact numeric arithmetic avoids floating-point accumulation errors. A fixed target removes inconsistent exceptions and duplicate configuration workflows.
 

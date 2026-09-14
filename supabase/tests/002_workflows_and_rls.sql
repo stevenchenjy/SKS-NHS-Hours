@@ -138,7 +138,7 @@ select extensions.lives_ok(
       p_description => 'A deterministic draft created by the workflow test.',
       p_category_id => '30000000-0000-4000-8000-000000000002',
       p_service_date => '2026-08-24',
-      p_hours => 1.25,
+      p_hours => 1,
       p_requested_approver_membership_id => '20000000-0000-4000-8000-000000000002',
       p_client_submission_key => 'workflow-idempotency-key'
     )
@@ -153,7 +153,7 @@ select extensions.lives_ok(
       p_description => 'This transport retry must return the original record.',
       p_category_id => '30000000-0000-4000-8000-000000000002',
       p_service_date => '2026-08-24',
-      p_hours => 1.25,
+      p_hours => 1,
       p_requested_approver_membership_id => '20000000-0000-4000-8000-000000000002',
       p_client_submission_key => 'workflow-idempotency-key'
     )
@@ -190,8 +190,8 @@ select extensions.throws_ok(
     )
   $$,
   '22023',
-  'Hours must be a positive quarter-hour value no greater than 24',
-  'non-quarter-hour values are rejected'
+  'Hours must be a whole number from 1 to 24',
+  'fractional hour values are rejected'
 );
 select extensions.throws_ok(
   $$
@@ -205,7 +205,7 @@ select extensions.throws_ok(
       p_description => 'A stale browser tab must not overwrite this request.',
       p_category_id => '30000000-0000-4000-8000-000000000002',
       p_service_date => '2026-08-24',
-      p_hours => 1.25,
+      p_hours => 1,
       p_requested_approver_membership_id => '20000000-0000-4000-8000-000000000002'
     )
   $$,
@@ -267,7 +267,7 @@ select extensions.lives_ok(
       p_description => 'Sorted pantry donations with the supervising organization.',
       p_category_id => '30000000-0000-4000-8000-000000000005',
       p_service_date => '2026-08-12',
-      p_hours => 1.50,
+      p_hours => 2,
       p_requested_approver_membership_id => '20000000-0000-4000-8000-000000000002'
     )
   $$,
@@ -406,7 +406,7 @@ select extensions.throws_ok(
     )
   $$,
   '42501',
-  'A reviewer cannot process their own request',
+  'Self-review is limited to the selected committee-head approval',
   'a president or vice president cannot approve their own hours'
 );
 

@@ -30,7 +30,7 @@ const reviewSchema = z
 
 function decisionError(message: string): string {
   if (message.includes("own") || message.includes("self")) {
-    return "You cannot review a request submitted under your own membership.";
+    return "You can approve your own request only as its selected committee head. A teacher must give final approval.";
   }
   if (message.includes("pending") || message.includes("concurrent")) {
     return "This request is no longer pending. Another reviewer may have processed it.";
@@ -67,6 +67,7 @@ export async function reviewHourRequestAction(
   revalidatePath("/admin/members");
   revalidatePath("/admin/requests");
   revalidatePath(`/admin/requests/${parsed.data.request_id}`);
+  revalidatePath(`/hours/${parsed.data.request_id}`);
   revalidatePath("/dashboard");
   redirect(`/admin/requests/${parsed.data.request_id}?notice=decision-recorded`);
 }

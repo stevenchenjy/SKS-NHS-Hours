@@ -260,12 +260,12 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa002', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select extensions.ok(
-  not exists (
+  exists (
     select 1
     from public.list_eligible_reviewers('10000000-0000-4000-8000-000000000001')
     where membership_id = '20000000-0000-4000-8000-000000000002'
   ),
-  'a review-capable caller is excluded from their own eligible-reviewer list'
+  'an active committee head is included in their own first-approver list'
 );
 
 reset role;

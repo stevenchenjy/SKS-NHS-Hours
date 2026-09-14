@@ -121,16 +121,26 @@ describe("review authorization invariants", () => {
     expect(() => assertReviewAllowed(ELIGIBLE_REVIEW)).not.toThrow();
   });
 
-  it("compares underlying users, not membership IDs, for self-review", () => {
+  it("allows an active committee head to review their own first stage", () => {
+    expect(
+      evaluateReviewEligibility({ ...ELIGIBLE_REVIEW, reviewerUserId: MEMBER_USER_ID }),
+    ).toEqual({ allowed: true, reasons: [] });
+  });
+
+  it("blocks final self-review even when the reviewer has the teacher role", () => {
     expect(isSelfReview(MEMBER_USER_ID, MEMBER_USER_ID)).toBe(true);
     const result = evaluateReviewEligibility({
       ...ELIGIBLE_REVIEW,
+      approvalStage: "teacher",
+      reviewerRoles: ["teacher_admin"],
       reviewerUserId: MEMBER_USER_ID,
     });
     expect(result).toEqual({ allowed: false, reasons: ["self_review"] });
     expect(() =>
       assertReviewAllowed({
         ...ELIGIBLE_REVIEW,
+        approvalStage: "teacher",
+        reviewerRoles: ["teacher_admin"],
         reviewerUserId: MEMBER_USER_ID,
       }),
     ).toThrow(ReviewNotAllowedError);

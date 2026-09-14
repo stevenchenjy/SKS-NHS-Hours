@@ -127,7 +127,7 @@ Review every filename in the dry run and confirm the project twice. Never use `-
 
 After the push, verify:
 
-- all 14 application tables have RLS enabled and forced;
+- all 15 application tables have RLS enabled and forced;
 - `anon` has no application access;
 - authenticated policy helper privileges remain narrowly sufficient for policy evaluation;
 - public function execution grants match `docs/DATABASE.md`;
@@ -186,9 +186,9 @@ Use safe test accounts and non-sensitive records:
 3. the hosted Reset Password template verifies a recovery token hash (and the allowlisted PKCE fallback works), while an ordinary or expired-context session cannot open/submit the password form;
 4. OAuth/recovery callbacks return only to exact allowlisted hosts;
 5. unprovisioned, inactive, and expired identities receive no protected data;
-6. an active member submits a 0.25-hour request to another active user;
+6. an active member submits a 1-hour request to another active user;
 7. requested and different eligible reviewers see their respective queue views;
-8. self-review fails and one valid approval records the actual reviewer;
+8. committee-head self-approval stays pending until a different teacher approves, and both reviewers are recorded;
 9. approved progress changes while pending remains separate;
 10. prior-year leadership cannot authorize a current operation;
 11. teacher admin can access accounts/audit and download a complete audited CSV while a member cannot;

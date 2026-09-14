@@ -5,49 +5,29 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireActiveViewer, requirePortalViewer } from "@/lib/dal/access";
-import { canPublishServiceEvents } from "@/lib/domain/events";
+import { getServiceEvent } from "@/lib/dal/events";
+import { canPublishServiceEvents, serviceEventSchema } from "@/lib/domain/events";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface ServiceEventFormState {
   error?: string;
+  values?: Record<string, string>;
   fieldErrors?: Record<string, string[]>;
 }
 
-const localDateTimeSchema = z
-  .string()
-  .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Enter a valid date and time.");
-
-const createServiceEventSchema = z
-  .object({
-    school_year_id: z.uuid(),
-    title: z.string().trim().min(1, "Enter an event title.").max(160),
-    description: z.string().trim().min(1, "Describe the help that is needed.").max(5_000),
-    location: z.string().trim().min(1, "Enter the event location.").max(300),
-    volunteer_audience: z.string().trim().min(1, "Explain who should volunteer.").max(500),
-    starts_at: localDateTimeSchema,
-    ends_at: localDateTimeSchema,
-    contact_name: z.string().trim().min(1, "Enter a contact name.").max(200),
-    contact_email: z.email("Enter a valid contact email.").max(320),
-    capacity: z.coerce
-      .number()
-      .int("People needed must be a whole number.")
-      .min(1, "At least one person is needed.")
-      .max(500, "Capacity cannot exceed 500 people."),
-  })
-  .refine((values) => values.ends_at > values.starts_at, {
-    path: ["ends_at"],
-    message: "The end time must be after the start time.",
-  });
-
-function eventRpcError(error: { message: string } | null): string {
+function eventRpcError(error: { message: string; code?: string } | null): string {
   const message = error?.message ?? "";
+  if (error?.code === "40001")
+    return "This event changed while you were editing. Reload the page to see the latest version before saving.";
+  if (message.includes("confirmed signup count"))
+    return "People needed cannot be less than the number of confirmed volunteers.";
+  if (message.includes("deadline"))
+    return "The signup deadline must be at or before the event starts.";
+  if (message.includes("Past events")) return "This event has ended and can no longer be edited.";
   if (message.includes("future")) return "The event must end in the future.";
   if (message.includes("school year")) return "Keep the event inside the selected school year.";
-  if (message.includes("committee heads")) {
-    return "Only committee heads and teacher administrators can publish events.";
-  }
-  return "The event could not be published. Review the details and try again.";
+  if (error?.code === "42501") return "You do not have permission to change this event.";
+  return "The event could not be saved. Review the details and try again.";
 }
 
 function returnedId(data: unknown): string | null {
@@ -71,47 +51,111 @@ export async function createServiceEventAction(
   _previous: ServiceEventFormState,
   formData: FormData,
 ): Promise<ServiceEventFormState> {
-  const viewer = await requirePortalViewer();
-  if (!canPublishServiceEvents(viewer)) {
-    return { error: "Only committee heads and teacher administrators can publish events." };
-  }
+  return saveServiceEvent(formData, false);
+}
 
-  const parsed = createServiceEventSchema.safeParse({
-    school_year_id: formData.get("school_year_id"),
-    title: formData.get("title"),
-    description: formData.get("description"),
-    location: formData.get("location"),
-    volunteer_audience: formData.get("volunteer_audience"),
-    starts_at: formData.get("starts_at"),
-    ends_at: formData.get("ends_at"),
-    contact_name: formData.get("contact_name"),
-    contact_email: formData.get("contact_email"),
-    capacity: formData.get("capacity"),
-  });
-  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
-  if (parsed.data.school_year_id !== viewer.activeMembership.school_year_id) {
-    return { error: "Publish events only for your current school year." };
+export async function updateServiceEventAction(
+  _previous: ServiceEventFormState,
+  formData: FormData,
+): Promise<ServiceEventFormState> {
+  return saveServiceEvent(formData, true);
+}
+
+async function saveServiceEvent(
+  formData: FormData,
+  editing: boolean,
+): Promise<ServiceEventFormState> {
+  const viewer = await requirePortalViewer();
+  const values = Object.fromEntries(
+    Array.from(formData.entries()).filter(
+      (entry): entry is [string, string] =>
+        typeof entry[1] === "string" && !entry[0].startsWith("$"),
+    ),
+  );
+  const parsed = serviceEventSchema.safeParse(values);
+  if (!parsed.success) return { values, fieldErrors: parsed.error.flatten().fieldErrors };
+
+  let eventId: string | null = null;
+  if (editing) {
+    const id = z.uuid().safeParse(formData.get("event_id"));
+    if (!id.success) return { values, error: "That event could not be found." };
+    const event = await getServiceEvent(id.data);
+    if (!event?.can_manage || event.school_year_id !== parsed.data.school_year_id) {
+      return { values, error: "You do not have permission to edit this event." };
+    }
+    if (!z.iso.datetime({ offset: true }).safeParse(values.updated_at).success) {
+      return { values, error: "Reload the event before editing." };
+    }
+    eventId = event.id;
+  } else {
+    if (!canPublishServiceEvents(viewer)) {
+      return {
+        values,
+        error: "Only committee heads and teacher administrators can publish events.",
+      };
+    }
+    if (parsed.data.school_year_id !== viewer.activeMembership.school_year_id) {
+      return { values, error: "Publish events only for your current school year." };
+    }
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("create_service_event", {
-    p_school_year_id: parsed.data.school_year_id,
-    p_title: parsed.data.title,
-    p_description: parsed.data.description,
-    p_location: parsed.data.location,
-    p_volunteer_audience: parsed.data.volunteer_audience,
-    p_starts_at: parsed.data.starts_at,
-    p_ends_at: parsed.data.ends_at,
-    p_contact_name: parsed.data.contact_name,
-    p_contact_email: parsed.data.contact_email,
-    p_capacity: parsed.data.capacity,
-  });
-  if (error) return { error: eventRpcError(error) };
+  const { data, error } = await supabase.rpc(
+    editing ? "update_service_event" : "create_service_event",
+    {
+      ...(editing
+        ? { p_event_id: eventId, p_expected_updated_at: values.updated_at }
+        : { p_school_year_id: parsed.data.school_year_id }),
+      p_title: parsed.data.title,
+      p_description: parsed.data.description,
+      p_location: parsed.data.location,
+      p_volunteer_audience: parsed.data.volunteer_audience,
+      p_starts_at: parsed.data.starts_at,
+      p_ends_at: parsed.data.ends_at,
+      p_signup_deadline: parsed.data.signup_deadline,
+      p_contact_name: parsed.data.contact_name,
+      p_contact_email: parsed.data.contact_email,
+      p_capacity: parsed.data.capacity,
+    },
+  );
+  if (error) return { values, error: eventRpcError(error) };
 
-  const eventId = returnedId(data);
-  if (!eventId) return { error: "The event was published but could not be opened." };
+  eventId = returnedId(data);
+  if (!eventId)
+    return { error: "The event was saved but could not be opened. Return to Events to check it." };
   revalidatePath("/events");
-  redirect(`/events/${eventId}?notice=created`);
+  revalidatePath(`/events/${eventId}`);
+  revalidatePath("/notifications");
+  redirect(`/events/${eventId}?notice=${editing ? "updated" : "created"}`);
+}
+
+export async function closeServiceEventAction(
+  eventId: string,
+  operation: "end" | "delete",
+  updatedAt: string,
+) {
+  await requirePortalViewer();
+  if (
+    !z.uuid().safeParse(eventId).success ||
+    !["end", "delete"].includes(operation) ||
+    !z.iso.datetime({ offset: true }).safeParse(updatedAt).success
+  ) {
+    redirect("/events?notice=invalid-event");
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("close_service_event", {
+    p_event_id: eventId,
+    p_operation: operation,
+    p_expected_updated_at: updatedAt,
+  });
+  if (error)
+    redirect(
+      `/events/${eventId}?notice=${error.code === "40001" ? "event-changed" : "manage-failed"}`,
+    );
+  revalidatePath("/events");
+  revalidatePath(`/events/${eventId}`);
+  revalidatePath("/notifications");
+  redirect(operation === "end" ? "/events?view=past&notice=ended" : "/events?notice=deleted");
 }
 
 export async function signupForServiceEventAction(eventId: string, requestedPath: string) {
@@ -125,7 +169,10 @@ export async function signupForServiceEventAction(eventId: string, requestedPath
   const { data, error } = await supabase.rpc("signup_for_service_event", {
     p_event_id: parsedId.data,
   });
-  if (error) redirect(`${destination}?notice=signup-failed`);
+  if (error)
+    redirect(
+      `${destination}?notice=${error.message.includes("deadline") ? "signup-closed" : "signup-failed"}`,
+    );
 
   revalidatePath("/events");
   revalidatePath(`/events/${parsedId.data}`);

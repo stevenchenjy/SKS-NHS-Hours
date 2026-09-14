@@ -213,6 +213,10 @@ export interface ServiceEvent {
   volunteer_audience: string;
   starts_at: string;
   ends_at: string;
+  signup_deadline: string;
+  is_signup_closed: boolean;
+  ended_at: string | null;
+  updated_at: string;
   contact_name: string;
   contact_email: string;
   capacity: number;
@@ -235,4 +239,15 @@ export interface ServiceEventRosterEntry {
   joined_at: string;
   promoted_at: string | null;
   waitlist_position: number | null;
+}
+
+export interface EventNotification {
+  id: string;
+  event_id: string | null;
+  kind: string;
+  title: string;
+  message: string;
+  changes: Record<string, { before: string | number | null; after: string | number | null }>;
+  created_at: string;
+  read_at: string | null;
 }

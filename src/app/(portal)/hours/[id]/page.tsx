@@ -69,6 +69,12 @@ export default async function HourRequestPage({
   if (!owned && !viewer.canReview) notFound();
   const canEdit = owned && ["draft", "changes_requested"].includes(request.status);
   const canWithdraw = owned && request.status === "pending";
+  const canApproveOwn =
+    owned &&
+    request.status === "pending" &&
+    !request.committee_head_approved_at &&
+    viewer.roles.includes("committee_head") &&
+    viewer.activeMembership.id === request.requested_approver_membership_id;
   const withdraw = withdrawHourRequestAction.bind(null, request.id);
 
   return (
@@ -103,6 +109,10 @@ export default async function HourRequestPage({
             <Button render={<Link href={`/hours/${request.id}/edit`} />}>
               <PencilLine data-icon="inline-start" aria-hidden="true" />
               Edit request
+            </Button>
+          ) : canApproveOwn ? (
+            <Button render={<Link href={`/admin/requests/${request.id}`} />}>
+              Review my request
             </Button>
           ) : undefined
         }
@@ -245,7 +255,9 @@ export default async function HourRequestPage({
               {request.status === "pending"
                 ? request.committee_head_approved_at
                   ? "The committee head approved this request. It is now available to every teacher for final approval."
-                  : "The selected committee head must complete the first approval before the request goes to the teachers."
+                  : canApproveOwn
+                    ? "You selected yourself as the committee head. Open Review my request to approve and send it to the teachers. Your hours count only after a teacher approves."
+                    : "The selected committee head must complete the first approval before the request goes to the teachers."
                 : request.status === "approved"
                   ? "This approved record is locked. A teacher administrator must use the traceable correction process for any change."
                   : request.status === "changes_requested"

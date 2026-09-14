@@ -47,7 +47,7 @@ export default async function EventsPage({
       <PageHeader
         eyebrow={viewer.activeMembership.school_year.label}
         title="Volunteer events"
-        description="Find open opportunities, see remaining spots, and manage your signup. Full events use a first-come waitlist that promotes the next student automatically."
+        description="Full events use a first-come waitlist that promotes the next student automatically."
         actions={
           canPublish ? (
             <Button render={<Link href="/events/new" />}>
@@ -102,7 +102,7 @@ export default async function EventsPage({
                 ? canPublish
                   ? "Publish an opportunity when your committee or school needs volunteers."
                   : "New volunteer opportunities will appear here as soon as they are published."
-                : "Expired opportunities remain here for the whole portal to reference."}
+                : "Events that have finished or been ended by the organizer remain here."}
             </EmptyDescription>
           </EmptyHeader>
           {selectedView === "active" && canPublish ? (

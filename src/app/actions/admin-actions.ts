@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { wholeRequestHoursSchema } from "@/lib/domain/hours";
 import { parseSchoolYearDateRange, validateInvitation } from "@/lib/domain";
 import {
   coordinateInvitationDelivery,
@@ -669,7 +670,7 @@ export async function correctApprovedRequestAction(
       description: z.string().trim().max(4000),
       category_id: z.uuid(),
       service_date: z.iso.date(),
-      hours: z.coerce.number().positive().max(24),
+      hours: wholeRequestHoursSchema,
       reason: z.string().trim().min(8, "Provide a specific correction reason.").max(2000),
     })
     .safeParse({
@@ -682,8 +683,6 @@ export async function correctApprovedRequestAction(
       reason: formData.get("reason"),
     });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
-  if (!Number.isInteger(parsed.data.hours * 4))
-    return { error: "Hours must use quarter-hour increments." };
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("correct_approved_request", {
     p_request_id: parsed.data.request_id,

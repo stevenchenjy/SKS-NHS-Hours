@@ -71,12 +71,18 @@ The pgTAP files are:
 - `supabase/tests/002_workflows_and_rls.sql` — request lifecycle, eligibility, reviews, self-review, progress, invitations, audits, and direct caller behavior;
 - `supabase/tests/003_admin_lifecycle_and_authorization.sql` — actor boundaries, corrections, fixed target/cap-free categories, destination access/history, global grants, and export visibility;
 - `supabase/tests/004_bootstrap.sql` — service-role-only one-time first-owner behavior, teacher-only anchor, audit, and second-call denial;
-- `supabase/tests/005_reviewer_directory.sql` — ordinary-member minimal reviewer discovery plus self/inactive/expired/suspended/non-review/other-year exclusions and anonymous/unprovisioned/expired denial;
+- `supabase/tests/005_reviewer_directory.sql` — minimal reviewer discovery including eligible committee-head callers, plus inactive/expired/suspended/non-review/other-year exclusions and anonymous/unprovisioned/expired denial;
 - `supabase/tests/006_invitation_send_integrity.sql` — two-phase delivery privileges/state checks, provider-accepted send facts/audits, idempotent acknowledgement, resend behavior, and unauthorized denial; and
 - `supabase/tests/007_hour_request_reviewer_names.sql` — request-scoped requested/actual reviewer display names without direct profile or membership disclosure, including cross-member/anonymous denial and historical attribution after reviewer expiration.
 - `supabase/tests/008_global_admin_and_simplified_policy.sql` — global grants/owner transfer, teacher-only anchors, progress exclusion, fixed targets, neutral category policy, destination access, read-only historical annual access/roles, combined leadership, and owner-only teacher-admin invitation lifecycle.
 
-They currently declare 301 assertions across eight files (plans 63 + 51 + 37 + 9 + 20 + 48 + 13 + 60). Run them only after a clean reset:
+- `supabase/tests/009_editable_school_year_dates.sql` — school-year date changes and membership expiry alignment.
+- `supabase/tests/010_service_event_signups.sql` — event publishing, signups, FIFO waitlists, cancellation, and visibility.
+- `supabase/tests/011_two_stage_hour_approval.sql` — committee approval followed by the shared teacher queue and final approval.
+- `supabase/tests/012_event_management_notifications.sql` — event changes, signup deadlines, lifecycle controls, and private notifications.
+- `supabase/tests/013_committee_head_self_approval.sql` — self-assignment and first-stage approval, required teacher review, role and assignment enforcement, returned-request resubmission, audit history, and approved totals.
+
+They currently declare 410 assertions across 13 files. Run them only after a clean reset:
 
 ```bash
 supabase db reset --local
@@ -90,7 +96,7 @@ Critical cases include:
 1. anonymous and unprovisioned callers receive no application rows;
 2. a member sees only their records and cannot directly set protected fields;
 3. requested and different eligible reviewers can process another user's pending request;
-4. self-review and expired/stale leadership fail;
+4. committee heads can approve their own selected first stage, while final self-review and expired/stale leadership fail;
 5. a terminal second decision fails and only one actual reviewer is recorded;
 6. approved records require an audited immutable correction;
 7. pending/changes-requested hours do not count as approved progress;
@@ -128,7 +134,7 @@ The authenticated portal suite covers 13 workflows:
 3. requested reviewer approval, actual-reviewer attribution, and member progress;
 4. a different eligible reviewer using all-pending, with their actual name shown separately from the requested approver;
 5. a simultaneous two-browser-context review race with one success, one conflict, and one persisted approval;
-6. self-review denial;
+6. committee-head self-approval followed by required teacher approval;
 7. changes requested, `save_changes`, persisted reviewer feedback, and resubmission;
 8. adjacent approved/pending segments, fixed-20 wording, and uncapped over-goal text;
 9. teacher-admin roster/member history plus one serious/critical axe scan;
@@ -191,7 +197,7 @@ Automated checks do not replace these manual groups in `docs/QA.md`:
 - 390×844, 768×1024, 1440×900, and 1920×1080 at 100% and 200% zoom; and
 - keyboard, focus, forms/errors, dialogs, status/progress equivalents, contrast, reflow, reduced motion, and screen-reader paths.
 
-Release blocks on any failed required check; Critical/High security issue; cross-user access; stale-role/self-review authority; mutable approved/audit history; incorrect totals; incomplete/unsafe CSV; inaccessible critical path; environment isolation error; or missing backup/bootstrap ownership.
+Release blocks on any failed required check; Critical/High security issue; cross-user access; stale-role/final self-review authority; mutable approved/audit history; incorrect totals; incomplete/unsafe CSV; inaccessible critical path; environment isolation error; or missing backup/bootstrap ownership.
 
 ## Current observed status
 

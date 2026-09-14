@@ -37,13 +37,10 @@ export default async function EditHourRequestPage({
     .sort((left, right) => right.created_at.localeCompare(left.created_at))
     .find((review) => review.action === "changes_requested" && review.comment);
 
-  const [categories, allCommitteeHeads] = await Promise.all([
+  const [categories, committeeHeads] = await Promise.all([
     listCategories(request.school_year_id),
     listActiveCommitteeHeads(request.school_year_id),
   ]);
-  const committeeHeads = allCommitteeHeads.filter(
-    (committeeHead) => committeeHead.membershipId !== request.member_membership_id,
-  );
 
   return (
     <div className="page-container max-w-5xl">
@@ -98,6 +95,7 @@ export default async function EditHourRequestPage({
         }
         categories={categories}
         reviewers={committeeHeads}
+        memberMembershipId={request.member_membership_id}
         submissionKey={request.client_submission_key ?? crypto.randomUUID()}
         request={request}
       />

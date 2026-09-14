@@ -65,6 +65,30 @@ beforeEach(() => {
   });
 });
 
+describe("whole-hour entry", () => {
+  it.each(["save_draft", "submit", "save_changes"])(
+    "rejects fractions for %s before calling the database",
+    async (intent) => {
+      const data = hours();
+      data.set("intent", intent);
+      data.set("hours", "1.25");
+      const result = await saveHourRequestAction({}, data);
+      expect(result.fieldErrors?.hours?.[0]).toContain("whole hours");
+      expect(rpc).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects fractional teacher corrections", async () => {
+    const data = hours();
+    data.set("request_id", ID);
+    data.set("reason", "Correct the recorded hours.");
+    data.set("hours", "1.5");
+    const result = await correctApprovedRequestAction({}, data);
+    expect(result.fieldErrors?.hours?.[0]).toContain("whole hours");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+});
+
 describe("hour submission partial failures", () => {
   it("preserves the saved draft ID and revision so a failed submit can be retried", async () => {
     rpc

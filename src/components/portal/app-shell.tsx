@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BadgeCheck,
+  Bell,
   CalendarDays,
   Download,
   Eye,
@@ -20,6 +21,7 @@ import {
 
 import { signOutAction } from "@/app/actions/auth-actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { NotificationBell } from "@/components/events/notification-bell";
 import { Button } from "@/components/ui/button";
 import { canViewMemberProgress } from "@/lib/domain/roles";
 import { cn } from "@/lib/utils";
@@ -150,11 +152,13 @@ export function AppShell({
   children,
   preview,
   previewControls,
+  unreadNotifications = 0,
 }: {
   viewer: Viewer;
   children: ReactNode;
   preview?: AppShellPreview;
   previewControls?: ReactNode;
+  unreadNotifications?: number;
 }) {
   const adminOnly = viewer.isTeacherAdmin && !viewer.isMember;
   const progressAccess = canViewMemberProgress(viewer);
@@ -165,6 +169,7 @@ export function AppShell({
   ];
   const navigation = [
     ...(viewer.isMember ? memberNavigation : [eventsNavigation]),
+    ...(!preview ? [{ href: "/notifications", label: "Notifications", icon: Bell }] : []),
     ...(viewer.canReview ? [reviewRequestsNavigation] : []),
     ...(progressAccess ? [memberProgressNavigation] : []),
     ...(viewer.isTeacherAdmin ? teacherAdministrationNavigation : []),
@@ -215,20 +220,23 @@ export function AppShell({
           </span>
           <span>NHS Service Hours</span>
         </Link>
-        <Link
-          href={preview ? previewHref(preview, "/profile") : "/profile"}
-          aria-label="Open My Profile"
-          className="flex items-center gap-3 rounded-md p-1 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <div className="hidden text-right sm:block">
-            <p className="text-sm font-semibold">{viewer.profile.full_name}</p>
-          </div>
-          <Avatar className="size-9">
-            <AvatarFallback className="bg-secondary text-xs font-bold text-secondary-foreground">
-              {initials(viewer.profile.full_name)}
-            </AvatarFallback>
-          </Avatar>
-        </Link>
+        <div className="flex items-center gap-2 sm:gap-4">
+          {!preview ? <NotificationBell initialCount={unreadNotifications} /> : null}
+          <Link
+            href={preview ? previewHref(preview, "/profile") : "/profile"}
+            aria-label="Open My Profile"
+            className="flex items-center gap-3 rounded-md p-1 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-semibold">{viewer.profile.full_name}</p>
+            </div>
+            <Avatar className="size-9">
+              <AvatarFallback className="bg-secondary text-xs font-bold text-secondary-foreground">
+                {initials(viewer.profile.full_name)}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
+        </div>
       </header>
 
       <aside className="fixed bottom-0 left-0 top-20 z-30 hidden w-[292px] flex-col border-r bg-sidebar lg:flex">

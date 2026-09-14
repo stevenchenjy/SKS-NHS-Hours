@@ -119,16 +119,16 @@ UI hiding is not a control. Protected pages, Server Actions/route handlers, call
 - Policies derive identity from the database Auth context; caller-supplied user IDs are only filters, never proof of ownership.
 - Security-sensitive functions set a controlled `search_path`, re-evaluate the relevant global grant or annual membership/role/date status, lock mutable rows, and expose only required execution grants. Authenticated callers have access only to the read-only private predicates needed to evaluate policies/views. The reviewer-name RPC returns requested/actual display names only when the caller can view that request, without granting direct access to the underlying reviewer profile or membership.
 - Views use caller-safe/security-invoker semantics and receive explicit RLS tests.
-- Database constraints protect UUID relationships, uniqueness, status enums, school-year alignment, exact hour values, self-review, and immutable records.
+- Database constraints protect UUID relationships, uniqueness, status enums, school-year alignment, exact hour values, final self-review prevention, and immutable records.
 - Review, correction, destination-year access, global-grant transfer, invitation acknowledgement, and audit writes are atomic inside PostgreSQL. Invitation email delivery crosses an external provider boundary: preparation does not mutate send facts, and only a provider-accepted call is acknowledged with an idempotent database operation. A provider-accepted/database-receipt split is reported explicitly because the two systems cannot share a transaction.
 
 ### Workflow integrity
 
 - Requested approver, assignment history, and actual reviewer are separate facts.
-- Members discover approvers through `list_eligible_reviewers`, a minimal same-year RPC that excludes the caller and returns no email; broad profile visibility is not used for the chooser.
+- Members discover approvers through `list_eligible_reviewers`, a minimal same-year RPC that includes eligible committee-head callers and returns no email; broad profile visibility is not used for the chooser.
 - Draft save and submission compare the expected revision to reject stale edits.
 - The decision path locks and rechecks a `pending` row so racing reviewers cannot both succeed. A simultaneous two-browser-context test observed one success, one conflict, and exactly one persisted approval.
-- Self-review is rejected regardless of assignment, role combination, or teacher-admin status.
+- Self-review is limited to first-stage approval by the selected active committee head. A different teacher must complete the final decision before the hours count. Self-review cannot request changes, reject, correct, or bypass another assigned committee head. Review history preserves both actors.
 - Expired memberships and memberships in closed or archived years are historical records: they cannot be reactivated or have annual roles changed. New participation uses destination-year access instead.
 - Teacher-admin invitations, including preparation, send acknowledgement, resend, and revocation, require the platform owner; ordinary teacher administrators manage only member and student-leadership invitations.
 - Change-request and rejection require a bounded comment. Approved records are locked; a teacher-admin correction records actor, reason, and before/after values without destroying history.

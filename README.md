@@ -9,7 +9,7 @@ The application separates authentication from authorization: signing in is not e
 - Invite-only email/password access through server-verified invite/recovery token hashes, a 30-minute user-bound password-update context, and optional school Google OAuth
 - Annual member access with `member`, `committee_head`, and combined `president_vice_president` roles; global `teacher_admin` and single `platform_owner` access are separate
 - Draft, submit, withdraw, changes-requested, resubmit, approve, reject, and reassign workflow
-- Self-review prevention, concurrent-decision protection, immutable review history, and traceable corrections
+- Committee-head self-approval with required final teacher approval, concurrent-decision protection, immutable review history, and traceable corrections
 - Exact quarter-hour calculations with a fixed 20-approved-hour requirement and a stacked approved/pending progress bar
 - Leader queues and member history; consolidated account/invitation/role administration; school-year, category, audit, CSV, and read-only role-preview workflows
 - Responsive, keyboard-accessible interface with textual status/progress equivalents

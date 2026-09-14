@@ -156,9 +156,6 @@ export default async function MemberProfilePage({
               <h2 id="log-title" className="text-2xl font-bold">
                 Complete service log
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Every request and its review-safe status for this school year.
-              </p>
             </div>
             <div className="overflow-hidden rounded-xl border">
               <Table>

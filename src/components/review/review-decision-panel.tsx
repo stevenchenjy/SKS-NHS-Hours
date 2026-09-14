@@ -31,6 +31,7 @@ export function ReviewDecisionPanel({
   approvalStage,
   canDecide,
   canReassign,
+  approveOnly = false,
 }: {
   requestId: string;
   reviewers: ReviewerOption[];
@@ -38,6 +39,7 @@ export function ReviewDecisionPanel({
   approvalStage: HourApprovalStage;
   canDecide: boolean;
   canReassign: boolean;
+  approveOnly?: boolean;
 }) {
   const [reviewState, reviewAction, reviewing] = useActionState(
     reviewHourRequestAction,
@@ -74,7 +76,9 @@ export function ReviewDecisionPanel({
                 className="min-h-32 resize-y"
               />
               <FieldDescription>
-                Required when requesting changes or rejecting; optional for approval.
+                {approveOnly
+                  ? "Optional for your committee approval. A teacher must still give final approval."
+                  : "Required when requesting changes or rejecting; optional for approval."}
               </FieldDescription>
               <FieldError>{reviewState.fieldErrors?.comment?.[0]}</FieldError>
             </Field>
@@ -93,28 +97,32 @@ export function ReviewDecisionPanel({
                   ? "Approve and send to teachers"
                   : "Give final approval"}
               </Button>
-              <Button
-                type="submit"
-                name="decision"
-                value="request_changes"
-                variant="outline"
-                size="lg"
-                disabled={reviewing}
-              >
-                <RotateCcw data-icon="inline-start" aria-hidden="true" />
-                Request changes
-              </Button>
-              <Button
-                type="submit"
-                name="decision"
-                value="reject"
-                variant="destructive"
-                size="lg"
-                disabled={reviewing}
-              >
-                <XCircle data-icon="inline-start" aria-hidden="true" />
-                Reject request
-              </Button>
+              {!approveOnly ? (
+                <>
+                  <Button
+                    type="submit"
+                    name="decision"
+                    value="request_changes"
+                    variant="outline"
+                    size="lg"
+                    disabled={reviewing}
+                  >
+                    <RotateCcw data-icon="inline-start" aria-hidden="true" />
+                    Request changes
+                  </Button>
+                  <Button
+                    type="submit"
+                    name="decision"
+                    value="reject"
+                    variant="destructive"
+                    size="lg"
+                    disabled={reviewing}
+                  >
+                    <XCircle data-icon="inline-start" aria-hidden="true" />
+                    Reject request
+                  </Button>
+                </>
+              ) : null}
             </div>
           </form>
         </TabsContent>

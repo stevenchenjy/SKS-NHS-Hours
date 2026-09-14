@@ -190,7 +190,7 @@ Every procedure below requires an active global `teacher_admin` or `platform_own
 
 ### Manage categories
 
-Open `/admin/settings/categories` to add, rename, describe, activate/deactivate, and set per-year availability. Categories are alphabetical and have no configurable order, per-request category maximum, or per-member approved-hours cap. The universal request sanity limit remains 24 hours in quarter-hour increments. Deactivate or make unavailable instead of deleting a referenced category.
+Open `/admin/settings/categories` to add, rename, describe, activate/deactivate, and set per-year availability. Categories are alphabetical and have no configurable order, per-request category maximum, or per-member approved-hours cap. The universal request sanity limit remains 24 hours in whole-hour increments. Deactivate or make unavailable instead of deleting a referenced category.
 
 ### Process and correct service requests
 
@@ -352,7 +352,7 @@ Use synthetic accounts and non-sensitive records:
 1. Public registration and anonymous access are unavailable.
 2. Invite and password-reset messages return only to the canonical allowlisted host.
 3. An unprovisioned, inactive, and expired identity receives no protected data.
-4. An active member submits a 0.25-hour request to a different active reviewer.
+4. An active member submits a 1-hour request to a different active reviewer.
 5. The assigned reviewer sees it; another eligible reviewer sees it in all-pending.
 6. Self-review fails, while one valid approval succeeds and records the actual reviewer.
 7. Approved progress changes; pending does not count toward approved progress.

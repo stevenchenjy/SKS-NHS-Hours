@@ -43,7 +43,7 @@ export default async function CategoriesSettingsPage({
     <div className="page-container">
       <PageHeader
         title="Service categories"
-        description="Name, describe, deactivate, and make categories available by school year without removing historical references."
+        description="Deactivating a category keeps its historical records intact."
       />
 
       <section aria-labelledby="master-categories-heading" className="rounded-xl border p-5 sm:p-6">
@@ -51,8 +51,7 @@ export default async function CategoriesSettingsPage({
           Category directory
         </h2>
         <p className="mb-6 mt-1 text-sm text-muted-foreground">
-          Categories are listed alphabetically. Active names are unique without regard to letter
-          case, and deactivation is archive-safe.
+          Active category names must be unique.
         </p>
         <div className="space-y-5 divide-y">
           {categories.map((category) => (
@@ -75,9 +74,6 @@ export default async function CategoriesSettingsPage({
             <h2 id="year-categories-heading" className="text-xl font-bold">
               School-year availability
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Choose which active categories members can use during the selected school year.
-            </p>
           </div>
           <form>
             <label htmlFor="category-year" className="sr-only">

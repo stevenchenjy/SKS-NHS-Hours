@@ -14,6 +14,7 @@ function normalizeEvent(row: Record<string, unknown>): ServiceEvent {
     waitlist_count: Number(row.waitlist_count),
     spots_remaining: Number(row.spots_remaining),
     is_expired: Boolean(row.is_expired),
+    is_signup_closed: Boolean(row.is_signup_closed),
     my_registration_status:
       status === "confirmed" || status === "waitlisted" || status === "withdrawn" ? status : null,
     my_waitlist_position:

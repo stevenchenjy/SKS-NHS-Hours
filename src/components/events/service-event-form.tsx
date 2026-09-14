@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { LoaderCircle, Send } from "lucide-react";
 
-import { createServiceEventAction, type ServiceEventFormState } from "@/app/actions/event-actions";
+import {
+  createServiceEventAction,
+  updateServiceEventAction,
+  type ServiceEventFormState,
+} from "@/app/actions/event-actions";
+import type { ServiceEvent } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,16 +57,32 @@ export function ServiceEventForm({
   schoolYearId,
   contactName,
   contactEmail,
+  event,
 }: {
   schoolYearId: string;
   contactName: string;
   contactEmail: string;
+  event?: ServiceEvent;
 }) {
-  const [state, formAction, pending] = useActionState(createServiceEventAction, initialState);
+  const [state, formAction, pending] = useActionState(
+    event ? updateServiceEventAction : createServiceEventAction,
+    initialState,
+  );
+  const fieldValue = (name: string, fallback = "") => state.values?.[name] ?? fallback;
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
       <input type="hidden" name="school_year_id" value={schoolYearId} />
+      {event ? (
+        <>
+          <input type="hidden" name="event_id" value={event.id} />
+          <input type="hidden" name="updated_at" value={event.updated_at} />
+          <p className="text-sm text-muted-foreground">
+            Confirmed and waitlisted volunteers will automatically receive a notification when you
+            change event details.
+          </p>
+        </>
+      ) : null}
       {state.error ? (
         <p role="alert" className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive">
           {state.error}
@@ -77,6 +98,7 @@ export function ServiceEventForm({
               name="title"
               maxLength={160}
               placeholder="Fall festival setup"
+              defaultValue={fieldValue("title", event?.title)}
               aria-invalid={Boolean(errorFor(state, "title"))}
               required
             />
@@ -93,6 +115,7 @@ export function ServiceEventForm({
               rows={5}
               maxLength={5_000}
               placeholder="Help arrange tables, welcome families, and clean up after the event."
+              defaultValue={fieldValue("description", event?.description)}
               aria-invalid={Boolean(errorFor(state, "description"))}
               required
             />
@@ -102,7 +125,10 @@ export function ServiceEventForm({
               id="volunteer_audience"
               name="volunteer_audience"
               maxLength={500}
-              defaultValue="All active NHS members"
+              defaultValue={fieldValue(
+                "volunteer_audience",
+                event?.volunteer_audience ?? "All active NHS members",
+              )}
               aria-invalid={Boolean(errorFor(state, "volunteer_audience"))}
               required
             />
@@ -119,16 +145,21 @@ export function ServiceEventForm({
               name="location"
               maxLength={300}
               placeholder="Main gym, 123 School Lane"
+              defaultValue={fieldValue("location", event?.location)}
               aria-invalid={Boolean(errorFor(state, "location"))}
               required
             />
           </FormField>
-          <div className="grid gap-5 sm:grid-cols-2">
+          <p className="text-sm text-muted-foreground">
+            All dates and times are in Eastern Time (New York).
+          </p>
+          <FieldGroup className="grid gap-5 sm:grid-cols-2">
             <FormField name="starts_at" label="Starts" state={state}>
               <Input
                 id="starts_at"
                 name="starts_at"
                 type="datetime-local"
+                defaultValue={fieldValue("starts_at", event?.starts_at.slice(0, 16))}
                 aria-invalid={Boolean(errorFor(state, "starts_at"))}
                 required
               />
@@ -138,24 +169,40 @@ export function ServiceEventForm({
                 id="ends_at"
                 name="ends_at"
                 type="datetime-local"
+                defaultValue={fieldValue("ends_at", event?.ends_at.slice(0, 16))}
                 aria-invalid={Boolean(errorFor(state, "ends_at"))}
                 required
               />
             </FormField>
-          </div>
+          </FieldGroup>
+          <FormField
+            name="signup_deadline"
+            label="Signup deadline"
+            state={state}
+            description="New signups and waitlist entries close at this time, at or before the event starts. Existing volunteers can still drop out, and waiting volunteers can still be promoted."
+          >
+            <Input
+              id="signup_deadline"
+              name="signup_deadline"
+              type="datetime-local"
+              defaultValue={fieldValue("signup_deadline", event?.signup_deadline.slice(0, 16))}
+              aria-invalid={Boolean(errorFor(state, "signup_deadline"))}
+              required
+            />
+          </FormField>
         </FieldGroup>
       </FieldSet>
 
       <FieldSet>
         <FieldLegend>Contact and capacity</FieldLegend>
         <FieldGroup>
-          <div className="grid gap-5 sm:grid-cols-2">
+          <FieldGroup className="grid gap-5 sm:grid-cols-2">
             <FormField name="contact_name" label="Contact person" state={state}>
               <Input
                 id="contact_name"
                 name="contact_name"
                 maxLength={200}
-                defaultValue={contactName}
+                defaultValue={fieldValue("contact_name", event?.contact_name ?? contactName)}
                 aria-invalid={Boolean(errorFor(state, "contact_name"))}
                 required
               />
@@ -166,26 +213,30 @@ export function ServiceEventForm({
                 name="contact_email"
                 type="email"
                 maxLength={320}
-                defaultValue={contactEmail}
+                defaultValue={fieldValue("contact_email", event?.contact_email ?? contactEmail)}
                 aria-invalid={Boolean(errorFor(state, "contact_email"))}
                 required
               />
             </FormField>
-          </div>
+          </FieldGroup>
           <FormField
             name="capacity"
             label="People needed"
             state={state}
-            description="Once these spots fill, later signups join the automatic first-come waitlist."
+            description={
+              event
+                ? `There are ${event.confirmed_count} confirmed volunteers. Increasing capacity promotes waiting volunteers in order; capacity cannot be below the confirmed count.`
+                : "Once these spots fill, later signups join the automatic first-come waitlist."
+            }
           >
             <Input
               id="capacity"
               name="capacity"
               type="number"
               inputMode="numeric"
-              min={1}
+              min={Math.max(1, event?.confirmed_count ?? 0)}
               max={500}
-              defaultValue={10}
+              defaultValue={fieldValue("capacity", String(event?.capacity ?? 10))}
               aria-invalid={Boolean(errorFor(state, "capacity"))}
               required
             />
@@ -194,7 +245,10 @@ export function ServiceEventForm({
       </FieldSet>
 
       <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:justify-end">
-        <Button render={<Link href="/events" />} variant="outline">
+        <Button
+          render={<Link href={event ? `/events/${event.id}` : "/events"} />}
+          variant="outline"
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={pending}>
@@ -203,7 +257,7 @@ export function ServiceEventForm({
           ) : (
             <Send data-icon="inline-start" aria-hidden="true" />
           )}
-          {pending ? "Publishing…" : "Publish event"}
+          {pending ? (event ? "Saving…" : "Publishing…") : event ? "Save changes" : "Publish event"}
         </Button>
       </div>
     </form>

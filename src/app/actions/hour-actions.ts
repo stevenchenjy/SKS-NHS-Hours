@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { wholeRequestHoursSchema } from "@/lib/domain/hours";
 import { requireActiveViewer } from "@/lib/dal/access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -26,11 +27,7 @@ const reviewerSchema = z.uuid("Choose a committee head for the first approval.")
 const titleSchema = z.string().trim().min(1, "Enter an activity title.").max(120);
 const descriptionSchema = z.string().trim().max(2_000);
 const serviceDateSchema = z.iso.date("Enter a valid service date.");
-const hoursSchema = z.coerce
-  .number()
-  .positive("Hours must be greater than zero.")
-  .max(24, "A single-date request cannot exceed 24 hours.")
-  .refine((value) => Number.isInteger(value * 4), "Use quarter-hour increments.");
+const hoursSchema = wholeRequestHoursSchema;
 
 function blankToUndefined(value: unknown): unknown {
   return value == null || (typeof value === "string" && value.trim() === "") ? undefined : value;

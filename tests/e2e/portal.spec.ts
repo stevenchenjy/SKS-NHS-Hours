@@ -143,7 +143,7 @@ async function submitRequest(
   page: Page,
   title: string,
   reviewer: RegExp = new RegExp(syntheticAccounts.committeeHead.fullName),
-  hours = "1.25",
+  hours = "1",
 ) {
   await page.goto("/hours/new");
   await page.getByLabel("Activity title").fill(title);
@@ -173,7 +173,7 @@ test("member login, dashboard, submission, approver selection, and pending total
     page,
     assignedTitle,
     new RegExp(syntheticAccounts.committeeHead.fullName),
-    "3.25",
+    "3",
   );
   assignedRequestPath = new URL(page.url()).pathname;
   await expect(page.getByText("Request submitted.")).toBeVisible();
@@ -186,9 +186,9 @@ test("member login, dashboard, submission, approver selection, and pending total
   await page.goto("/dashboard");
   await expectProgressSummary(
     page,
-    "12.5 of 20 approved · 6.5 pending · 7.5 approved hours remaining",
+    "12.5 of 20 approved · 6.25 pending · 7.5 approved hours remaining",
     62.5,
-    32.5,
+    31.25,
   );
   const assignedRow = page.getByRole("row").filter({ hasText: assignedTitle });
   await expect(assignedRow).toHaveCount(1);
@@ -235,9 +235,9 @@ test("selected committee head completes the first approval without approving hou
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
     page,
-    "12.5 of 20 approved · 6.5 pending · 7.5 approved hours remaining",
+    "12.5 of 20 approved · 6.25 pending · 7.5 approved hours remaining",
     62.5,
-    32.5,
+    31.25,
   );
   if (!assignedRequestPath) throw new Error("The assigned request path was not captured.");
   await page.goto(assignedRequestPath);
@@ -261,8 +261,8 @@ test("a teacher gives final approval from the shared teacher queue", async ({ pa
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
     page,
-    "15.75 of 20 approved · 3.25 pending · 4.25 approved hours remaining",
-    78.75,
+    "15.5 of 20 approved · 3.25 pending · 4.5 approved hours remaining",
+    77.5,
     16.25,
   );
   if (!assignedRequestPath) throw new Error("The assigned request path was not captured.");
@@ -339,6 +339,42 @@ test("simultaneous reviewers serialize to one decision", async ({ browser, baseU
   ).toContainText(syntheticAccounts.platformOwner.fullName);
 });
 
+test("a committee head can approve their own hours before a teacher gives final approval", async ({
+  page,
+}) => {
+  const title = `E2E Committee Self Approval ${Date.now()}`;
+  await login(page, syntheticAccounts.committeeHead.email);
+  await submitRequest(page, title, new RegExp(syntheticAccounts.committeeHead.fullName), "2");
+  const memberPath = new URL(page.url()).pathname;
+  await page.getByRole("button", { name: "Review my request", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Review request", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reject request", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Request changes", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Approve and send to teachers", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("The committee-head approval was recorded.");
+  await expect(page.getByText("Pending teacher approval", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Give final approval", exact: true })).toHaveCount(
+    0,
+  );
+  await page.goto(memberPath);
+  await expect(page.getByRole("button", { name: "Review my request", exact: true })).toHaveCount(0);
+  await expect(
+    page.getByText("Final teacher reviewer", { exact: true }).locator(".."),
+  ).toContainText("Not yet reviewed");
+
+  await login(page, syntheticAccounts.platformOwner.email);
+  await page.goto(`/admin/requests?search=${encodeURIComponent(title)}`);
+  await openQueueRequest(page, title);
+  await page.getByRole("button", { name: "Give final approval", exact: true }).click();
+  await page.waitForURL(/decision-recorded/);
+  await login(page, syntheticAccounts.committeeHead.email);
+  await page.goto(memberPath);
+  await expect(page.getByText("Approved", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Final teacher reviewer", { exact: true }).locator(".."),
+  ).toContainText(syntheticAccounts.platformOwner.fullName);
+});
+
 test("president and vice president cannot open the review queue without committee-head access", async ({
   page,
 }) => {
@@ -401,11 +437,11 @@ test("above-target member sees accurate totals while the stacked visual remains 
   await login(page, syntheticAccounts.leaderMember.email);
   await expectProgressSummary(
     page,
-    "21 of 20 approved · 1.25 pending · 1 approved hours over requirement",
+    "21 of 20 approved · 1 pending · 1 approved hours over requirement",
     100,
     0,
     105,
-    6.25,
+    5,
   );
 });
 
@@ -424,6 +460,7 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
   await page.getByLabel("Location").fill("School library");
   await page.getByLabel("Starts").fill("2026-09-24T15:00");
   await page.getByLabel("Ends").fill("2026-09-24T17:00");
+  await page.getByLabel("Signup deadline").fill("2026-09-23T15:00");
   await page.getByLabel("People needed").fill("1");
   await page.getByRole("button", { name: "Publish event" }).click();
   await page.waitForURL(/\/events\/[0-9a-f-]+\?notice=created/);
@@ -457,6 +494,61 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
     hasText: syntheticAccounts.leaderMember.fullName,
   });
   await expect(promotedMember).toContainText("Confirmed");
+
+  await page.getByRole("button", { name: "Edit event", exact: true }).click();
+  await page.getByLabel("Location", { exact: true }).fill("Main gym");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await page.waitForURL(/notice=updated/);
+  await expect(page.getByText("Main gym", { exact: true })).toBeVisible();
+
+  await login(page, syntheticAccounts.leaderMember.email);
+  await page.goto("/notifications");
+  const eventUpdate = page
+    .locator('[data-slot="card"]')
+    .filter({ hasText: volunteerEventTitle })
+    .filter({ hasText: "Event updated" });
+  await expect(eventUpdate).toContainText("Before: School library");
+  await expect(eventUpdate).toContainText("Now: Main gym");
+  await eventUpdate.getByRole("button", { name: "Mark as read", exact: true }).click();
+  await expect(eventUpdate.getByText("Unread", { exact: true })).toHaveCount(0);
+
+  await login(page, syntheticAccounts.committeeHead.email);
+  await page.goto(`${eventPath}/edit`);
+  await page.getByLabel("Signup deadline").fill("2026-08-01T12:00");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await page.waitForURL(/notice=updated/);
+  await login(page, syntheticAccounts.member.email);
+  await page.goto(eventPath);
+  await expect(page.getByRole("button", { name: "Signups closed", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Sign up", exact: true })).toHaveCount(0);
+
+  await login(page, syntheticAccounts.committeeHead.email);
+  await page.goto(eventPath);
+  await page.getByRole("button", { name: "End event", exact: true }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "End event", exact: true })
+    .click();
+  await page.waitForURL(/view=past&notice=ended/);
+  await expect(page.getByText(volunteerEventTitle, { exact: true })).toBeVisible();
+  await page.goto(eventPath);
+  await expect(page.getByRole("button", { name: "Edit event", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Delete event", exact: true }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Delete event", exact: true })
+    .click();
+  await page.waitForURL(/notice=deleted/);
+  await expect(page.getByText(volunteerEventTitle, { exact: true })).toHaveCount(0);
+
+  await login(page, syntheticAccounts.leaderMember.email);
+  await page.goto("/notifications");
+  const deletion = page
+    .locator('[data-slot="card"]')
+    .filter({ hasText: volunteerEventTitle })
+    .filter({ hasText: "Event deleted" });
+  await expect(deletion).toContainText("Your signup has been cancelled");
+  await expect(deletion.getByRole("button", { name: "View event", exact: true })).toHaveCount(0);
 
   await page.goto("/events?view=past");
   await expect(page.getByText("Freshman Orientation Guides")).toBeVisible();
@@ -564,12 +656,7 @@ test("ordinary member cannot open leader or teacher-admin routes", async ({ page
 test("@mobile member submission and leader approval remain usable", async ({ page }) => {
   const mobileTitle = `E2E Mobile Service ${Date.now()}`;
   await login(page, syntheticAccounts.member.email);
-  await submitRequest(
-    page,
-    mobileTitle,
-    new RegExp(syntheticAccounts.committeeHead.fullName),
-    "0.25",
-  );
+  await submitRequest(page, mobileTitle, new RegExp(syntheticAccounts.committeeHead.fullName), "1");
   await expect(page.getByText("Request submitted.")).toBeVisible();
 
   await login(page, syntheticAccounts.committeeHead.email);

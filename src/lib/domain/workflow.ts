@@ -204,7 +204,10 @@ export function evaluateReviewEligibility(input: ReviewEligibilityInput): Review
     reasons.push("request_not_pending");
   }
 
-  if (isSelfReview(value.submitterUserId, value.reviewerUserId)) {
+  if (
+    isSelfReview(value.submitterUserId, value.reviewerUserId) &&
+    !(value.approvalStage === "committee_head" && value.reviewerRoles.includes("committee_head"))
+  ) {
     reasons.push("self_review");
   }
 

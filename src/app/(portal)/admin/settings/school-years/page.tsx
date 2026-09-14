@@ -41,7 +41,7 @@ export default async function SchoolYearsSettingsPage({
     <div className="page-container">
       <PageHeader
         title="School years"
-        description="Set each school year's start and end dates. Access follows those dates automatically, so no manual year closure is required."
+        description="Access follows school-year dates automatically; no manual year closure is required."
       />
 
       {notice ? (

@@ -67,7 +67,7 @@ export default async function AuditPage({
       <PageHeader
         eyebrow={viewer.activeMembership.school_year.label}
         title="Audit trail"
-        description="Append-only sensitive-action records. The application role cannot update or delete these events."
+        description="Audit records cannot be edited or deleted."
       />
 
       <form className="mb-5 grid gap-3 rounded-xl border bg-muted/35 p-4 sm:grid-cols-[minmax(220px,1fr)_220px_auto]">

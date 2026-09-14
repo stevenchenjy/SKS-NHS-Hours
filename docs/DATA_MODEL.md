@@ -116,7 +116,7 @@ Database triggers protect the single platform owner and final active global admi
 
 `school_year_categories` enables a category for one year and stores availability, creator, and timestamps. Legacy order/request-limit/approved-cap columns remain but are normalized to `0`/`null` and have no policy effect.
 
-Request hours remain exact positive quarter-hour amounts with a universal 24-hour maximum. There is no limit on how many approved hours may belong to a category. Referenced categories and year mappings are deactivated/unavailable rather than hard-deleted so old requests remain readable.
+Request hours remain exact positive whole-hour amounts with a universal 24-hour maximum. There is no limit on how many approved hours may belong to a category. Referenced categories and year mappings are deactivated/unavailable rather than hard-deleted so old requests remain readable.
 
 ### `invitations` and `invitation_roles`
 
@@ -141,7 +141,7 @@ The current service record contains:
 
 Statuses are `draft`, `pending`, `changes_requested`, `approved`, `rejected`, and `withdrawn`.
 
-Non-drafts require complete service data and a submission timestamp. The selected and acting reviewers cannot be the owner membership. A completed first stage records the selected committee head while status remains `pending`; terminal/changes decisions require an actual reviewer and decision time. Withdrawn requires withdrawal time; a draft has no submission time. Hours are 0.25–24.00 in quarter-hour increments.
+Non-drafts require complete service data and a submission timestamp. The selected and acting reviewers cannot be the owner membership. A completed first stage records the selected committee head while status remains `pending`; terminal/changes decisions require an actual reviewer and decision time. Withdrawn requires withdrawal time; a draft has no submission time. New entries, edits, and corrections require whole hours from 1 to 24. Existing quarter-hour records retain their original values.
 
 The row-protection trigger rejects deletion, requires authorized functions for creation/status/protected-field changes, and prevents ordinary changes to approved records. `revision` and the optional member/client-key unique index support stale-write and replay protection.
 

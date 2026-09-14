@@ -78,7 +78,7 @@ Use the platform owner's read-only Role preview for demonstrations. For an inter
 
 Activate the draft year only after the review. Then verify:
 
-1. a member can sign in, see the correct year, and submit a quarter-hour request;
+1. a member can sign in, see the correct year, and submit a whole-hour request;
 2. the member progress line shows approved, then pending, then neutral remainder;
 3. a Committee head or President / Vice President can see and decide eligible pending work;
 4. a global teacher administrator can administer and review without becoming a member;

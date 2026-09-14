@@ -203,6 +203,39 @@ export async function getHourRequestReviewerNames(requestId: string): Promise<{
   };
 }
 
+export interface ApprovedReviewItem {
+  id: string;
+  title: string;
+  hours: number | string;
+  service_date: string;
+  status: "approved";
+  decided_at: string;
+  member_name: string;
+  category_name: string;
+  requested_approver_name: string;
+  actual_reviewer_name: string;
+}
+
+export async function listApprovedReviewArchive(
+  schoolYearId: string,
+  requestedApproverId?: string,
+): Promise<ApprovedReviewItem[]> {
+  const supabase = await createSupabaseServerClient();
+  let query = supabase
+    .from("approved_request_archive")
+    .select("*")
+    .eq("school_year_id", schoolYearId)
+    .order("decided_at", { ascending: false });
+  if (requestedApproverId)
+    query = query.eq("requested_approver_membership_id", requestedApproverId);
+  const { data, error } = await query;
+  return requireData(
+    data,
+    error,
+    "Unable to load approved request archive",
+  ) as ApprovedReviewItem[];
+}
+
 export async function listPendingQueue(
   schoolYearId: string,
   requestedApproverId?: string,

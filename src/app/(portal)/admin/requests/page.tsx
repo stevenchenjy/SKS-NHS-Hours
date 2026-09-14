@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Search } from "lucide-react";
 
+import { RouteRefresh } from "@/components/portal/route-refresh";
 import { PageHeader } from "@/components/portal/page-header";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requireReviewer } from "@/lib/dal/access";
-import { listPendingQueue } from "@/lib/dal/portal";
+import { listApprovedReviewArchive, listPendingQueue } from "@/lib/dal/portal";
 
 export const metadata: Metadata = { title: "Review requests" };
 
@@ -32,7 +33,8 @@ export default async function ReviewQueuePage({
   const params = await searchParams;
   const search = value(params.search).trim().toLowerCase();
   const notice = value(params.notice);
-  const all = await listPendingQueue(
+  const archived = value(params.view) === "archive";
+  const all = await (archived ? listApprovedReviewArchive : listPendingQueue)(
     viewer.activeMembership.school_year_id,
     viewer.isTeacherAdmin ? undefined : viewer.activeMembership.id,
   );
@@ -46,12 +48,13 @@ export default async function ReviewQueuePage({
 
   return (
     <div className="page-container">
+      <RouteRefresh />
       <PageHeader
         eyebrow={viewer.activeMembership.school_year.label}
         title="Review requests"
         description={
           viewer.isTeacherAdmin
-            ? "These requests already have committee-head approval. One teacher decision completes the review."
+            ? "These requests already have committee-head approval. One teacher’s approval completes the request and moves it to Archive for all teachers."
             : "Complete the first approval for requests that members assigned to you. Approved requests move automatically to all teachers."
         }
       />
@@ -64,13 +67,44 @@ export default async function ReviewQueuePage({
         </p>
       ) : null}
 
+      <nav aria-label="Review request views" className="mb-6 flex gap-2">
+        <Button
+          variant={archived ? "outline" : "default"}
+          render={<Link href="/admin/requests" aria-current={!archived ? "page" : undefined} />}
+        >
+          Pending
+        </Button>
+        <Button
+          variant={archived ? "default" : "outline"}
+          render={
+            <Link
+              href="/admin/requests?view=archive"
+              aria-current={archived ? "page" : undefined}
+            />
+          }
+        >
+          Archive
+        </Button>
+      </nav>
+      {archived ? (
+        <p className="mb-5 text-sm text-muted-foreground">
+          Approved requests are saved here with the teacher’s decision. No further approval is
+          needed.
+        </p>
+      ) : null}
       <div className="mb-5 flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-center lg:justify-between">
         <p className="text-sm font-semibold">
-          {viewer.isTeacherAdmin ? "Teacher approval queue" : "Assigned to me"} ({all.length})
+          {archived
+            ? "Approved requests"
+            : viewer.isTeacherAdmin
+              ? "Teacher approval queue"
+              : "Assigned to me"}{" "}
+          ({all.length})
         </p>
         <form className="flex w-full gap-2 lg:max-w-md">
+          {archived ? <input type="hidden" name="view" value="archive" /> : null}
           <label htmlFor="search" className="sr-only">
-            Search pending requests
+            Search requests
           </label>
           <div className="relative min-w-0 flex-1">
             <Search
@@ -100,8 +134,8 @@ export default async function ReviewQueuePage({
               <TableHead>Category</TableHead>
               <TableHead>Service date</TableHead>
               <TableHead>Hours</TableHead>
-              <TableHead>Approval stage</TableHead>
-              <TableHead>Selected committee head</TableHead>
+              <TableHead>{archived ? "Status" : "Approval stage"}</TableHead>
+              <TableHead>{archived ? "Approved by" : "Selected committee head"}</TableHead>
               <TableHead className="pr-5 text-right">
                 <span className="sr-only">Review</span>
               </TableHead>
@@ -114,7 +148,9 @@ export default async function ReviewQueuePage({
                   <TableCell className="pl-5">
                     <p className="font-semibold">{request.member_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {request.waiting_days} day{request.waiting_days === 1 ? "" : "s"} waiting
+                      {"waiting_days" in request
+                        ? `${request.waiting_days} day${request.waiting_days === 1 ? "" : "s"} waiting`
+                        : `Approved ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" }).format(new Date(request.decided_at))}`}
                     </p>
                   </TableCell>
                   <TableCell className="max-w-[280px] truncate font-medium">
@@ -126,17 +162,23 @@ export default async function ReviewQueuePage({
                   <TableCell>
                     <StatusBadge
                       status={
-                        request.approval_stage === "teacher"
-                          ? "pending_teacher_approval"
-                          : "pending_committee_approval"
+                        request.status === "approved"
+                          ? "approved"
+                          : request.approval_stage === "teacher"
+                            ? "pending_teacher_approval"
+                            : "pending_committee_approval"
                       }
                       className="whitespace-nowrap"
                     />
                   </TableCell>
-                  <TableCell>{request.requested_approver_name}</TableCell>
+                  <TableCell>
+                    {"actual_reviewer_name" in request
+                      ? request.actual_reviewer_name
+                      : request.requested_approver_name}
+                  </TableCell>
                   <TableCell className="pr-5 text-right">
                     <Button render={<Link href={`/admin/requests/${request.id}`} />} size="sm">
-                      Review
+                      {archived ? "View history" : "Review"}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -144,7 +186,9 @@ export default async function ReviewQueuePage({
             ) : (
               <TableRow>
                 <TableCell colSpan={8} className="h-36 text-center text-muted-foreground">
-                  No pending requests match this view.
+                  {archived
+                    ? "No approved requests match this view."
+                    : "No pending requests match this view."}
                 </TableCell>
               </TableRow>
             )}

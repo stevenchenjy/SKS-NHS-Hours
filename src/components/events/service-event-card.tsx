@@ -18,7 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress, ProgressLabel } from "@/components/ui/progress";
-import { formatServiceEventSchedule } from "@/lib/domain/events";
+import { formatServiceEventDeadline, formatServiceEventSchedule } from "@/lib/domain/events";
 import { cn } from "@/lib/utils";
 import type { ServiceEvent } from "@/lib/types";
 
@@ -33,7 +33,7 @@ function registrationBadge(event: ServiceEvent) {
       </Badge>
     );
   }
-  if (!event.is_expired && event.spots_remaining === 0) {
+  if (!event.is_signup_closed && event.spots_remaining === 0) {
     return <Badge variant="outline">Waitlist open</Badge>;
   }
   return null;
@@ -123,17 +123,25 @@ export function ServiceEventCard({
           </div>
         </dl>
 
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">
+            {event.is_signup_closed ? "Signups closed" : "Signup deadline"}
+          </span>
+          {" · "}
+          {formatServiceEventDeadline(event.signup_deadline)}
+        </p>
+
         <Progress
           value={filledPercent}
           aria-label={`${event.confirmed_count} of ${event.capacity} volunteer spots filled`}
         >
-          <ProgressLabel>
-            {event.capacity} {event.capacity === 1 ? "person" : "people"} needed
-          </ProgressLabel>
-          <span className="ml-auto text-sm tabular-nums text-muted-foreground">
+          <ProgressLabel className="font-bold tabular-nums text-foreground">
             {event.spots_remaining > 0
               ? `${event.spots_remaining} ${event.spots_remaining === 1 ? "spot" : "spots"} left`
               : "Full"}
+          </ProgressLabel>
+          <span className="ml-auto text-sm tabular-nums text-muted-foreground">
+            {event.capacity} {event.capacity === 1 ? "person" : "people"} needed
           </span>
         </Progress>
 
@@ -159,7 +167,7 @@ export function ServiceEventCard({
               variant="outline"
               aria-label={`${event.can_manage ? "Manage roster for" : "View details for"} ${event.title}`}
             >
-              {event.can_manage ? "Manage roster" : "View details"}
+              {event.can_manage ? "Manage event" : "View details"}
             </Button>
           ) : null}
           {!event.is_expired && viewerCanSignUp ? (
@@ -173,6 +181,10 @@ export function ServiceEventCard({
                   variant="destructive"
                 />
               </form>
+            ) : event.is_signup_closed ? (
+              <Button disabled variant="outline">
+                Signups closed
+              </Button>
             ) : (
               <form action={signupAction}>
                 <EventActionSubmit

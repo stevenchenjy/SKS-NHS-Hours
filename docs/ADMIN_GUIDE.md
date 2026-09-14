@@ -88,7 +88,7 @@ Only one school year may be active. Global administrators retain access automati
 
 ## Manage categories
 
-Settings → Categories can create, rename, describe, activate, or deactivate a category and make it available or unavailable for a school year. Categories are shown alphabetically. They have no custom display order, per-request maximum, or per-member approved-hour cap. A universal 24-hour sanity limit still applies to one service request, and hours remain positive quarter-hour increments.
+Settings → Categories can create, rename, describe, activate, or deactivate a category and make it available or unavailable for a school year. Categories are shown alphabetically. They have no custom display order, per-request maximum, or per-member approved-hour cap. A universal 24-hour sanity limit still applies to one service request, and hours remain positive whole-hour increments.
 
 Deactivate or make a category unavailable instead of deleting one referenced by history. The initial reference set is Green Team, Peer Tutoring, Concessions, Fundraising & Events, and Community Service.
 

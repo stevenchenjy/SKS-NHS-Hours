@@ -67,11 +67,7 @@ export default async function MemberRosterPage({
 
   return (
     <div className="page-container">
-      <PageHeader
-        eyebrow={viewer.activeMembership.school_year.label}
-        title="Members"
-        description="Search the complete roster, compare approved progress, and open any permitted service log."
-      />
+      <PageHeader eyebrow={viewer.activeMembership.school_year.label} title="Members" />
 
       <form className="mb-6 grid gap-3 rounded-xl border bg-muted/35 p-4 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_repeat(4,minmax(150px,auto))_auto]">
         <label className="relative">

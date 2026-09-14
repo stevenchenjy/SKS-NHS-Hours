@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(10);
+select extensions.plan(17);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -137,6 +137,23 @@ select extensions.ok(
   ),
   'the final decision records the teacher who acted'
 );
+
+select extensions.is((select count(*) from public.pending_review_queue where id = '40000000-0000-4000-8000-000000000002'), 0::bigint,
+  'the approving teacher no longer sees the request in Pending');
+select extensions.is((select count(*) from public.approved_request_archive where id = '40000000-0000-4000-8000-000000000002'), 1::bigint,
+  'the approving teacher sees the request once in Archive');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001', true);
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001","role":"authenticated"}', true);
+select extensions.is((select count(*) from public.pending_review_queue where id = '40000000-0000-4000-8000-000000000002'), 0::bigint,
+  'the other teacher also loses the completed request from Pending');
+select extensions.is((select actual_reviewer_name from public.approved_request_archive where id = '40000000-0000-4000-8000-000000000002'), 'Taylor Teacher',
+  'the other teacher sees the completed decision in Archive');
+select extensions.throws_ok($$ select public.review_hour_request('40000000-0000-4000-8000-000000000002', 'approve') $$,
+  '40001', 'Request is no longer pending', 'a stale second teacher approval cannot duplicate approval');
+select extensions.throws_ok($$ select public.review_hour_request('40000000-0000-4000-8000-000000000002', 'reject', 'Stale review') $$,
+  '40001', 'Request is no longer pending', 'a stale second teacher decision cannot override approval');
+select extensions.is((select count(*) from public.hour_reviews where hour_request_id = '40000000-0000-4000-8000-000000000002' and action = 'approved'), 1::bigint,
+  'only one final approval is recorded in history');
 
 select * from extensions.finish();
 rollback;

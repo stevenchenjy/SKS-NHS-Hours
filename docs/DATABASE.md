@@ -40,9 +40,9 @@ IDs are UUIDs except for append-only event/history identifiers where the migrati
 - A Supabase Auth UUID maps to at most one profile.
 - A profile has at most one membership in a given school year.
 - Member access depends on membership status/expiration, profile status, school-year status/dates, and roles. Global administrator access depends on an active profile and platform grant, not a school-year date.
-- Every member target is fixed at exactly 20 approved hours. Request hours are positive quarter-hour increments and cannot exceed the universal 24-hour sanity limit.
+- Every member target is fixed at exactly 20 approved hours. Request hours are positive whole-hour increments and cannot exceed the universal 24-hour sanity limit.
 - Selected committee head, first-stage reviewer, and final teacher reviewer are separate. Every reference aligns with the request's school year.
-- Self-review is rejected even when the user has several roles or is a teacher administrator.
+- An active committee head may select themselves and approve their own first stage. Final decisions still require a different teacher; self-review cannot request changes or reject a request.
 - Committee-head approval keeps the request pending; one teacher approval is required before hours count. Review and reassignment lock and recheck the row so stale competing decisions fail.
 - Approved rows cannot use the ordinary edit path. `correct_approved_request` records reason and before/after facts.
 - `hour_reviews`, `hour_request_corrections`, and `audit_events` are append-only.
@@ -54,19 +54,19 @@ IDs are UUIDs except for append-only event/history identifiers where the migrati
 
 Normal writes go through these public RPCs; direct table writes are intentionally not granted to authenticated callers.
 
-| Area                  | Functions                                                                                                                                                             |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Member requests       | `create_hour_request_draft`, `save_hour_request_draft`, `submit_hour_request`, `withdraw_hour_request`                                                                |
-| Review                | `review_hour_request`, `reassign_hour_request`                                                                                                                        |
-| Approved corrections  | `correct_approved_request`                                                                                                                                            |
-| School years          | `create_school_year`, `activate_school_year`, `close_school_year`; the legacy `set_school_year_target` contract accepts only 20                                       |
-| Memberships and roles | `renew_memberships` (destination access), `set_membership_status`, `set_profile_status`, `assign_membership_role`, `remove_membership_role`                           |
-| Global administration | `grant_teacher_admin`, `revoke_teacher_admin`, `transfer_platform_owner`; platform-owner-only                                                                         |
-| Invitations           | `create_invitation`, `prepare_invitation_send`, `record_invitation_send_success`, `revoke_invitation`, `claim_invitation`                                             |
-| Categories/settings   | `upsert_service_category`, `set_school_year_category`, `set_app_setting`                                                                                              |
-| Reporting             | `record_export`                                                                                                                                                       |
-| Reviewer discovery    | `list_eligible_reviewers` returns only active committee-head IDs, full name, and role keys to an active same-year member; it excludes the caller, teachers, and email |
-| Initial access        | `bootstrap_teacher_admin` (service role only, one time)                                                                                                               |
+| Area                  | Functions                                                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Member requests       | `create_hour_request_draft`, `save_hour_request_draft`, `submit_hour_request`, `withdraw_hour_request`                                      |
+| Review                | `review_hour_request`, `reassign_hour_request`                                                                                              |
+| Approved corrections  | `correct_approved_request`                                                                                                                  |
+| School years          | `create_school_year`, `activate_school_year`, `close_school_year`; the legacy `set_school_year_target` contract accepts only 20             |
+| Memberships and roles | `renew_memberships` (destination access), `set_membership_status`, `set_profile_status`, `assign_membership_role`, `remove_membership_role` |
+| Global administration | `grant_teacher_admin`, `revoke_teacher_admin`, `transfer_platform_owner`; platform-owner-only                                               |
+| Invitations           | `create_invitation`, `prepare_invitation_send`, `record_invitation_send_success`, `revoke_invitation`, `claim_invitation`                   |
+| Categories/settings   | `upsert_service_category`, `set_school_year_category`, `set_app_setting`                                                                    |
+| Reporting             | `record_export`                                                                                                                             |
+| Reviewer discovery    | `list_eligible_reviewers` returns active same-year committee heads, including an eligible caller; no teacher accounts or email              |
+| Initial access        | `bootstrap_teacher_admin` (service role only, one time)                                                                                     |
 
 The invitation transport boundary is explicitly two phase. `prepare_invitation_send(uuid)` returns only `(invitation_id uuid, email text, full_name text)` and writes no send fact. After Auth accepts the email, `record_invitation_send_success(uuid, uuid, timestamptz)` returns the updated invitation, advances expiry/count/time once per idempotency UUID, and audits `invitation.sent` or `invitation.resent`. The migration asserts that the former pre-provider `resend_invitation` RPC is absent.
 

@@ -18,7 +18,7 @@ export default async function ProfilePage() {
     <div className="page-container">
       <PageHeader
         title="My profile"
-        description="Your account identity and current roles."
+
         actions={
           viewer.isMember ? <Button render={<Link href="/hours/new" />}>Log Hours</Button> : null
         }

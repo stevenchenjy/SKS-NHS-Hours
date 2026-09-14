@@ -26,13 +26,10 @@ export default async function NewHourRequestPage() {
     );
   }
 
-  const [categories, allCommitteeHeads] = await Promise.all([
+  const [categories, committeeHeads] = await Promise.all([
     listCategories(viewer.activeMembership.school_year_id),
     listActiveCommitteeHeads(viewer.activeMembership.school_year_id),
   ]);
-  const committeeHeads = allCommitteeHeads.filter(
-    (committeeHead) => committeeHead.membershipId !== viewer.activeMembership.id,
-  );
 
   return (
     <div className="page-container max-w-5xl">
@@ -44,14 +41,13 @@ export default async function NewHourRequestPage() {
           </Link>
         }
         title="Log service hours"
-        description="Save an editable draft or submit a complete activity for review."
       />
       {categories.length === 0 || committeeHeads.length === 0 ? (
         <div className="rounded-xl border border-[var(--status-pending)]/30 bg-[var(--status-pending-bg)] p-5">
           <h2 className="font-semibold">Submissions are not ready</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            An active service category and at least one other active committee head are required.
-            Contact the NHS adviser.
+            An active service category and at least one active committee head are required. Contact
+            the NHS adviser.
           </p>
         </div>
       ) : (
@@ -60,6 +56,7 @@ export default async function NewHourRequestPage() {
           schoolYearLabel={viewer.activeMembership.school_year.label}
           categories={categories}
           reviewers={committeeHeads}
+          memberMembershipId={viewer.activeMembership.id}
           submissionKey={crypto.randomUUID()}
         />
       )}

@@ -87,12 +87,7 @@ export default async function DashboardPage({
       <PageHeader
         eyebrow={viewer.activeMembership.school_year.label}
         title="Your service progress"
-        description={
-          <>
-            Welcome, {viewer.profile.full_name}. Only approved hours count toward your annual
-            requirement.
-          </>
-        }
+        description="Only approved hours count toward your annual requirement."
         actions={
           <Button render={<Link href="/hours/new" />} size="lg" className="h-10 px-4">
             <Plus data-icon="inline-start" aria-hidden="true" />
@@ -162,9 +157,6 @@ export default async function DashboardPage({
             <h2 id="history-heading" className="text-2xl font-bold tracking-tight">
               Service history
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Draft, pending, reviewed, and withdrawn requests remain visible.
-            </p>
           </div>
           <form className="grid gap-2 sm:grid-cols-4" aria-label="Filter service history">
             <label className="sr-only" htmlFor="year">

@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { formatRoleLabel } from "@/lib/domain/roles";
 import type { HourRequest, ReviewerOption, ServiceCategory } from "@/lib/types";
 
 const initialState: HourRequestFormState = {};
@@ -43,9 +42,9 @@ function initialValues(request?: HourRequest): HourRequestFormValues {
 
 export function HourRequestForm({
   schoolYearId,
-  schoolYearLabel,
   categories,
   reviewers,
+  memberMembershipId,
   submissionKey,
   request,
 }: {
@@ -53,6 +52,7 @@ export function HourRequestForm({
   schoolYearLabel: string;
   categories: ServiceCategory[];
   reviewers: ReviewerOption[];
+  memberMembershipId?: string;
   submissionKey: string;
   request?: HourRequest;
 }) {
@@ -64,11 +64,9 @@ export function HourRequestForm({
     categories.map((category) => [category.id, category.name]),
   );
   const reviewerItems = Object.fromEntries(
-    reviewers.map((reviewer) => [
-      reviewer.membershipId,
-      `${reviewer.fullName} · ${reviewer.roles.map(formatRoleLabel).join(", ")}`,
-    ]),
+    reviewers.map((reviewer) => [reviewer.membershipId, reviewer.fullName]),
   );
+  const canSelectSelf = reviewers.some((reviewer) => reviewer.membershipId === memberMembershipId);
 
   return (
     <form action={action} className="space-y-8" noValidate>
@@ -82,9 +80,6 @@ export function HourRequestForm({
           <h2 id="activity-fields" className="text-xl font-bold">
             Activity details
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Record one service activity for {schoolYearLabel}. Approved hours count toward progress.
-          </p>
         </div>
         <FieldGroup>
           <Field data-invalid={Boolean(state.fieldErrors?.title)}>
@@ -167,12 +162,13 @@ export function HourRequestForm({
             <FieldLabel htmlFor="hours">Hours</FieldLabel>
             <Input
               id="hours"
+              aria-describedby="hours-hint"
               name="hours"
               type="number"
-              min="0.25"
+              min="1"
               max="24"
-              step="0.25"
-              inputMode="decimal"
+              step="1"
+              inputMode="numeric"
               required
               value={values.hours}
               onChange={(event) =>
@@ -180,6 +176,9 @@ export function HourRequestForm({
               }
               className="h-11 max-w-44"
             />
+            <p id="hours-hint" className="text-sm text-muted-foreground">
+              Whole hours only, from 1 to 24.
+            </p>
             <FieldError>{state.fieldErrors?.hours?.[0]}</FieldError>
           </Field>
         </FieldGroup>
@@ -193,6 +192,9 @@ export function HourRequestForm({
           <p className="mt-1 text-sm text-muted-foreground">
             Choose one committee head for the first approval. After they approve, the request is
             automatically sent to all teachers for the final approval.
+            {canSelectSelf
+              ? " You may select yourself for the committee approval. Your hours count only after a teacher approves."
+              : null}
           </p>
         </div>
         <Field data-invalid={Boolean(state.fieldErrors?.requested_approver_membership_id)}>
@@ -219,7 +221,7 @@ export function HourRequestForm({
               <SelectGroup>
                 {reviewers.map((reviewer) => (
                   <SelectItem key={reviewer.membershipId} value={reviewer.membershipId}>
-                    {reviewer.fullName} · {reviewer.roles.map(formatRoleLabel).join(", ")}
+                    {reviewerItems[reviewer.membershipId]}
                   </SelectItem>
                 ))}
               </SelectGroup>

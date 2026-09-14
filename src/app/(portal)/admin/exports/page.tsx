@@ -9,25 +9,13 @@ import { listSchoolYears } from "@/lib/dal/portal";
 export const metadata: Metadata = { title: "Exports" };
 
 const exports = [
-  [
-    "progress",
-    "Current member progress",
-    "Approved, pending, remaining, over-goal, role, and membership values.",
-  ],
-  [
-    "hours",
-    "Complete hour records",
-    "Every service record with requested and actual reviewer identifiers.",
-  ],
-  ["pending", "Pending requests", "The current review queue for follow-up."],
-  ["approved", "Approved requests", "Approved service records for school administration."],
-  [
-    "categories",
-    "Category summaries",
-    "Approved and pending hours grouped by member and category.",
-  ],
-  ["directory", "Membership directory", "Provisioned account and school-year access records."],
-  ["archive", "School-year archive", "A complete record export suitable for archive storage."],
+  ["progress", "Current member progress"],
+  ["hours", "Complete hour records"],
+  ["pending", "Pending requests"],
+  ["approved", "Approved requests"],
+  ["categories", "Category summaries"],
+  ["directory", "Membership directory"],
+  ["archive", "School-year archive"],
 ] as const;
 
 function param(value: string | string[] | undefined): string {
@@ -46,10 +34,7 @@ export default async function ExportsPage({
 
   return (
     <div className="page-container">
-      <PageHeader
-        title="Exports"
-        description="Every CSV is authorized and generated on the server, neutralizes spreadsheet formulas, and records an audit event."
-      />
+      <PageHeader title="Exports" />
       <form className="mb-6 rounded-xl border bg-muted/35 p-4">
         <label htmlFor="export-year" className="mr-3 text-sm font-semibold">
           School year
@@ -71,7 +56,7 @@ export default async function ExportsPage({
         </Button>
       </form>
       <div className="divide-y rounded-xl border">
-        {exports.map(([type, label, description]) => (
+        {exports.map(([type, label]) => (
           <article
             key={type}
             className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"
@@ -82,7 +67,6 @@ export default async function ExportsPage({
               </span>
               <div>
                 <h2 className="font-semibold">{label}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{description}</p>
               </div>
             </div>
             <Button render={<a href={`/api/exports/${type}?year=${yearId}`} />} variant="outline">

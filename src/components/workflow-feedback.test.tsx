@@ -11,6 +11,7 @@ vi.mock("react", async (importOriginal) => ({
 import { HourRequestForm } from "./hours/hour-request-form";
 import { CorrectionForm } from "./admin/correction-form";
 import { EventNotice } from "./events/event-notice";
+import { ReviewDecisionPanel } from "./review/review-decision-panel";
 import type { HourRequest } from "@/lib/types";
 
 beforeEach(() => {
@@ -18,6 +19,41 @@ beforeEach(() => {
 });
 
 describe("workflow feedback", () => {
+  it("explains that choosing yourself still requires teacher approval", () => {
+    const html = renderToStaticMarkup(
+      <HourRequestForm
+        schoolYearId="year"
+        schoolYearLabel="2026-2027"
+        categories={[]}
+        reviewers={[
+          { membershipId: "head", userId: "user", fullName: "Riley", roles: ["committee_head"] },
+        ]}
+        memberMembershipId="head"
+        submissionKey="key"
+      />,
+    );
+    expect(html).toContain("You may select yourself for the committee approval.");
+    expect(html).toContain("Your hours count only after a teacher approves.");
+  });
+
+  it("limits a committee head's own decision controls to first approval", () => {
+    const html = renderToStaticMarkup(
+      <ReviewDecisionPanel
+        requestId="request"
+        reviewers={[]}
+        currentReviewerMembershipId="head"
+        approvalStage="committee_head"
+        canDecide
+        canReassign={false}
+        approveOnly
+      />,
+    );
+    expect(html).toContain("Approve and send to teachers");
+    expect(html).not.toContain("Request changes");
+    expect(html).not.toContain("Reject request");
+    expect(html).not.toContain("Give final approval");
+  });
+
   it("posts the latest saved ID and revision after submission fails", () => {
     state.current = {
       savedRequest: { id: "saved-id", revision: 3 },

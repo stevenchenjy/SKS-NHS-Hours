@@ -68,14 +68,20 @@ export function CorrectionForm({
             <FieldLabel htmlFor="correction-hours">Hours</FieldLabel>
             <Input
               id="correction-hours"
+              aria-describedby="correction-hours-hint"
+              inputMode="numeric"
               name="hours"
               type="number"
-              min="0.25"
+              min="1"
               max="24"
-              step="0.25"
+              step="1"
               defaultValue={request.hours ?? ""}
               required
             />
+            <FieldDescription id="correction-hours-hint">
+              Whole hours only, from 1 to 24.
+            </FieldDescription>
+            <FieldError>{state.fieldErrors?.hours?.[0]}</FieldError>
           </Field>
         </div>
         <Field data-invalid={Boolean(state.fieldErrors?.reason)}>

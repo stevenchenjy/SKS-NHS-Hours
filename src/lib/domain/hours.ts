@@ -71,7 +71,14 @@ export const quarterHourUnitsSchema = z
   .max(MAX_DATABASE_HOURS * QUARTER_HOURS_PER_HOUR)
   .transform((value) => value as QuarterHourUnits);
 
-/** Valid service-entry hours: 0.25 through 24.00 inclusive. */
+/** Whole-hour values for all new entries, edits, and corrections. */
+export const wholeRequestHoursSchema = z.coerce
+  .number()
+  .int("Enter whole hours only (for example, 1, 2, or 3).")
+  .min(1, "Enter at least 1 hour.")
+  .max(MAX_REQUEST_HOURS, `A single-date request cannot exceed ${MAX_REQUEST_HOURS} hours.`);
+
+/** Reads existing records, including historical quarter-hour entries. */
 export const requestHoursSchema = quarterHourInputSchema
   .refine((units) => units > 0, "Hours must be greater than zero.")
   .refine(

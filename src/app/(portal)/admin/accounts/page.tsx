@@ -221,7 +221,6 @@ export default async function AccountsPage({
       <PageHeader
         eyebrow={selectedYear?.label}
         title="Accounts"
-        description="Manage identities, school-year access, roles, and invitations from one place."
         actions={
           view === "directory" && selectedYearId ? (
             <Button

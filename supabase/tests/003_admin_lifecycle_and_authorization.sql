@@ -144,8 +144,8 @@ select extensions.lives_ok(
       p_description => 'Prepared books and tables for the school library event.',
       p_category_id => '30000000-0000-4000-8000-000000000001',
       p_service_date => '2026-08-05',
-      p_hours => 11.50,
-      p_reason => 'Corrected a one-hour transcription error.'
+      p_hours => 11.00,
+      p_reason => 'Corrected a transcription error.'
     )
   $$,
   'teacher administrator can correct an approved request'
@@ -173,7 +173,7 @@ select extensions.is(
     from public.hour_request_corrections
     where hour_request_id = '40000000-0000-4000-8000-000000000001'
   ),
-  11.50::numeric,
+  11.00::numeric,
   'correction records the corrected approved hours'
 );
 select extensions.ok(
@@ -189,7 +189,7 @@ select extensions.is(
     select approved_hours from public.member_progress
     where membership_id = '20000000-0000-4000-8000-000000000003'
   ),
-  14.75::numeric,
+  14.25::numeric,
   'progress reflects corrected approved totals and the cross-reviewer approval'
 );
 

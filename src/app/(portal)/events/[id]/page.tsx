@@ -5,6 +5,7 @@ import { ArrowLeft, UsersRound } from "lucide-react";
 import { z } from "zod";
 
 import { EventNotice } from "@/components/events/event-notice";
+import { EventManagementControls } from "@/components/events/event-management-controls";
 import { ServiceEventCard } from "@/components/events/service-event-card";
 import { PageHeader } from "@/components/portal/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +71,16 @@ export default async function ServiceEventDetailPage({
           </Link>
         }
         title={event.can_manage ? "Event roster" : "Event details"}
+        actions={
+          event.can_manage ? (
+            <EventManagementControls
+              eventId={event.id}
+              title={event.title}
+              isPast={event.is_expired}
+              updatedAt={event.updated_at}
+            />
+          ) : undefined
+        }
         description={
           event.can_manage
             ? "Monitor confirmed volunteers and the first-come waitlist. Open spots are filled automatically when someone drops."

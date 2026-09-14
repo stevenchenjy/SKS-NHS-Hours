@@ -234,6 +234,10 @@ const previewServiceEvent: ServiceEvent = {
   volunteer_audience: "All active NHS members",
   starts_at: "2026-09-18T15:30:00",
   ends_at: "2026-09-18T19:00:00",
+  signup_deadline: "2026-09-17T15:00:00",
+  is_signup_closed: false,
+  ended_at: null,
+  updated_at: "2026-08-29T15:00:00Z",
   contact_name: "Riley Reviewer",
   contact_email: "reviewer@example.edu",
   capacity: 12,
@@ -259,7 +263,7 @@ function EventsPreview({ viewer }: { viewer: Viewer }) {
       <PageHeader
         eyebrow="2026–2027"
         title="Volunteer events"
-        description="Find open opportunities, see remaining spots, and manage your signup. Full events use a first-come waitlist that promotes the next student automatically."
+        description="Full events use a first-come waitlist that promotes the next student automatically."
         actions={canPublish ? <Button>Publish event</Button> : undefined}
       />
       <div className="mb-6 inline-flex rounded-lg bg-muted p-1">
@@ -283,7 +287,7 @@ function MemberDashboardPreview() {
       <PageHeader
         eyebrow="2026–2027"
         title="Your service progress"
-        description="Welcome, Maya Chen. Only approved hours count toward your annual requirement."
+        description="Only approved hours count toward your annual requirement."
         actions={
           <Button render={<Link href="/hours/new" />} size="lg">
             <Plus data-icon="inline-start" aria-hidden="true" /> Log Hours
@@ -319,9 +323,6 @@ function MemberDashboardPreview() {
             <h2 id="preview-history-heading" className="text-2xl font-bold tracking-tight">
               Service history
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Draft, pending, reviewed, and withdrawn requests remain visible.
-            </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-4">
             <select
@@ -410,11 +411,7 @@ const adminMembers = [
 function MemberProgressPreview() {
   return (
     <div className="page-container">
-      <PageHeader
-        eyebrow="2026–2027"
-        title="Member progress"
-        description="View approved progress for members in the active school year."
-      />
+      <PageHeader eyebrow="2026–2027" title="Member progress" />
       <MetricRail
         items={[
           { label: "Active members", value: 84 },
@@ -476,15 +473,7 @@ function ReviewRequestsPreview({ assignedOnly }: { assignedOnly: boolean }) {
 
   return (
     <div className="page-container">
-      <PageHeader
-        eyebrow="2026–2027"
-        title="Review requests"
-        description={
-          assignedOnly
-            ? "Review service requests assigned to you."
-            : "Review any pending service request for the active school year."
-        }
-      />
+      <PageHeader eyebrow="2026–2027" title="Review requests" />
       <section className="rounded-xl border">
         <div className="flex items-center justify-between gap-4 border-b px-5 py-4 sm:px-6">
           <div>
@@ -541,7 +530,7 @@ function ProfilePreview({ viewer }: { viewer: Viewer }) {
 
   return (
     <div className="page-container max-w-[920px]">
-      <PageHeader title="My Profile" description="Your account and current NHS access." />
+      <PageHeader title="My Profile" />
       <section className="rounded-xl border p-6 sm:p-8">
         <div className="flex items-center gap-4">
           <div className="flex size-14 items-center justify-center rounded-full bg-secondary text-lg font-bold text-secondary-foreground">
@@ -574,19 +563,14 @@ function AdministrationPreview({ section }: { section: "accounts" | "exports" | 
   const content = {
     accounts: {
       title: "Accounts",
-      description: "Manage accounts, school-year access, roles, and invitations.",
       heading: "Accounts and invitations",
-      detail: "Invite members or add existing accounts to the active school year.",
     },
     exports: {
       title: "Exports",
-      description: "Prepare records for the active school year.",
       heading: "Available exports",
-      detail: "Download approved service records and member progress when needed.",
     },
     settings: {
       title: "Settings",
-      description: "Manage school-year dates and service categories.",
       heading: "School years",
       detail: "The active school year runs from Aug 29, 2026 through Sep 1, 2027.",
     },
@@ -594,14 +578,12 @@ function AdministrationPreview({ section }: { section: "accounts" | "exports" | 
 
   return (
     <div className="page-container max-w-[1080px]">
-      <PageHeader
-        eyebrow="Administration"
-        title={content.title}
-        description={content.description}
-      />
+      <PageHeader eyebrow="Administration" title={content.title} />
       <section className="rounded-xl border p-6 sm:p-7">
         <h2 className="text-xl font-bold">{content.heading}</h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">{content.detail}</p>
+        {"detail" in content ? (
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{content.detail}</p>
+        ) : null}
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border bg-muted/30 p-4">
             <p className="font-semibold">2026–2027</p>
@@ -631,7 +613,6 @@ function ReviewRequestPreview({
       <PageHeader
         eyebrow="Pending review · submitted Aug 24, 2026"
         title="Community garden shift"
-        description="Review the service record, member context, and immutable history before deciding."
       />
       <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-7">
@@ -764,11 +745,7 @@ function ReviewRequestPreview({
 function LogHoursPreview() {
   return (
     <div className="page-container max-w-[920px]">
-      <PageHeader
-        eyebrow="2026–2027"
-        title="Log service hours"
-        description="Save a draft at any time, or submit a complete activity for leader review."
-      />
+      <PageHeader eyebrow="2026–2027" title="Log service hours" />
       <div className="rounded-xl border bg-background p-5 sm:p-7">
         <HourRequestForm
           schoolYearId="30000000-0000-4000-8000-000000000001"

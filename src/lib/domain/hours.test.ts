@@ -1,3 +1,4 @@
+import { wholeRequestHoursSchema } from "./hours";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -93,5 +94,14 @@ describe("request and target limits", () => {
 
   it("allows a zero target so progress can handle it explicitly", () => {
     expect(parseTargetHours("0.00")).toBe(0);
+  });
+});
+
+describe("whole-hour entry validation", () => {
+  it.each([1, "2", 24, "24.00"])("accepts whole hours %p", (value) => {
+    expect(wholeRequestHoursSchema.parse(value)).toBe(Number(value));
+  });
+  it.each([0, "0.25", "1.5", "1.75", "1.001", 25, ""])("rejects invalid entry %p", (value) => {
+    expect(wholeRequestHoursSchema.safeParse(value).success).toBe(false);
   });
 });

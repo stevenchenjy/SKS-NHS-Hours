@@ -78,15 +78,18 @@ export default async function ReviewRequestPage({
   }
   const progressAccess = canViewMemberProgress(viewer);
   const approvalStage = request.committee_head_approved_at ? "teacher" : "committee_head";
+  const selfReview = viewer.memberships.some(
+    (membership) => membership.id === request.member_membership_id,
+  );
   const canDecide =
     request.status === "pending" &&
     (approvalStage === "teacher"
-      ? viewer.isTeacherAdmin
+      ? viewer.isTeacherAdmin && !selfReview
       : viewer.roles.includes("committee_head") &&
         viewer.activeMembership.id === request.requested_approver_membership_id);
   const canReassign =
     request.status === "pending" && approvalStage === "committee_head" && viewer.isTeacherAdmin;
-  const [progress, allCommitteeHeads, categories] = await Promise.all([
+  const [progress, committeeHeads, categories] = await Promise.all([
     progressAccess ? getProgress(request.member_membership_id) : Promise.resolve(null),
     canReassign ? listActiveCommitteeHeads(request.school_year_id) : Promise.resolve([]),
     listCategories(request.school_year_id),
@@ -96,10 +99,6 @@ export default async function ReviewRequestPage({
     member && "email" in member && typeof member.email === "string" ? member.email : null;
   const requestedApprover = profileFromMembership(request.requestedApproverMembership);
   const actualReviewer = profileFromMembership(request.actualReviewerMembership);
-  const selfReview = viewer.activeMembership.id === request.member_membership_id;
-  const committeeHeads = allCommitteeHeads.filter(
-    (committeeHead) => committeeHead.membershipId !== request.member_membership_id,
-  );
 
   return (
     <div className="page-container">
@@ -144,7 +143,9 @@ export default async function ReviewRequestPage({
         >
           {request.status === "pending" && request.committee_head_approved_at
             ? "The committee-head approval was recorded. The request is now in every teacher’s final-approval queue."
-            : "Your decision was recorded. The immutable request history is shown below."}
+            : request.status === "approved"
+              ? "Approved and archived. This request has left every teacher’s pending queue; no further approval is needed."
+              : "Your decision was recorded. The immutable request history is shown below."}
         </p>
       ) : null}
 
@@ -281,21 +282,18 @@ export default async function ReviewRequestPage({
               <div className="flex gap-3">
                 <LockKeyhole className="mt-0.5 size-5 text-muted-foreground" aria-hidden="true" />
                 <div>
-                  <h2 className="font-semibold">Decision controls are locked</h2>
+                  <h2 className="font-semibold">
+                    {request.status === "approved"
+                      ? "Approved and archived"
+                      : "Decision controls are locked"}
+                  </h2>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                    This request is {request.status.replaceAll("_", " ")}. Its existing decision
-                    remains in history.
+                    {request.status === "approved"
+                      ? "This request is approved and archived. One teacher’s approval is final, and the hours count toward the member’s total."
+                      : `This request is ${request.status.replaceAll("_", " ")}. Its existing decision remains in history.`}
                   </p>
                 </div>
               </div>
-            </section>
-          ) : selfReview ? (
-            <section className="rounded-xl border border-destructive/30 bg-destructive/5 p-5">
-              <h2 className="font-semibold text-destructive">Self-review is prohibited</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                You submitted this request under your own membership. Another eligible approver must
-                process it.
-              </p>
             </section>
           ) : canDecide || canReassign ? (
             <section
@@ -319,6 +317,7 @@ export default async function ReviewRequestPage({
                 approvalStage={approvalStage}
                 canDecide={canDecide}
                 canReassign={canReassign}
+                approveOnly={selfReview}
               />
             </section>
           ) : (

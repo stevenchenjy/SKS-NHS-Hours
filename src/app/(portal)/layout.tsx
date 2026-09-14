@@ -1,7 +1,13 @@
 import { AppShell } from "@/components/portal/app-shell";
 import { requirePortalViewer } from "@/lib/dal/access";
+import { unreadNotificationCount } from "@/lib/dal/notifications";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const viewer = await requirePortalViewer();
-  return <AppShell viewer={viewer}>{children}</AppShell>;
+  const unread = await unreadNotificationCount();
+  return (
+    <AppShell viewer={viewer} unreadNotifications={unread}>
+      {children}
+    </AppShell>
+  );
 }
