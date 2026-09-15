@@ -106,7 +106,7 @@ insert into public.school_years (
 )
 values (
   '11111111-1111-4111-8111-111111111111', '2026-2028',
-  current_date - 30, current_date + 335, 20.00, 'active',
+  current_date - 30, current_date + 335, 35.00, 'active',
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'
 );
 

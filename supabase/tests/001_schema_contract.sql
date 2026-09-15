@@ -130,9 +130,10 @@ select extensions.results_eq(
       ('Peer Tutoring'::text),
       ('Concessions'::text),
       ('Fundraising & Events'::text),
-      ('Community Service'::text)
+      ('Community Service'::text),
+      ('Scholarship & Opportunities'::text)
   $$,
-  'the five initial service categories are seeded in display order'
+  'the six reference service categories are seeded in display order'
 );
 select extensions.is(
   (
@@ -143,11 +144,12 @@ select extensions.is(
       '30000000-0000-4000-8000-000000000002'::uuid,
       '30000000-0000-4000-8000-000000000003'::uuid,
       '30000000-0000-4000-8000-000000000004'::uuid,
-      '30000000-0000-4000-8000-000000000005'::uuid
+      '30000000-0000-4000-8000-000000000005'::uuid,
+      '30000000-0000-4000-8000-000000000006'::uuid
     ])
       and created_by_profile_id is null
   ),
-  5::bigint,
+  6::bigint,
   'production reference categories use fixed IDs without a synthetic creator'
 );
 select extensions.results_eq(

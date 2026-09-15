@@ -1,3 +1,4 @@
+import { ANNUAL_REQUIRED_HOURS } from "@/lib/domain/hours";
 import type { Metadata } from "next";
 import { CheckCircle2 } from "lucide-react";
 
@@ -70,7 +71,9 @@ export default async function SchoolYearsSettingsPage({
               >
                 <div>
                   <h3 className="text-lg font-bold">{year.label}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">20 approved hours required</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {year.default_target_hours} approved hours required
+                  </p>
                 </div>
                 <SchoolYearDatesForm schoolYear={year} />
                 <div className="flex flex-wrap items-center gap-2 lg:justify-end">
@@ -102,9 +105,9 @@ export default async function SchoolYearsSettingsPage({
           Create the next school year
         </h2>
         <p className="mb-6 mt-1 text-sm leading-6 text-muted-foreground">
-          A new year starts as a draft with the fixed 20-hour requirement. Add member and leadership
-          access from Accounts; global administrators need no annual assignment. Dates remain
-          editable after activation.
+          A new year starts as a draft with the fixed {ANNUAL_REQUIRED_HOURS}-hour requirement. Add
+          member and leadership access from Accounts; global administrators need no annual
+          assignment. Dates remain editable after activation.
         </p>
         <CreateSchoolYearForm />
       </section>

@@ -55,7 +55,7 @@ The current unit suite under `src/lib/domain` covers:
 - real ISO school-year dates and active-year/membership eligibility;
 - role and review-capability rules;
 - allowed/forbidden request workflow transitions, self-review, and actual-reviewer invariants;
-- fixed-20 approved/pending progress, stacked visual presentation, and over-goal percentages;
+- fixed-35 approved/pending progress, stacked visual presentation, and over-goal percentages;
 - strict allowlisted filters, pagination, and parameter-pollution rejection;
 - invitation email/domain/role/expiry validation;
 - CSV quoting, line endings, Unicode, and spreadsheet-formula neutralization; and
@@ -100,7 +100,7 @@ Critical cases include:
 5. a terminal second decision fails and only one actual reviewer is recorded;
 6. approved records require an audited immutable correction;
 7. pending/changes-requested hours do not count as approved progress;
-8. fixed-20 remaining/over-goal progress is exact and global admins are excluded;
+8. fixed-35 remaining/over-goal progress is exact and global admins are excluded;
 9. school-year/category/reviewer composite references cannot cross years;
 10. destination access preserves prior membership/history and does not preserve stale leadership;
 11. account/role/global-grant/year/category/invitation/review/correction/destination-access/export actions append audit events;
@@ -136,7 +136,7 @@ The authenticated portal suite covers 13 workflows:
 5. a simultaneous two-browser-context review race with one success, one conflict, and one persisted approval;
 6. committee-head self-approval followed by required teacher approval;
 7. changes requested, `save_changes`, persisted reviewer feedback, and resubmission;
-8. adjacent approved/pending segments, fixed-20 wording, and uncapped over-goal text;
+8. adjacent approved/pending segments, fixed-35 wording, and uncapped over-goal text;
 9. teacher-admin roster/member history plus one serious/critical axe scan;
 10. year creation and destination-year access assignment;
 11. expired-account experience;

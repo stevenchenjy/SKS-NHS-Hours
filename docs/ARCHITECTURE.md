@@ -40,7 +40,7 @@ flowchart LR
 4. Authorization-sensitive mutations run server-side and end in a database transaction or narrowly scoped RPC.
 5. Row Level Security and explicit grants deny unauthorized direct Data API access.
 6. Selected committee head, completed first approval, and final teacher reviewer are separate facts. Hours require both approval stages.
-7. Only approved requests contribute to the fixed 20-hour requirement. Pending hours are a separately colored adjacent visual/text value; changes-requested hours remain separate.
+7. Only approved requests contribute to the fixed 35-hour requirement. Pending hours are a separately colored adjacent visual/text value; changes-requested hours remain separate.
 8. Reviews, corrections, and audit events are append-only. Approved facts are never silently overwritten.
 9. Historical identities and records survive school-year expiration, suspension, and transition.
 10. Exactly one active global administrator is platform owner. Role preview is synthetic and read-only; it never impersonates a real account.
@@ -157,7 +157,7 @@ Progress is calculated from authoritative request rows, not stored as a mutable 
 
 ```text
 actual percentage = approved hours / 20 * 100
-remaining hours   = max(20 - approved hours, 0)
+remaining hours   = max(35 - approved hours, 0)
 hours over goal   = max(approved hours - 20, 0)
 ```
 

@@ -175,7 +175,7 @@ insert into public.school_years (
 )
 values (
   '10000000-0000-4000-8000-000000000001',
-  '2026-2027', '2026-07-01', '2027-06-30', 20.00, 'active',
+  '2026-2027', '2026-07-01', '2027-06-30', 35.00, 'active',
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001',
   '2026-07-01 12:00:00+00', '2026-07-01 12:00:00+00'
 )
@@ -340,6 +340,9 @@ values
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
   ('30000000-0000-4000-8000-000000000005', 'Community Service',
    'Service performed for community organizations.', 0, true, null,
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
+  ('30000000-0000-4000-8000-000000000006', 'Scholarship & Opportunities',
+   'Service supporting scholarship and opportunity initiatives.', 0, true, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001')
 on conflict (id) do update
 set name = excluded.name, description = excluded.description,
@@ -365,6 +368,9 @@ values
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
   ('10000000-0000-4000-8000-000000000001',
    '30000000-0000-4000-8000-000000000005', true, 0, null, null,
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'),
+  ('10000000-0000-4000-8000-000000000001',
+   '30000000-0000-4000-8000-000000000006', true, 0, null, null,
    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001')
 on conflict (school_year_id, category_id) do update
 set is_available = excluded.is_available, display_order = excluded.display_order,

@@ -28,7 +28,7 @@ This log records decisions that materially affect security, data integrity, oper
 
 ## D-005 — Use whole-hour entry with exact numeric storage
 
-**Decision:** Store hours as exact numeric values, require positive whole-hour increments with a universal 24-hour maximum per request, and fix every annual member requirement at 20 approved hours.
+**Decision:** Store hours as exact numeric values, require positive whole-hour increments with a universal 24-hour maximum per request, and fix every annual member requirement at 35 approved hours.
 
 **Reason:** Exact numeric arithmetic avoids floating-point accumulation errors. A fixed target removes inconsistent exceptions and duplicate configuration workflows.
 
@@ -46,7 +46,7 @@ This log records decisions that materially affect security, data integrity, oper
 
 ## D-008 — Derive progress from request records
 
-**Decision:** Secure database views/queries aggregate authoritative requests by status. Only approved requests count toward the fixed 20-hour completion requirement. The progress track stacks approved, then pending in a second color, then neutral remainder; textual totals remain separate and uncapped.
+**Decision:** Secure database views/queries aggregate authoritative requests by status. Only approved requests count toward the fixed 35-hour completion requirement. The progress track stacks approved, then pending in a second color, then neutral remainder; textual totals remain separate and uncapped.
 
 **Reason:** A mutable running total can drift or be tampered with. Derived totals remain explainable and auditable.
 

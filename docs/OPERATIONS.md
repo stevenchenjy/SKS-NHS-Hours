@@ -176,13 +176,13 @@ Every procedure below requires an active global `teacher_admin` or `platform_own
 
 1. In Accounts, select the school year and assign one annual access level: Member, Committee head, or President / Vice President.
 2. Leadership automatically includes member and is assigned deliberately each year. Do not create duplicate identities for ordinary student leadership.
-3. Every member target is fixed at 20 approved hours. There is no Target settings page or override workflow.
+3. Every member target is fixed at 35 approved hours. There is no Target settings page or override workflow.
 4. Only the platform owner can invite/grant/revoke a teacher administrator or transfer ownership. Staff administration must use a separate identity from any member participation/history.
 5. After changes, use synthetic accounts in non-production or have the person refresh/sign in; verify the new capability and audit event rather than relying on navigation alone.
 
 ### Create a year and assign the new roster
 
-1. Open `/admin/settings/school-years` and create a draft year with a consecutive label and inclusive dates. The requirement is fixed at 20 approved hours.
+1. Open `/admin/settings/school-years` and create a draft year with a consecutive label and inclusive dates. The requirement is fixed at 35 approved hours.
 2. In Accounts → Add accounts, add selected existing profiles or invite/import new identities into the draft year. Choose each person's annual access deliberately; the destination transaction links prior membership when available and does not rewrite history.
 3. Review member/leadership access and category availability, then activate. Global administrators retain access automatically and must not be added as members.
 4. Close the prior year when policy says submissions/reviews must stop. Retain it for read-only history.
@@ -243,7 +243,7 @@ Before production launch:
          p_school_year_label: v.NHS_BOOTSTRAP_YEAR_LABEL,
          p_start_date: v.NHS_BOOTSTRAP_START_DATE,
          p_end_date: v.NHS_BOOTSTRAP_END_DATE,
-         p_default_target_hours: 20,
+         p_default_target_hours: 35,
          p_expiration_date: v.NHS_BOOTSTRAP_END_DATE,
        }),
      });
@@ -431,7 +431,7 @@ For a suspected incident:
 
 ## Routine operational checklist
 
-- At each school year: create the draft year, verify dates and fixed 20-hour policy, add the member roster, deliberately assign student leadership, review category availability, activate, and retain the old year read-only.
+- At each school year: create the draft year, verify dates and fixed 35-hour policy, add the member roster, deliberately assign student leadership, review category availability, activate, and retain the old year read-only.
 - Monthly during active use: review inactive/expiring accounts, privileged roles, invitation failures, audit events, export activity, Auth errors, and backup status.
 - At staff turnover: invite and verify a separate successor teacher administrator, transfer platform ownership when appropriate, then remove predecessor access; rotate shared operational secrets and review GitHub, Vercel, Supabase, SMTP, Google, and domain access.
 - At dependency updates: run the full check suite, database/RLS tests, browser workflows, dependency audit, and production build before promotion.

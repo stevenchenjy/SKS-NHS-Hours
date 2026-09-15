@@ -194,7 +194,7 @@ select extensions.is(
 );
 
 select extensions.lives_ok(
-  $$ select public.create_school_year('2027-2028', '2027-07-01', '2028-06-30', 20.00) $$,
+  $$ select public.create_school_year('2027-2028', '2027-07-01', '2028-06-30', 35.00) $$,
   'teacher administrator can create a fixed-target school year as a draft'
 );
 select extensions.throws_ok(
@@ -204,13 +204,13 @@ select extensions.throws_ok(
     )
   $$,
   '23514',
-  'The annual service target is fixed at 20 approved hours',
+  'The annual service target is fixed at 35 approved hours',
   'school-year target mutation is rejected by the compatibility RPC'
 );
 select extensions.is(
   (select default_target_hours from public.school_years where label = '2027-2028'),
-  20.00::numeric,
-  'new school years always retain the fixed 20-hour target'
+  35.00::numeric,
+  'new school years always retain the fixed 35-hour target'
 );
 select extensions.throws_ok(
   $$

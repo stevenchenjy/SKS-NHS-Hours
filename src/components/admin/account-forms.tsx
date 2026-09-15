@@ -1,5 +1,6 @@
 "use client";
 
+import { ANNUAL_REQUIRED_HOURS } from "@/lib/domain/hours";
 import { useActionState } from "react";
 import { FileUp, Send } from "lucide-react";
 
@@ -170,7 +171,8 @@ export function AddExistingAccountForm({
               ))}
           </select>
           <FieldDescription>
-            Access expires at the school year end, and the service requirement is fixed at 20 hours.
+            Access expires at the school year end, and the service requirement is fixed at{" "}
+            {ANNUAL_REQUIRED_HOURS} hours.
           </FieldDescription>
           <FieldError>{state.fieldErrors?.school_year_id?.[0]}</FieldError>
         </Field>

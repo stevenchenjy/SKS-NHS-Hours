@@ -1,3 +1,4 @@
+import { ANNUAL_REQUIRED_HOURS } from "@/lib/domain/hours";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarDays, Clock3, History, Plus, Tag, UserRound } from "lucide-react";
@@ -58,7 +59,7 @@ const memberViewer: Viewer = {
       label: "2026–2027",
       start_date: "2026-07-01",
       end_date: "2027-06-30",
-      default_target_hours: 20,
+      default_target_hours: ANNUAL_REQUIRED_HOURS,
       status: "active",
       created_at: "2026-06-01T12:00:00Z",
       closed_at: null,
@@ -126,14 +127,14 @@ const progress: ProgressRecord = {
   full_name: "Maya Chen",
   email: "maya.chen@example.edu",
   membership_status: "active",
-  target_hours: 20,
+  target_hours: ANNUAL_REQUIRED_HOURS,
   approved_hours: 14.5,
   pending_hours: 3.25,
   changes_requested_hours: 1.5,
   rejected_hours: 0,
-  remaining_hours: 5.5,
+  remaining_hours: ANNUAL_REQUIRED_HOURS - 14.5,
   over_goal_hours: 0,
-  actual_percentage: 72.5,
+  actual_percentage: Math.round((14.5 / ANNUAL_REQUIRED_HOURS) * 10_000) / 100,
   approved_count: 5,
   pending_count: 2,
   changes_requested_count: 1,
@@ -300,7 +301,10 @@ function MemberDashboardPreview() {
             <div>
               <p className="text-sm font-semibold text-muted-foreground">Approved hours</p>
               <p className="mt-1 text-5xl font-bold tracking-tight">
-                14.5 <span className="text-xl font-medium text-muted-foreground">/ 20</span>
+                14.5{" "}
+                <span className="text-xl font-medium text-muted-foreground">
+                  / {ANNUAL_REQUIRED_HOURS}
+                </span>
               </p>
             </div>
             <StatusBadge status="below_goal" className="hidden sm:inline-flex" />
@@ -402,10 +406,10 @@ function MemberDashboardPreview() {
 }
 
 const adminMembers = [
-  ["Maya Chen", "14.5", "20", "72.5%", "5.5 hours remaining"],
-  ["Eli Thompson", "20", "20", "100%", "Requirement met"],
-  ["Sofia Patel", "8.25", "20", "41.25%", "11.75 hours remaining"],
-  ["Liam Rivera", "22.5", "20", "112.5%", "2.5 hours over goal"],
+  ["Maya Chen", "14.5", "35", "41.43%", "20.5 hours remaining"],
+  ["Eli Thompson", "35", "35", "100%", "Requirement met"],
+  ["Sofia Patel", "8.25", "35", "23.57%", "26.75 hours remaining"],
+  ["Liam Rivera", "37.5", "35", "107.14%", "2.5 hours over goal"],
 ];
 
 function MemberProgressPreview() {

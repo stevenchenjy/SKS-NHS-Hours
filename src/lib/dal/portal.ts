@@ -106,7 +106,7 @@ export async function listCategories(schoolYearId: string): Promise<ServiceCateg
 
 export async function listActiveCommitteeHeads(schoolYearId: string): Promise<ReviewerOption[]> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("list_eligible_reviewers", {
+  const { data, error } = await supabase.rpc("list_committee_head_options", {
     p_school_year_id: schoolYearId,
   });
   const rows = requireData(data, error, "Unable to load committee heads") as unknown as Array<{
@@ -114,12 +114,14 @@ export async function listActiveCommitteeHeads(schoolYearId: string): Promise<Re
     profile_id: string;
     full_name: string;
     role_keys: RoleSlug[];
+    committee_name: string | null;
   }>;
   return rows
     .map((row) => ({
       membershipId: row.membership_id,
       userId: row.profile_id,
       fullName: row.full_name,
+      committeeName: row.committee_name,
       roles: row.role_keys,
     }))
     .sort((a, b) => a.fullName.localeCompare(b.fullName));

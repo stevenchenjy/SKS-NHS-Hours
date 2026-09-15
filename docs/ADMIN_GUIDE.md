@@ -8,7 +8,7 @@ Never share accounts. A successful sign-in proves identity; the database separat
 
 | Access                     | Scope               | Main capability                                                                                        |
 | -------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------ |
-| Member                     | One school year     | Submit and track the person's own service hours toward the fixed 20-hour requirement                   |
+| Member                     | One school year     | Submit and track the person's own service hours toward the fixed 35-hour requirement                   |
 | Committee head             | One school year     | Member access plus eligible review and roster context                                                  |
 | President / Vice President | One school year     | Member access plus eligible review and roster context                                                  |
 | Teacher administrator      | Global              | Review and administer accounts, years, categories, corrections, audit, and exports across all years    |
@@ -25,6 +25,8 @@ Student leadership is deliberately reassigned for each school year. Teacher admi
 - **Invitations** is the delivery/lifecycle queue. Check whether an invite is pending, accepted, expired, or revoked; inspect expiry and accepted send count; resend or revoke pending invitations.
 
 The Members area is intentionally read-only progress/history, not a second account-status editor. Settings no longer has a separate Roles page workflow.
+
+Accounts and Invitations show **Password setup** and **First portal visit** separately. Password setup reflects whether the authentication account currently has a password; administrators never receive the password or its hash. A visit is recorded only when the authenticated portal opens in the browser, not when an invitation is accepted or a page is prefetched. The first timestamp is retained across later visits. Visit tracking started September 14, 2026, so **No visit recorded** does not rule out use before tracking began.
 
 ## Invite one account
 
@@ -90,7 +92,7 @@ Only one school year may be active. Global administrators retain access automati
 
 Settings → Categories can create, rename, describe, activate, or deactivate a category and make it available or unavailable for a school year. Categories are shown alphabetically. They have no custom display order, per-request maximum, or per-member approved-hour cap. A universal 24-hour sanity limit still applies to one service request, and hours remain positive whole-hour increments.
 
-Deactivate or make a category unavailable instead of deleting one referenced by history. The initial reference set is Green Team, Peer Tutoring, Concessions, Fundraising & Events, and Community Service.
+Deactivate or make a category unavailable instead of deleting one referenced by history. The reference set is Green Team, Peer Tutoring, Concessions, Fundraising & Events, Community Service, and Scholarship & Opportunities.
 
 ## Review service requests
 
@@ -106,9 +108,9 @@ The selected committee head, first approval, and final teacher reviewer are reco
 
 ## Read progress correctly
 
-Only approved hours count toward the fixed 20-hour requirement. Pending hours are informational and do not reduce the approved-hours remainder.
+Only approved hours count toward the fixed 35-hour requirement. Pending hours are informational and do not reduce the approved-hours remainder.
 
-The progress bar is one stacked line: approved occupies the left segment, pending connects after it in another color, and the rest is neutral. The visual segments stop at the 20-hour width, while text preserves true approved values and over-goal amounts. A summary such as `5 of 20 approved · 2 pending · 15 approved hours remaining` always means the remainder is based on approved hours only.
+The progress bar is one stacked line: approved occupies the left segment, pending connects after it in another color, and the rest is neutral. The visual segments stop at the 35-hour width, while text preserves true approved values and over-goal amounts. A summary such as `5 of 35 approved · 2 pending · 30 approved hours remaining` always means the remainder is based on approved hours only.
 
 `/admin/members` and each member detail page are the canonical roster-progress/history views. They intentionally exclude global administrators.
 

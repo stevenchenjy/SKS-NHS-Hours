@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { wholeRequestHoursSchema } from "@/lib/domain/hours";
+import { ANNUAL_REQUIRED_HOURS, wholeRequestHoursSchema } from "@/lib/domain/hours";
 import { parseSchoolYearDateRange, validateInvitation } from "@/lib/domain";
 import {
   coordinateInvitationDelivery,
@@ -483,12 +483,12 @@ export async function createSchoolYearAction(
     p_label: range.label,
     p_start_date: range.startDate,
     p_end_date: range.endDate,
-    p_default_target_hours: 20,
+    p_default_target_hours: ANNUAL_REQUIRED_HOURS,
   });
   if (error) return { error: messageForDatabaseError(error.message) };
   revalidatePath("/admin/settings/school-years");
   return {
-    message: "Draft school year created with the fixed 20-hour member requirement.",
+    message: `Draft school year created with the fixed ${ANNUAL_REQUIRED_HOURS}-hour member requirement.`,
   };
 }
 

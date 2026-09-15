@@ -48,7 +48,7 @@ insert into public.school_years (
 )
 values (
   '10000000-0000-4000-8000-000000000002', '2027-2028', '2027-07-01', '2028-06-30',
-  20.00, 'draft', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'
+  35.00, 'draft', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001'
 );
 
 insert into public.invitations (
@@ -478,8 +478,8 @@ select extensions.is(
     select actual_percentage from public.member_progress
     where membership_id = '20000000-0000-4000-8000-000000000004'
   ),
-  60.00::numeric,
-  'actual percentage uses the fixed 20-hour goal'
+  34.29::numeric,
+  'actual percentage uses the fixed 35-hour goal'
 );
 select extensions.is(
   (
@@ -487,7 +487,7 @@ select extensions.is(
     where membership_id = '20000000-0000-4000-8000-000000000004'
   ),
   0.00::numeric,
-  'twelve approved hours do not exceed the fixed 20-hour goal'
+  'twelve approved hours do not exceed the fixed 35-hour goal'
 );
 select extensions.is(
   (select count(*) from public.school_year_summary),

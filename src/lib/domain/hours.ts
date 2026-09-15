@@ -4,6 +4,7 @@ export const MINUTES_PER_QUARTER_HOUR = 15;
 export const QUARTER_HOURS_PER_HOUR = 4;
 export const MAX_DATABASE_HOURS = 99_999.75;
 export const MAX_REQUEST_HOURS = 24;
+export const ANNUAL_REQUIRED_HOURS = 35;
 
 declare const quarterHourUnitsBrand: unique symbol;
 

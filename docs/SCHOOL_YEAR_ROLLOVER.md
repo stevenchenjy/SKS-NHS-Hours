@@ -12,7 +12,7 @@ one profile
 global administrator grant  → no annual membership requirement, no service target
 ```
 
-- Every member has a fixed requirement of 20 approved hours.
+- Every member has a fixed requirement of 35 approved hours.
 - Pending hours are displayed separately and never count as approved completion.
 - Member and student-leadership access belongs to one school year.
 - Committee head and President / Vice President automatically include member access.
@@ -37,7 +37,7 @@ In Settings → School years:
 
 1. enter a consecutive label such as `2027-2028`;
 2. enter the real inclusive dates whose years match the label;
-3. create the year; it starts as `draft` with the fixed 20-hour requirement; and
+3. create the year; it starts as `draft` with the fixed 35-hour requirement; and
 4. verify that global administrators can still open administration without an annual assignment.
 
 A draft does not accept ordinary member submissions. Only one year may be active.
@@ -64,7 +64,7 @@ Do not add a global teacher administrator as a member. If one person genuinely n
 Check:
 
 - label and inclusive dates;
-- fixed 20-hour requirement;
+- fixed 35-hour requirement;
 - expected member count, excluding global administrators;
 - one deliberately selected access level per person;
 - expected Committee head and President / Vice President reviewers;

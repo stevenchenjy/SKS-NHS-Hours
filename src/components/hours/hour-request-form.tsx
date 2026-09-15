@@ -64,7 +64,12 @@ export function HourRequestForm({
     categories.map((category) => [category.id, category.name]),
   );
   const reviewerItems = Object.fromEntries(
-    reviewers.map((reviewer) => [reviewer.membershipId, reviewer.fullName]),
+    reviewers.map((reviewer) => [
+      reviewer.membershipId,
+      reviewer.committeeName
+        ? `${reviewer.fullName} — ${reviewer.committeeName}`
+        : reviewer.fullName,
+    ]),
   );
   const canSelectSelf = reviewers.some((reviewer) => reviewer.membershipId === memberMembershipId);
 

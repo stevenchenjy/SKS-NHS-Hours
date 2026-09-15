@@ -10,7 +10,7 @@ The application separates authentication from authorization: signing in is not e
 - Annual member access with `member`, `committee_head`, and combined `president_vice_president` roles; global `teacher_admin` and single `platform_owner` access are separate
 - Draft, submit, withdraw, changes-requested, resubmit, approve, reject, and reassign workflow
 - Committee-head self-approval with required final teacher approval, concurrent-decision protection, immutable review history, and traceable corrections
-- Exact quarter-hour calculations with a fixed 20-approved-hour requirement and a stacked approved/pending progress bar
+- Exact quarter-hour calculations with a fixed 35-approved-hour requirement and a stacked approved/pending progress bar
 - Leader queues and member history; consolidated account/invitation/role administration; school-year, category, audit, CSV, and read-only role-preview workflows
 - Responsive, keyboard-accessible interface with textual status/progress equivalents
 

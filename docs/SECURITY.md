@@ -21,7 +21,7 @@ Review evidence available in the repository includes:
 - `src/lib/domain/csv.ts`, `src/lib/domain/query.ts`, `src/lib/domain/invitation.ts`, `src/lib/domain/progress.ts`, and `src/lib/domain/audit.ts` for bounded CSV, filters, lifecycle, calculations, and audit shapes;
 - `supabase/migrations/20260829030000_initial_nhs_backend.sql` for normalized records, constraints, immutable triggers, caller-derived functions, security-invoker views, grants, and forced RLS;
 - `supabase/migrations/20260829040000_hour_request_reviewer_names.sql` for request-scoped reviewer-name attribution without broad profile or membership disclosure;
-- `supabase/migrations/20260830010000_global_admin_and_simplified_policy.sql` for global administrator grants and owner succession, combined President / Vice President access, fixed 20-hour targets, neutral category-limit fields, and safe destination-year access;
+- `supabase/migrations/20260830010000_global_admin_and_simplified_policy.sql` for global administrator grants and owner succession, combined President / Vice President access, fixed 35-hour targets, neutral category-limit fields, and safe destination-year access;
 - `supabase/config.toml` for local Auth defaults;
 - `supabase/templates/invite.html` and `supabase/templates/recovery.html` for local token-hash Auth templates;
 - `supabase/tests` and `tests/e2e/portal.spec.ts` for authored database/browser assurance cases; and
@@ -132,7 +132,7 @@ UI hiding is not a control. Protected pages, Server Actions/route handlers, call
 - Expired memberships and memberships in closed or archived years are historical records: they cannot be reactivated or have annual roles changed. New participation uses destination-year access instead.
 - Teacher-admin invitations, including preparation, send acknowledgement, resend, and revocation, require the platform owner; ordinary teacher administrators manage only member and student-leadership invitations.
 - Change-request and rejection require a bounded comment. Approved records are locked; a teacher-admin correction records actor, reason, and before/after values without destroying history.
-- Only approved records affect the fixed 20-hour completion requirement. Exact numeric/quarter-hour logic avoids binary floating-point drift. Pending is separately labeled/colored and cannot reduce approved hours remaining.
+- Only approved records affect the fixed 35-hour completion requirement. Exact numeric/quarter-hour logic avoids binary floating-point drift. Pending is separately labeled/colored and cannot reduce approved hours remaining.
 
 ### Browser response defenses
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { ArrowLeft } from "lucide-react";
 
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
@@ -7,7 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export const metadata: Metadata = { title: "Reset password" };
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage() {
+  // The proxy's CSP nonce is per request; a static page has no matching script nonce.
+  await connection();
   return (
     <Card className="py-0 shadow-sm">
       <CardHeader className="border-b px-6 py-7">

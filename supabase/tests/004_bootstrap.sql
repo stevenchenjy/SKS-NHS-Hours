@@ -47,7 +47,7 @@ select extensions.throws_ok(
       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbb020',
       'bootstrap-admin@example.edu',
       'Bootstrap Administrator',
-      '2026-2027', '2026-07-01', '2027-06-30', 20.00, '2027-06-30'
+      '2026-2027', '2026-07-01', '2027-06-30', 35.00, '2027-06-30'
     )
   $$,
   '42501',
@@ -75,7 +75,7 @@ select extensions.lives_ok(
       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbb020',
       'bootstrap-admin@example.edu',
       'Bootstrap Administrator',
-      '2026-2027', '2026-07-01', '2027-06-30', 20.00, '2027-06-30'
+      '2026-2027', '2026-07-01', '2027-06-30', 35.00, '2027-06-30'
     )
   $$,
   'service role can perform the one-time first-admin bootstrap'
@@ -113,7 +113,7 @@ select extensions.throws_ok(
       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbb020',
       'bootstrap-admin@example.edu',
       'Bootstrap Administrator',
-      '2026-2027', '2026-07-01', '2027-06-30', 20.00, '2027-06-30'
+      '2026-2027', '2026-07-01', '2027-06-30', 35.00, '2027-06-30'
     )
   $$,
   '55000',

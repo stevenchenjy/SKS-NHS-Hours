@@ -71,18 +71,25 @@ async function expectProgressSummary(
   const progress = page.getByRole("progressbar", { name: "Approved service-hour progress" });
   await expect(progress).toHaveAttribute("aria-valuetext", summary);
   await expect(
-    page.getByText(`${approvedPercentage}% approved · ${pendingPercentage}% pending`, {
-      exact: true,
-    }),
+    page.getByText(
+      `${Number(approvedPercentage.toFixed(2))}% approved · ${Number(pendingPercentage.toFixed(2))}% pending`,
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   await expect(progress.locator('[data-progress-segment="approved"]')).toHaveAttribute(
     "style",
     new RegExp(`width:\\s*${String(approvedWidth).replace(".", "\\.")}%`),
   );
-  await expect(progress.locator('[data-progress-segment="pending"]')).toHaveAttribute(
-    "style",
-    new RegExp(`width:\\s*${String(pendingWidth).replace(".", "\\.")}%`),
-  );
+  await expect
+    .poll(async () => {
+      const style = await progress
+        .locator('[data-progress-segment="pending"]')
+        .getAttribute("style");
+      return Number(style?.match(/width:\s*([\d.]+)/)?.[1]);
+    })
+    .toBeCloseTo(pendingWidth, 3);
 }
 
 async function choose(page: Page, label: string, option: RegExp | string) {
@@ -165,9 +172,9 @@ test("member login, dashboard, submission, approver selection, and pending total
   await expect(page.getByRole("heading", { name: "Your service progress" })).toBeVisible();
   await expectProgressSummary(
     page,
-    "12.5 of 20 approved · 3.25 pending · 7.5 approved hours remaining",
-    62.5,
-    16.25,
+    "12.5 of 35 approved · 3.25 pending · 22.5 approved hours remaining",
+    35.71,
+    (3.25 / 35) * 100,
   );
   await submitRequest(
     page,
@@ -186,9 +193,9 @@ test("member login, dashboard, submission, approver selection, and pending total
   await page.goto("/dashboard");
   await expectProgressSummary(
     page,
-    "12.5 of 20 approved · 6.25 pending · 7.5 approved hours remaining",
-    62.5,
-    31.25,
+    "12.5 of 35 approved · 6.25 pending · 22.5 approved hours remaining",
+    35.71,
+    (6.25 / 35) * 100,
   );
   const assignedRow = page.getByRole("row").filter({ hasText: assignedTitle });
   await expect(assignedRow).toHaveCount(1);
@@ -235,9 +242,9 @@ test("selected committee head completes the first approval without approving hou
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
     page,
-    "12.5 of 20 approved · 6.25 pending · 7.5 approved hours remaining",
-    62.5,
-    31.25,
+    "12.5 of 35 approved · 6.25 pending · 22.5 approved hours remaining",
+    35.71,
+    (6.25 / 35) * 100,
   );
   if (!assignedRequestPath) throw new Error("The assigned request path was not captured.");
   await page.goto(assignedRequestPath);
@@ -261,9 +268,9 @@ test("a teacher gives final approval from the shared teacher queue", async ({ pa
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
     page,
-    "15.5 of 20 approved · 3.25 pending · 4.5 approved hours remaining",
-    77.5,
-    16.25,
+    "15.5 of 35 approved · 3.25 pending · 19.5 approved hours remaining",
+    44.29,
+    (3.25 / 35) * 100,
   );
   if (!assignedRequestPath) throw new Error("The assigned request path was not captured.");
   await page.goto(assignedRequestPath);
@@ -417,7 +424,7 @@ test("above-target member sees accurate totals while the stacked visual remains 
     page,
     overRequirementTitle,
     new RegExp(syntheticAccounts.committeeHead.fullName),
-    "9",
+    "24",
   );
 
   await login(page, syntheticAccounts.committeeHead.email);
@@ -437,11 +444,11 @@ test("above-target member sees accurate totals while the stacked visual remains 
   await login(page, syntheticAccounts.leaderMember.email);
   await expectProgressSummary(
     page,
-    "21 of 20 approved · 1 pending · 1 approved hours over requirement",
+    "36 of 35 approved · 1 pending · 1 approved hours over requirement",
     100,
     0,
-    105,
-    5,
+    102.86,
+    (1 / 35) * 100,
   );
 });
 

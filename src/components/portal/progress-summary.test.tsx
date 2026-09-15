@@ -30,6 +30,30 @@ function progress(overrides: Partial<ProgressRecord> = {}): ProgressRecord {
 }
 
 describe("progress presentation", () => {
+  it.each([
+    [20, 15, 0, 57.14],
+    [35, 0, 0, 100],
+    [40, 0, 5, 114.29],
+  ])("uses the 35-hour requirement for %s approved hours", (approved, remaining, over, actual) => {
+    const result = getProgressPresentation(
+      progress({
+        target_hours: 35,
+        approved_hours: approved,
+        pending_hours: 7,
+        remaining_hours: remaining,
+        over_goal_hours: over,
+        actual_percentage: actual,
+      }),
+    );
+    expect(result.target).toBe(35);
+    expect(result.pendingPercentage).toBe(20);
+    expect(result.approvedVisual).toBe(Math.min(actual, 100));
+    expect(result.summary).toContain(`${approved} of 35 approved`);
+    expect(result.summary).toContain(
+      over > 0 ? "5 approved hours over requirement" : `${remaining} approved hours remaining`,
+    );
+  });
+
   it("uses the approved and pending wording in the zero state", () => {
     expect(getProgressPresentation(progress())).toMatchObject({
       summary: "0 of 20 approved · 0 pending · 20 approved hours remaining",

@@ -19,6 +19,8 @@ import {
   RosterImportForm,
 } from "@/components/admin/account-forms";
 import { PageHeader } from "@/components/portal/page-header";
+import { RouteRefresh } from "@/components/portal/route-refresh";
+import { AccountSetupCells } from "@/components/admin/account-setup-cells";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +41,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requireTeacherAdmin } from "@/lib/dal/access";
+import { listAccountSetupStatus, type AccountSetupStatus } from "@/lib/dal/account-setup";
 import { listAccountDirectory, listInvitations, listSchoolYears } from "@/lib/dal/portal";
 import {
   deriveAnnualAccessStatus,
@@ -188,11 +191,21 @@ export default async function AccountsPage({
 
   let directory: AccountDirectoryRecord[] = [];
   let invitations: InvitationRow[] = [];
+  let setupStatuses: AccountSetupStatus[] = [];
   if (selectedYearId && (view === "directory" || view === "add")) {
-    directory = await listAccountDirectory(selectedYearId);
+    [directory, setupStatuses] = await Promise.all([
+      listAccountDirectory(selectedYearId),
+      view === "directory" ? listAccountSetupStatus(selectedYearId) : Promise.resolve([]),
+    ]);
   } else if (selectedYearId && view === "invitations") {
-    invitations = (await listInvitations(selectedYearId)) as unknown as InvitationRow[];
+    const [invitationRows, statuses] = await Promise.all([
+      listInvitations(selectedYearId),
+      listAccountSetupStatus(selectedYearId),
+    ]);
+    invitations = invitationRows as unknown as InvitationRow[];
+    setupStatuses = statuses;
   }
+  const setupByEmail = new Map(setupStatuses.map((status) => [status.email.toLowerCase(), status]));
 
   const filtered = directory.filter(
     ({ profile }) =>
@@ -218,6 +231,7 @@ export default async function AccountsPage({
 
   return (
     <div className="page-container">
+      {view === "directory" || view === "invitations" ? <RouteRefresh /> : null}
       <PageHeader
         eyebrow={selectedYear?.label}
         title="Accounts"
@@ -340,6 +354,13 @@ export default async function AccountsPage({
         </section>
       ) : null}
 
+      {selectedYearId && (view === "directory" || view === "invitations") ? (
+        <p className="mb-5 text-sm text-muted-foreground">
+          Password setup and portal entry are tracked separately. First visits are recorded from
+          September 14, 2026; earlier visits may not appear.
+        </p>
+      ) : null}
+
       {view === "directory" && selectedYearId ? (
         <section aria-labelledby="account-directory-heading">
           <h2 id="account-directory-heading" className="sr-only">
@@ -371,6 +392,8 @@ export default async function AccountsPage({
               <TableHeader>
                 <TableRow className="bg-muted/60 hover:bg-muted/60">
                   <TableHead className="pl-5">Account</TableHead>
+                  <TableHead>Password setup</TableHead>
+                  <TableHead>First portal visit</TableHead>
                   <TableHead className="min-w-[280px]">Access and roles</TableHead>
                   <TableHead>School-year access</TableHead>
                   <TableHead>Expires</TableHead>
@@ -459,6 +482,7 @@ export default async function AccountsPage({
                           <p className="font-semibold">{profile.full_name}</p>
                           <p className="text-xs text-muted-foreground">{profile.email}</p>
                         </TableCell>
+                        <AccountSetupCells status={setupByEmail.get(profile.email.toLowerCase())} />
                         <TableCell className="align-top">
                           <div className="flex max-w-[320px] flex-wrap gap-1.5">
                             {globalLabel ? <Badge variant="secondary">{globalLabel}</Badge> : null}
@@ -715,7 +739,7 @@ export default async function AccountsPage({
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-36 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="h-36 text-center text-muted-foreground">
                       No accounts match this view.
                     </TableCell>
                   </TableRow>
@@ -811,6 +835,8 @@ export default async function AccountsPage({
                   <TableHead className="pl-5">Invitee</TableHead>
                   <TableHead>Initial access</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Password setup</TableHead>
+                  <TableHead>First portal visit</TableHead>
                   <TableHead>Last sent</TableHead>
                   <TableHead>Expires</TableHead>
                   <TableHead>Send count</TableHead>
@@ -865,6 +891,9 @@ export default async function AccountsPage({
                             {effectiveInvitationStatus}
                           </Badge>
                         </TableCell>
+                        <AccountSetupCells
+                          status={setupByEmail.get(invitation.email.toLowerCase())}
+                        />
                         <TableCell>{dateTime(invitation.sent_at)}</TableCell>
                         <TableCell>{dateTime(invitation.expires_at)}</TableCell>
                         <TableCell>{invitation.send_count}</TableCell>
@@ -895,7 +924,7 @@ export default async function AccountsPage({
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-36 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="h-36 text-center text-muted-foreground">
                       No invitations for this school year.
                     </TableCell>
                   </TableRow>

@@ -5,7 +5,7 @@ import { googleLoginAction } from "@/app/actions/auth-actions";
 import { LoginForm } from "@/components/auth/login-form";
 import { SchoolBrand } from "@/components/auth/school-brand";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { safeInternalPath } from "@/lib/safe-navigation";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -19,7 +19,7 @@ const authenticationErrors: Record<string, string> = {
   "google-not-configured": "School Google sign-in is not configured.",
   "invalid-invitation-link": "This invitation link is malformed. Ask the NHS adviser to resend it.",
   "invitation-link-expired":
-    "This invitation link is invalid or expired. Ask the NHS adviser to resend it.",
+    "This invitation link has expired or has already been used. If you have not set a password, use Forgot your password below. If no email arrives, contact the NHS adviser.",
   "invitation-claim-failed":
     "The invitation could not be matched to an active portal account. Contact the NHS adviser.",
   "password-context-required":
@@ -54,9 +54,6 @@ export default async function LoginPage({
         <CardTitle as="h1" className="text-3xl font-bold tracking-tight">
           Welcome back
         </CardTitle>
-        <CardDescription className="text-base leading-6">
-          Use the account from your NHS invitation. There is no public registration.
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5 px-6 py-7">
         {error ? (

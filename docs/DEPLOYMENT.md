@@ -140,7 +140,7 @@ The initial account is a controlled break-glass operation:
 
 1. Create/invite the intended Auth user in the Supabase dashboard and copy its UUID.
 2. Have two authorized school staff invoke the service-role-only `bootstrap_teacher_admin` RPC using the prompt-based Node procedure in `docs/OPERATIONS.md`; never paste the secret into shell history.
-3. Verify the active profile, school year dates, global `platform_owner` grant, teacher-only attribution anchor, absence of member progress, fixed 20-hour policy, and bootstrap audit event.
+3. Verify the active profile, school year dates, global `platform_owner` grant, teacher-only attribution anchor, absence of member progress, fixed 35-hour policy, and bootstrap audit event.
 4. Sign in and use Accounts to invite and verify a separate second global teacher administrator.
 5. Prove an ordinary authenticated user, browser-safe key, and second bootstrap attempt are rejected.
 

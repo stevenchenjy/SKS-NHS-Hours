@@ -1,0 +1,15 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select extensions.plan(6);
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001","role":"authenticated"}', true);
+select extensions.is((select default_target_hours from public.school_years where id = '10000000-0000-4000-8000-000000000001'), 35::numeric, 'current year requires 35 approved hours');
+select extensions.ok(not exists(select 1 from public.member_progress where target_hours <> 35), 'every member progress row uses 35');
+select extensions.is((select remaining_hours from public.member_progress where membership_id = '20000000-0000-4000-8000-000000000003'), 22.5::numeric, 'pending hours do not reduce the remainder to 35');
+select extensions.is((select default_target_hours from public.school_year_summary where school_year_id = '10000000-0000-4000-8000-000000000001'), 35::numeric, 'school-year summary uses 35');
+select extensions.is((select default_target_hours from public.create_school_year('2030-2031', '2030-07-01', '2031-06-30')), 35::numeric, 'new years default to 35 without a supplied target');
+select extensions.throws_ok($$ select public.set_school_year_target('10000000-0000-4000-8000-000000000001', 20) $$, '23514', 'The annual service target is fixed at 35 approved hours', 'old 20-hour policy cannot be restored by a stale client');
+select * from extensions.finish();
+rollback;

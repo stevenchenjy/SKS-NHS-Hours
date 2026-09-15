@@ -77,7 +77,7 @@ Global authority requires an active profile but is independent of school-year da
 
 ### `school_years`
 
-Defines an administrative period with case-insensitive unique `label`, inclusive start/end dates, fixed 20-hour default target, status (`draft`, `active`, `closed`, `archived`), creator, timestamps, and closure actor/time.
+Defines an administrative period with case-insensitive unique `label`, inclusive start/end dates, fixed 35-hour default target, status (`draft`, `active`, `closed`, `archived`), creator, timestamps, and closure actor/time.
 
 An active year accepts service work only while the database calendar date is inside its date range. Closed/archived years retain history. The application validator additionally expects a consecutive-year label such as `2026-2027`.
 
@@ -264,7 +264,7 @@ The migration defines five `security_invoker` views so underlying table RLS rema
 
 | View                     | Purpose                                                                                                                                                                    |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `member_progress`        | Fixed 20-hour target, member/leadership roles, status totals, remaining/over-goal hours, last activity, and uncapped approved percentage; global admins excluded           |
+| `member_progress`        | Fixed 35-hour target, member/leadership roles, status totals, remaining/over-goal hours, last activity, and uncapped approved percentage; global admins excluded           |
 | `pending_review_queue`   | Stage-aware pending service details: selected head only at stage one, all teachers at stage two, plus member/category context and stage age                                |
 | `category_totals`        | Approved/pending totals per membership/category; compatibility cap/remaining columns are null                                                                              |
 | `school_year_summary`    | Membership and request counts plus approved/pending totals by school year                                                                                                  |
@@ -272,15 +272,15 @@ The migration defines five `security_invoker` views so underlying table RLS rema
 
 Roster progress is a school-year-filtered query over `member_progress`; authorized membership-directory exports use the caller-safe membership/profile/progress sources. Pagination and search remain bounded in the server data-access layer.
 
-For each member membership, the target is fixed at 20 approved hours:
+For each member membership, the target is fixed at 35 approved hours:
 
 ```text
 approved_hours          = sum(hours where status = approved)
 pending_hours           = sum(hours where status = pending)
 changes_requested_hours = sum(hours where status = changes_requested)
-remaining_hours         = max(20 - approved, 0)
-over_goal_hours         = max(approved - 20, 0)
-actual_percentage       = approved / 20 * 100
+remaining_hours         = max(35 - approved, 0)
+over_goal_hours         = max(approved - 35, 0)
+actual_percentage       = approved / 35 * 100
 ```
 
 The UI stacks approved then pending on one track and caps the combined visual width at 100%; query/text values preserve real approved and pending totals. Pending never contributes to approved completion. There are no per-category approved-hour caps.

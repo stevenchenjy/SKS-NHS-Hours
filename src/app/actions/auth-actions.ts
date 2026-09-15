@@ -81,7 +81,9 @@ export async function forgotPasswordAction(
   formData: FormData,
 ): Promise<AuthFormState> {
   const parsed = z
-    .object({ email: z.email("Enter a valid school email address.") })
+    .object({
+      email: z.string().trim().toLowerCase().pipe(z.email("Enter a valid school email address.")),
+    })
     .safeParse({ email: formData.get("email") });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
 
@@ -93,10 +95,28 @@ export async function forgotPasswordAction(
     return { message: "If an invited account exists, password reset instructions are on the way." };
   }
 
-  const supabase = await createSupabaseServerClient();
-  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: new URL("/auth/recovery-callback", environment.NEXT_PUBLIC_APP_URL).toString(),
-  });
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+      redirectTo: new URL("/auth/recovery-callback", environment.NEXT_PUBLIC_APP_URL).toString(),
+    });
+    if (error) {
+      // Never log the address, tokens, or provider message, which may contain personal data.
+      console.error("Password reset request failed", { code: error.code, status: error.status });
+      return {
+        error:
+          error.status === 429
+            ? "Password reset requests are temporarily limited. Wait a few minutes and try again. If this continues, contact the NHS adviser."
+            : "We could not send reset instructions. Please try again later or contact the NHS adviser for help accessing your account.",
+      };
+    }
+  } catch {
+    console.error("Password reset request failed", { code: "request_failed" });
+    return {
+      error:
+        "We could not send reset instructions. Please try again later or contact the NHS adviser for help accessing your account.",
+    };
+  }
   return { message: "If an invited account exists, password reset instructions are on the way." };
 }
 

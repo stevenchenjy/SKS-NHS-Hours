@@ -40,7 +40,7 @@ IDs are UUIDs except for append-only event/history identifiers where the migrati
 - A Supabase Auth UUID maps to at most one profile.
 - A profile has at most one membership in a given school year.
 - Member access depends on membership status/expiration, profile status, school-year status/dates, and roles. Global administrator access depends on an active profile and platform grant, not a school-year date.
-- Every member target is fixed at exactly 20 approved hours. Request hours are positive whole-hour increments and cannot exceed the universal 24-hour sanity limit.
+- Every member target is fixed at exactly 35 approved hours. Request hours are positive whole-hour increments and cannot exceed the universal 24-hour sanity limit.
 - Selected committee head, first-stage reviewer, and final teacher reviewer are separate. Every reference aligns with the request's school year.
 - An active committee head may select themselves and approve their own first stage. Final decisions still require a different teacher; self-review cannot request changes or reject a request.
 - Committee-head approval keeps the request pending; one teacher approval is required before hours count. Review and reassignment lock and recheck the row so stale competing decisions fail.

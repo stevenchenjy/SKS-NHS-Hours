@@ -84,6 +84,7 @@ export interface ReviewerOption {
   membershipId: string;
   userId: string;
   fullName: string;
+  committeeName?: string | null;
   roles: RoleSlug[];
 }
 

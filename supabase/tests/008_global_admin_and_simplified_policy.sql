@@ -109,7 +109,7 @@ select extensions.throws_ok(
     where id = '10000000-0000-4000-8000-000000000001'
   $$,
   '23514',
-  'The annual service target is fixed at 20 approved hours',
+  'The annual service target is fixed at 35 approved hours',
   'direct school-year target mutation is blocked'
 );
 select extensions.throws_ok(
@@ -119,7 +119,7 @@ select extensions.throws_ok(
     where id = '20000000-0000-4000-8000-000000000003'
   $$,
   '23514',
-  'Membership target overrides are disabled; the target is 20 approved hours',
+  'Membership target overrides are disabled; the target is 35 approved hours',
   'direct membership target overrides are blocked'
 );
 
@@ -163,8 +163,8 @@ select extensions.throws_ok(
     )
   $$,
   '23514',
-  'The annual service target is fixed at 20 approved hours',
-  'the deployed school-year target RPC rejects non-20 values'
+  'The annual service target is fixed at 35 approved hours',
+  'the deployed school-year target RPC rejects non-35 values'
 );
 select extensions.throws_ok(
   $$
@@ -173,7 +173,7 @@ select extensions.throws_ok(
     )
   $$,
   '23514',
-  'Membership target overrides are disabled; the target is 20 approved hours',
+  'Membership target overrides are disabled; the target is 35 approved hours',
   'the deployed membership target RPC rejects overrides'
 );
 select extensions.throws_ok(
@@ -305,7 +305,7 @@ select set_config(
       p_label => '2030-2031',
       p_start_date => date '2030-09-01',
       p_end_date => date '2031-09-01',
-      p_default_target_hours => 20.00
+      p_default_target_hours => 35.00
     )).id::text
   ),
   true
