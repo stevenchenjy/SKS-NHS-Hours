@@ -87,7 +87,6 @@ export default async function DashboardPage({
       <PageHeader
         eyebrow={viewer.activeMembership.school_year.label}
         title="Your service progress"
-        description="Only approved hours count toward your annual requirement."
         actions={
           <Button render={<Link href="/hours/new" />} size="lg" className="h-10 px-4">
             <Plus data-icon="inline-start" aria-hidden="true" />

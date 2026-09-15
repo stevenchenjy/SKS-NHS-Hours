@@ -288,7 +288,6 @@ function MemberDashboardPreview() {
       <PageHeader
         eyebrow="2026–2027"
         title="Your service progress"
-        description="Only approved hours count toward your annual requirement."
         actions={
           <Button render={<Link href="/hours/new" />} size="lg">
             <Plus data-icon="inline-start" aria-hidden="true" /> Log Hours
