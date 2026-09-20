@@ -5,6 +5,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # typescript-eslint currently rejects the TypeScript 7 API.
+      - dependency-name: typescript
+        versions: [">=7"]
+      # eslint-plugin-react still uses APIs removed in ESLint 10.
+      - dependency-name: eslint
+        versions: [">=10"]
     groups:
       production-dependencies:
         dependency-type: production
