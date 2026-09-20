@@ -3,6 +3,8 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select extensions.plan(22);
 
+-- Keep event creation and signup ahead of the clock as the test date advances.
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
@@ -20,8 +22,8 @@ select extensions.throws_ok(
       'Ordinary members may not publish volunteer opportunities.',
       'School cafeteria',
       'All NHS members',
-      '2026-09-15 15:00',
-      '2026-09-15 17:00',
+      timezone('America/New_York', transaction_timestamp()) + interval '2 days',
+      timezone('America/New_York', transaction_timestamp()) + interval '2 days 2 hours',
       'Morgan Member',
       'member@example.edu',
       1
@@ -50,8 +52,8 @@ select extensions.lives_ok(
       'A capacity-one opportunity used to verify FIFO promotion.',
       'School cafeteria',
       'All active NHS members',
-      '2026-09-15 15:00',
-      '2026-09-15 17:00',
+      timezone('America/New_York', transaction_timestamp()) + interval '2 days',
+      timezone('America/New_York', transaction_timestamp()) + interval '2 days 2 hours',
       'Riley Reviewer',
       'reviewer@example.edu',
       1
