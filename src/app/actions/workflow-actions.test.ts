@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${url}`);
   },
 }));
-vi.mock("@/lib/dal/access", () => ({ requireActiveViewer: viewer, requireTeacherAdmin: viewer }));
+vi.mock("@/lib/dal/access", () => ({ requireActiveViewer: viewer, requireAdmin: viewer }));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient: async () => ({ rpc }) }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({}) }));
 vi.mock("@/lib/auth/send-invitation-email", () => ({ sendInvitationEmail: sendEmail }));
@@ -61,6 +61,7 @@ beforeEach(() => {
   viewer.mockResolvedValue({
     roles: ["member"],
     activeMembership: { school_year_id: YEAR },
+    isAdmin: true,
     isPlatformOwner: true,
   });
 });

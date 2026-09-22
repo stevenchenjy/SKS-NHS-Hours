@@ -21,7 +21,7 @@ select extensions.is(
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003', true);
 select extensions.throws_ok(
   $$ select * from public.list_account_setup_status('10000000-0000-4000-8000-000000000001') $$,
-  '42501', 'An active global teacher administrator is required',
+  '42501', 'Admin access is required',
   'members cannot inspect other accounts setup status'
 );
 select extensions.lives_ok($$ select public.record_portal_visit() $$,

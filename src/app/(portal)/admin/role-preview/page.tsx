@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
-import { requirePlatformOwner } from "@/lib/dal/access";
+import { requireAdmin } from "@/lib/dal/access";
 
 export default async function RolePreviewPage() {
-  await requirePlatformOwner();
+  await requireAdmin();
   redirect("/design-preview?role=member&section=dashboard");
 }

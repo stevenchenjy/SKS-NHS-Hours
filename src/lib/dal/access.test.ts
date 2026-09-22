@@ -9,7 +9,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: createSupabaseServerClientMock,
 }));
 
-import { getViewer } from "./access";
+import { getViewer, requireAdmin, requireReviewer } from "./access";
 
 const PROFILE_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001";
 const MEMBERSHIP_ID = "20000000-0000-4000-8000-000000000001";
@@ -147,13 +147,35 @@ describe("getViewer role loading", () => {
       roles: [],
       globalAccessLevel: "platform_owner",
       isMember: false,
-      canReview: true,
-      isTeacherAdmin: true,
+      canReview: false,
+      isTeacherAdmin: false,
+      isAdmin: true,
       isPlatformOwner: true,
       activeMembership: null,
       memberships: [],
     });
     expect(from).not.toHaveBeenCalledWith("membership_roles");
+  });
+
+  it("gives a non-owner admin management access without teacher approval access", async () => {
+    const { client } = viewerClient(
+      {
+        data: [{ membership_id: MEMBERSHIP_ID, roles: { role_key: "teacher_admin" } }],
+        error: null,
+      },
+      { data: { access_level: "admin" }, error: null },
+      { data: [membership], error: null },
+    );
+    createSupabaseServerClientMock.mockResolvedValue(client);
+    await expect(getViewer()).resolves.toMatchObject({
+      globalAccessLevel: "admin",
+      isAdmin: true,
+      isPlatformOwner: false,
+      isTeacherAdmin: false,
+      canReview: false,
+      isMember: false,
+      activeMembership: { id: MEMBERSHIP_ID },
+    });
   });
 
   it("maps a global teacher administrator without granting platform-owner authority", async () => {
@@ -217,5 +239,32 @@ describe("getViewer role loading", () => {
       isTeacherAdmin: false,
       isPlatformOwner: false,
     });
+  });
+  it("blocks teacher access to administrative routes", async () => {
+    const { client } = viewerClient(
+      {
+        data: [{ membership_id: MEMBERSHIP_ID, roles: { role_key: "teacher_admin" } }],
+        error: null,
+      },
+      { data: { access_level: "teacher_admin" }, error: null },
+      { data: [membership], error: null },
+    );
+    createSupabaseServerClientMock.mockResolvedValue(client);
+    await expect(requireAdmin()).rejects.toThrow("NEXT_REDIRECT");
+    await expect(requireReviewer()).resolves.toMatchObject({ isTeacherAdmin: true });
+  });
+
+  it("lets an Admin manage the portal but blocks the review queue", async () => {
+    const { client } = viewerClient(
+      {
+        data: [{ membership_id: MEMBERSHIP_ID, roles: { role_key: "teacher_admin" } }],
+        error: null,
+      },
+      { data: { access_level: "admin" }, error: null },
+      { data: [membership], error: null },
+    );
+    createSupabaseServerClientMock.mockResolvedValue(client);
+    await expect(requireAdmin()).resolves.toMatchObject({ isAdmin: true });
+    await expect(requireReviewer()).rejects.toThrow("NEXT_REDIRECT");
   });
 });

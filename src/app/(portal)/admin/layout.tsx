@@ -1,6 +1,6 @@
-import { requireReviewer } from "@/lib/dal/access";
+import { requirePortalViewer } from "@/lib/dal/access";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await requireReviewer();
+  await requirePortalViewer();
   return children;
 }

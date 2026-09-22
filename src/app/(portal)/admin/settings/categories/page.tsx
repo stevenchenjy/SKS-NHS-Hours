@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { CategoryForm, SchoolYearCategoryForm } from "@/components/admin/settings-forms";
 import { PageHeader } from "@/components/portal/page-header";
-import { requireTeacherAdmin } from "@/lib/dal/access";
+import { requireAdmin } from "@/lib/dal/access";
 import {
   listAllServiceCategories,
   listSchoolYearCategorySettings,
@@ -26,7 +26,7 @@ export default async function CategoriesSettingsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const viewer = await requireTeacherAdmin();
+  const viewer = await requireAdmin();
   const params = await searchParams;
   const years = await listSchoolYears();
   const yearId = param(params.year) || viewer.activeMembership.school_year_id;

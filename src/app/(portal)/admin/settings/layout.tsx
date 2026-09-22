@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { requireTeacherAdmin } from "@/lib/dal/access";
+import { requireAdmin } from "@/lib/dal/access";
 
 const settingsNavigation = [
   ["/admin/settings/school-years", "School years"],
@@ -8,7 +8,7 @@ const settingsNavigation = [
 ] as const;
 
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
-  await requireTeacherAdmin();
+  await requireAdmin();
   return (
     <>
       <nav

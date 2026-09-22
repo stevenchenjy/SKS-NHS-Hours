@@ -40,7 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { requireTeacherAdmin } from "@/lib/dal/access";
+import { requireAdmin } from "@/lib/dal/access";
 import { listAccountSetupStatus, type AccountSetupStatus } from "@/lib/dal/account-setup";
 import { listAccountDirectory, listInvitations, listSchoolYears } from "@/lib/dal/portal";
 import {
@@ -100,8 +100,8 @@ function accountsHref(
 function roleLabel(role: string): string {
   if (role === "president_vice_president") return "President / Vice President";
   if (role === "committee_head") return "Committee head";
-  if (role === "teacher_admin") return "Teacher administrator";
-  if (role === "platform_owner") return "Platform owner";
+  if (role === "teacher_admin") return "Teacher";
+  if (role === "platform_owner" || role === "admin") return "Admin";
   return "Member";
 }
 
@@ -115,8 +115,9 @@ function dateTime(value: string | null): string {
 }
 
 function accessLabel(record: AccountDirectoryRecord): string | null {
-  if (record.globalAccessLevel === "platform_owner") return "Platform owner";
-  if (record.globalAccessLevel === "teacher_admin") return "Teacher administrator";
+  if (record.globalAccessLevel === "platform_owner" || record.globalAccessLevel === "admin")
+    return "Admin";
+  if (record.globalAccessLevel === "teacher_admin") return "Teacher";
   return null;
 }
 
@@ -143,7 +144,7 @@ export default async function AccountsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [viewer, params] = await Promise.all([requireTeacherAdmin(), searchParams]);
+  const [viewer, params] = await Promise.all([requireAdmin(), searchParams]);
   const years = await listSchoolYears();
   const fallbackYearId =
     viewer.activeMembership?.school_year_id ??
@@ -267,11 +268,11 @@ export default async function AccountsPage({
           className="mb-6 rounded-xl border border-[var(--status-pending)]/35 bg-[var(--status-pending-bg)] p-5"
         >
           <h2 id="confirm-owner-transfer-heading" className="font-semibold">
-            Transfer platform ownership to {transferTarget.profile.full_name}?
+            Transfer ownership to {transferTarget.profile.full_name}?
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
             This immediately gives that account the only platform-owner grant and changes your
-            account to a teacher administrator. Only the new owner can transfer ownership back.
+            account to a teacher. Only the new owner can transfer ownership back.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <form
@@ -440,14 +441,14 @@ export default async function AccountsPage({
                     );
                     const isObviousMember = Boolean(membership && !isFormerAdminAnchor);
                     const canGrantTeacherAdmin = Boolean(
-                      viewer.isPlatformOwner &&
+                      viewer.isAdmin &&
                       record.globalAccessLevel === null &&
                       profile.status === "active" &&
                       (!membership || isFormerAdminAnchor),
                     );
                     const canChangeProfileStatus =
                       record.globalAccessLevel === null ||
-                      (viewer.isPlatformOwner && record.globalAccessLevel === "teacher_admin");
+                      (viewer.isAdmin && record.globalAccessLevel === "teacher_admin");
                     const missingLeadershipRoles = leadershipRoles.filter(
                       ([role]) => !membershipRoles.includes(role),
                     );
@@ -645,20 +646,20 @@ export default async function AccountsPage({
                                   render={
                                     <form action={grantAdmin}>
                                       <button type="submit" className="w-full text-left">
-                                        Grant teacher administrator
+                                        Grant teacher
                                       </button>
                                     </form>
                                   }
                                 />
                               ) : null}
-                              {viewer.isPlatformOwner &&
+                              {viewer.isAdmin &&
                               record.globalAccessLevel === null &&
                               isObviousMember ? (
                                 <DropdownMenuItem disabled>
                                   Member accounts cannot become global admins
                                 </DropdownMenuItem>
                               ) : null}
-                              {viewer.isPlatformOwner &&
+                              {viewer.isAdmin &&
                               record.globalAccessLevel === null &&
                               profile.status === "inactive" &&
                               (!membership || isFormerAdminAnchor) ? (
@@ -666,25 +667,26 @@ export default async function AccountsPage({
                                   Reactivate account before granting administrator access
                                 </DropdownMenuItem>
                               ) : null}
-                              {viewer.isPlatformOwner &&
-                              record.globalAccessLevel === "teacher_admin" ? (
+                              {viewer.isAdmin && record.globalAccessLevel === "teacher_admin" ? (
                                 <>
-                                  <DropdownMenuItem
-                                    render={
-                                      <Link
-                                        href={accountsHref("directory", selectedYearId, {
-                                          confirm_transfer: profile.id,
-                                        })}
-                                      />
-                                    }
-                                  >
-                                    Transfer platform ownership
-                                  </DropdownMenuItem>
+                                  {viewer.isPlatformOwner ? (
+                                    <DropdownMenuItem
+                                      render={
+                                        <Link
+                                          href={accountsHref("directory", selectedYearId, {
+                                            confirm_transfer: profile.id,
+                                          })}
+                                        />
+                                      }
+                                    >
+                                      Transfer ownership
+                                    </DropdownMenuItem>
+                                  ) : null}
                                   <DropdownMenuItem
                                     render={
                                       <form action={revokeAdmin}>
                                         <button type="submit" className="w-full text-left">
-                                          Revoke teacher administrator
+                                          Revoke teacher
                                         </button>
                                       </form>
                                     }
@@ -692,15 +694,10 @@ export default async function AccountsPage({
                                 </>
                               ) : null}
                               {record.globalAccessLevel === "platform_owner" ? (
-                                <DropdownMenuItem disabled>
-                                  Protected platform owner
-                                </DropdownMenuItem>
+                                <DropdownMenuItem disabled>Protected admin</DropdownMenuItem>
                               ) : null}
-                              {!viewer.isPlatformOwner &&
-                              record.globalAccessLevel === "teacher_admin" ? (
-                                <DropdownMenuItem disabled>
-                                  Managed by the platform owner
-                                </DropdownMenuItem>
+                              {!viewer.isAdmin && record.globalAccessLevel === "teacher_admin" ? (
+                                <DropdownMenuItem disabled>Managed by the admin</DropdownMenuItem>
                               ) : null}
                               {(membershipAction && !globalLabel) || canChangeProfileStatus ? (
                                 <DropdownMenuSeparator />
@@ -762,7 +759,7 @@ export default async function AccountsPage({
             </p>
             <InviteAccountForm
               schoolYears={years}
-              allowTeacherAdmin={viewer.isPlatformOwner}
+              allowTeacherAdmin={viewer.isAdmin}
               defaultSchoolYearId={defaultOpenSchoolYearId}
             />
           </section>
@@ -870,7 +867,7 @@ export default async function AccountsPage({
                     );
                     const canManageInvitation =
                       invitation.status === "pending" &&
-                      (!isTeacherAdminInvitation || viewer.isPlatformOwner);
+                      (!isTeacherAdminInvitation || viewer.isAdmin);
                     return (
                       <TableRow key={invitation.id}>
                         <TableCell className="pl-5">
@@ -913,10 +910,8 @@ export default async function AccountsPage({
                             </div>
                           ) : invitation.status === "pending" &&
                             isTeacherAdminInvitation &&
-                            !viewer.isPlatformOwner ? (
-                            <span className="text-xs text-muted-foreground">
-                              Platform owner managed
-                            </span>
+                            !viewer.isAdmin ? (
+                            <span className="text-xs text-muted-foreground">Admin managed</span>
                           ) : null}
                         </TableCell>
                       </TableRow>

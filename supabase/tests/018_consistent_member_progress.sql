@@ -1,4 +1,14 @@
 begin;
+
+-- A real teacher is distinct from the platform owner used for administration.
+insert into auth.users (id, email, aud, role, email_confirmed_at)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009', 'teacher@example.edu',
+  'authenticated', 'authenticated', statement_timestamp());
+insert into public.profiles (id, email, full_name)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009', 'teacher@example.edu', 'Terry Teacher');
+insert into public.platform_access_grants (profile_id, access_level, granted_by_profile_id)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009', 'teacher_admin', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001');
+
 create extension if not exists pgtap with schema extensions;
 select extensions.plan(22);
 
@@ -43,7 +53,7 @@ select extensions.is((select pending_hours from public.member_progress where mem
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa007', true);
 select extensions.is((select pending_hours from public.member_progress where membership_id = '20000000-0000-4000-8000-000000000003'), 6::numeric, 'unassigned leader retains the same total after head approval');
 
-select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001', true);
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009', true);
 select extensions.is((select pending_hours from public.member_progress where membership_id = '20000000-0000-4000-8000-000000000003'), 6::numeric, 'teacher sees the same total');
 select extensions.is((select count(*) from public.pending_review_queue where member_membership_id = '20000000-0000-4000-8000-000000000003'), 3::bigint, 'all three requests enter the teacher queue after head approval');
 select public.review_hour_request('40000000-0000-4000-8000-000000000002', 'approve');

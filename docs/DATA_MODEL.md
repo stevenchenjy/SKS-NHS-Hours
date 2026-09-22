@@ -71,9 +71,9 @@ Profiles persist through school-year transitions so historical service and decis
 
 ### `platform_access_grants`
 
-At most one row per profile grants global `teacher_admin` or `platform_owner` access. A partial unique index permits exactly one current platform owner once administration is bootstrapped. Grant actor/time are retained for attribution.
+At most one row per profile grants global `teacher_admin`, `admin`, or `platform_owner` access. A partial unique index permits exactly one current platform owner once administration is bootstrapped. Grant actor/time are retained for attribution.
 
-Global authority requires an active profile but is independent of school-year dates, status, and member requirements. Only the platform owner can grant/revoke teacher-administrator access or transfer ownership. Global administrators are prohibited from member or student-leadership roles; a separate teacher-only membership anchor is maintained per year solely because review and audit history use same-year membership foreign keys.
+Global authority requires an active profile but is independent of school-year dates, status, and member requirements. Admins can grant/revoke teacher access. The protected platform owner can grant additional Admin access or transfer ownership. Teachers approve hours, view progress, and manage events; Admins manage accounts, password assistance, exports, settings, audit, and corrections. Admins are excluded from teacher approval queues and cannot approve requests. Global administrators are prohibited from member or student-leadership roles; a separate teacher-only membership anchor is maintained per year solely because review and audit history use same-year membership foreign keys.
 
 ### `school_years`
 

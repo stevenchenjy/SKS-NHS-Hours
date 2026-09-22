@@ -186,8 +186,8 @@ const configurations: Record<
 
 export async function GET(request: Request, context: { params: Promise<{ type: string }> }) {
   const viewer = await getViewer();
-  if (!viewer?.activeMembership || !viewer.isTeacherAdmin) {
-    return Response.json({ error: "Teacher administrator access required." }, { status: 403 });
+  if (!viewer?.activeMembership || !viewer.isAdmin) {
+    return Response.json({ error: "Admin access required." }, { status: 403 });
   }
   const { type } = await context.params;
   if (!isExportType(type)) return Response.json({ error: "Unknown export type." }, { status: 404 });

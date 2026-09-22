@@ -34,7 +34,8 @@ interface NavigationItem {
 }
 
 export interface AppShellPreview {
-  role: "member" | "committee_head" | "president_vice_president" | "teacher_admin";
+  role:
+    "member" | "committee_head" | "president_vice_president" | "teacher_admin" | "platform_owner";
   section: string;
 }
 
@@ -90,7 +91,7 @@ const auditTrailNavigation: NavigationItem = {
   icon: ShieldCheck,
 };
 
-const teacherAdminNavigation: NavigationItem[] = [
+const adminNavigation: NavigationItem[] = [
   { href: "/admin/accounts", label: "Accounts", icon: BadgeCheck },
   { href: "/admin/exports", label: "Exports", icon: Download },
   { href: "/admin/settings/school-years", label: "Settings", icon: Settings },
@@ -160,28 +161,28 @@ export function AppShell({
   previewControls?: ReactNode;
   unreadNotifications?: number;
 }) {
-  const adminOnly = viewer.isTeacherAdmin && !viewer.isMember;
+  const adminOnly = (viewer.isTeacherAdmin || viewer.isAdmin) && !viewer.isMember;
   const progressAccess = canViewMemberProgress(viewer);
-  const teacherAdministrationNavigation = [
-    teacherAdminNavigation[0]!,
-    ...(viewer.isPlatformOwner ? [auditTrailNavigation] : []),
-    ...teacherAdminNavigation.slice(1),
+  const administrationNavigation = [
+    adminNavigation[0]!,
+    ...(viewer.isAdmin ? [auditTrailNavigation] : []),
+    ...adminNavigation.slice(1),
   ];
   const navigation = [
     ...(viewer.isMember ? memberNavigation : [eventsNavigation]),
     ...(!preview ? [{ href: "/notifications", label: "Notifications", icon: Bell }] : []),
     ...(viewer.canReview ? [reviewRequestsNavigation] : []),
     ...(progressAccess ? [memberProgressNavigation] : []),
-    ...(viewer.isTeacherAdmin ? teacherAdministrationNavigation : []),
-    ...(viewer.isPlatformOwner ? [rolePreviewNavigation] : []),
+    ...(viewer.isAdmin ? administrationNavigation : []),
+    ...(viewer.isAdmin ? [rolePreviewNavigation] : []),
   ];
   const bottomNavigation = adminOnly
     ? [
         eventsNavigation,
-        reviewRequestsNavigation,
+        ...(viewer.canReview ? [reviewRequestsNavigation] : []),
         ...(progressAccess ? [memberProgressNavigation] : []),
-        teacherAdminNavigation[0]!,
-        ...(viewer.isPlatformOwner ? [auditTrailNavigation] : []),
+        ...(viewer.isAdmin ? [adminNavigation[0]!] : []),
+        ...(viewer.isAdmin ? [auditTrailNavigation] : []),
       ]
     : viewer.canReview
       ? [
@@ -229,6 +230,11 @@ export function AppShell({
           >
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold">{viewer.profile.full_name}</p>
+              {viewer.isAdmin || viewer.isTeacherAdmin ? (
+                <p className="text-xs text-muted-foreground">
+                  {viewer.isAdmin ? "Admin" : "Teacher"}
+                </p>
+              ) : null}
             </div>
             <Avatar className="size-9">
               <AvatarFallback className="bg-secondary text-xs font-bold text-secondary-foreground">

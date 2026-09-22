@@ -25,7 +25,7 @@ const ROLE_LABELS: Record<SchoolYearRole, string> = {
   member: "Member",
   committee_head: "Committee head",
   president_vice_president: "President / Vice President",
-  teacher_admin: "Teacher administrator",
+  teacher_admin: "Teacher",
 };
 
 const REVIEW_CAPABLE_ROLE_SET: ReadonlySet<SchoolYearRole> = new Set(REVIEW_CAPABLE_ROLES);
@@ -38,8 +38,12 @@ export function hasTeacherAdminCapability(roles: readonly SchoolYearRole[]): boo
   return roles.includes("teacher_admin");
 }
 
-export function canViewMemberProgress(viewer: Pick<Viewer, "isTeacherAdmin" | "roles">): boolean {
-  return viewer.isTeacherAdmin || viewer.roles.includes("president_vice_president");
+export function canViewMemberProgress(
+  viewer: Pick<Viewer, "isTeacherAdmin" | "isAdmin" | "roles">,
+): boolean {
+  return (
+    viewer.isTeacherAdmin || viewer.isAdmin || viewer.roles.includes("president_vice_president")
+  );
 }
 
 export function formatRoleLabel(role: SchoolYearRole): string {

@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { requireReviewer } from "@/lib/dal/access";
+import { requirePortalViewer } from "@/lib/dal/access";
 import { canViewMemberProgress } from "@/lib/domain/roles";
 import {
   getProfileRecord,
@@ -42,7 +42,7 @@ export default async function MemberProfilePage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const viewer = await requireReviewer();
+  const viewer = await requirePortalViewer();
   if (!canViewMemberProgress(viewer)) redirect("/admin/requests?notice=not-authorized");
   const { id } = await params;
   const yearValue = (await searchParams).year;

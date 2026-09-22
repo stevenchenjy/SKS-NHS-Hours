@@ -8,11 +8,13 @@ import {
 
 describe("service event domain", () => {
   it("allows committee heads and teacher administrators to publish", () => {
-    expect(canPublishServiceEvents({ isTeacherAdmin: false, roles: ["committee_head"] })).toBe(
-      true,
-    );
-    expect(canPublishServiceEvents({ isTeacherAdmin: true, roles: [] })).toBe(true);
-    expect(canPublishServiceEvents({ isTeacherAdmin: false, roles: ["member"] })).toBe(false);
+    expect(
+      canPublishServiceEvents({ isAdmin: false, isTeacherAdmin: false, roles: ["committee_head"] }),
+    ).toBe(true);
+    expect(canPublishServiceEvents({ isAdmin: false, isTeacherAdmin: true, roles: [] })).toBe(true);
+    expect(
+      canPublishServiceEvents({ isAdmin: false, isTeacherAdmin: false, roles: ["member"] }),
+    ).toBe(false);
   });
 
   it("formats school-local event timestamps without applying a browser time-zone shift", () => {

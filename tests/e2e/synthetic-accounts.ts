@@ -2,7 +2,13 @@ import type { Viewer } from "@/lib/types";
 
 type ViewerAccessExpectation = Pick<
   Viewer,
-  "roles" | "globalAccessLevel" | "isMember" | "canReview" | "isTeacherAdmin" | "isPlatformOwner"
+  | "roles"
+  | "globalAccessLevel"
+  | "isMember"
+  | "canReview"
+  | "isTeacherAdmin"
+  | "isAdmin"
+  | "isPlatformOwner"
 >;
 
 interface SyntheticAccount extends ViewerAccessExpectation {
@@ -17,9 +23,21 @@ export const syntheticAccounts = {
     roles: [],
     globalAccessLevel: "platform_owner",
     isMember: false,
+    canReview: false,
+    isTeacherAdmin: false,
+    isAdmin: true,
+    isPlatformOwner: true,
+  },
+  teacher: {
+    email: "teacher@example.edu",
+    fullName: "Terry Teacher",
+    roles: ["teacher_admin"],
+    globalAccessLevel: "teacher_admin",
+    isMember: false,
     canReview: true,
     isTeacherAdmin: true,
-    isPlatformOwner: true,
+    isAdmin: false,
+    isPlatformOwner: false,
   },
   committeeHead: {
     email: "reviewer@example.edu",
@@ -29,6 +47,7 @@ export const syntheticAccounts = {
     isMember: true,
     canReview: true,
     isTeacherAdmin: false,
+    isAdmin: false,
     isPlatformOwner: false,
   },
   member: {
@@ -39,6 +58,7 @@ export const syntheticAccounts = {
     isMember: true,
     canReview: false,
     isTeacherAdmin: false,
+    isAdmin: false,
     isPlatformOwner: false,
   },
   presidentVicePresident: {
@@ -49,6 +69,7 @@ export const syntheticAccounts = {
     isMember: true,
     canReview: false,
     isTeacherAdmin: false,
+    isAdmin: false,
     isPlatformOwner: false,
   },
   leaderMember: {
@@ -59,6 +80,7 @@ export const syntheticAccounts = {
     isMember: true,
     canReview: false,
     isTeacherAdmin: false,
+    isAdmin: false,
     isPlatformOwner: false,
   },
   expiredMember: {
@@ -69,6 +91,7 @@ export const syntheticAccounts = {
     isMember: false,
     canReview: false,
     isTeacherAdmin: false,
+    isAdmin: false,
     isPlatformOwner: false,
   },
 } satisfies Record<string, SyntheticAccount>;

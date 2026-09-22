@@ -46,7 +46,7 @@ export function ForgotPasswordForm() {
       </Button>
       <p className="text-sm leading-6 text-muted-foreground">
         Use the school email from your invitation and check your spam or junk folder. If no email
-        arrives, contact the NHS adviser to check your account and email delivery.
+        arrives, contact the portal admin to check your account and email delivery.
       </p>
     </form>
   );

@@ -158,3 +158,21 @@ An application rollback does not undo a database migration. Keep migrations back
 ## Current verification boundary
 
 The current migration has passed a linked Supabase dry-run and PostgreSQL-dialect parsing. The application has passed formatting, lint, TypeScript, 209 unit tests, and a production build in a non-iCloud temporary checkout. The eight-file/301-assertion database suite still requires a clean CI/container execution before promotion; after that, hosted Auth/invitation, role-preview, paginated CSV, and administrator-succession smoke checks remain separate gates in `docs/QA.md` and `docs/DEPLOYMENT.md`.
+
+## Admin and teacher separation
+
+`20260922010000_separate_admin_and_teacher_access.sql` adds the global `admin`
+access level. Both `admin` and the protected singleton `platform_owner` use the
+Admin workspace. `teacher_admin` is displayed as **Teacher** and permits final
+hour approval, member progress, and event management.
+
+Administration is enforced in route guards, server actions, export endpoints,
+read policies, and database RPCs. The legacy `private.require_teacher_admin()`
+name is retained for compatibility but now requires Admin. The separate
+`private.current_actor_is_teacher_approver()` predicate excludes both kinds of
+Admin from final approval. Existing review history and annual attribution
+anchors are preserved. `public.grant_admin(uuid)` is owner-only.
+
+Tests cover both Admin variants, teacher denials, event management, direct RPC
+and export access, reviewer choices, and the two-stage approval workflow in
+`supabase/tests/019_admin_teacher_separation.sql`.

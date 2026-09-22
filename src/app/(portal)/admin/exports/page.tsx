@@ -3,7 +3,7 @@ import { Download, FileSpreadsheet } from "lucide-react";
 
 import { PageHeader } from "@/components/portal/page-header";
 import { Button } from "@/components/ui/button";
-import { requireTeacherAdmin } from "@/lib/dal/access";
+import { requireAdmin } from "@/lib/dal/access";
 import { listSchoolYears } from "@/lib/dal/portal";
 
 export const metadata: Metadata = { title: "Exports" };
@@ -27,7 +27,7 @@ export default async function ExportsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const viewer = await requireTeacherAdmin();
+  const viewer = await requireAdmin();
   const params = await searchParams;
   const years = await listSchoolYears();
   const yearId = param(params.year) || viewer.activeMembership.school_year_id;

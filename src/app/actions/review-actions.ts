@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { requireReviewer, requireTeacherAdmin } from "@/lib/dal/access";
+import { requireReviewer, requireAdmin } from "@/lib/dal/access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface ReviewFormState {
@@ -82,7 +82,7 @@ export async function reassignHourRequestAction(
   _previous: ReviewFormState,
   formData: FormData,
 ): Promise<ReviewFormState> {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const parsed = reassignSchema.safeParse({
     request_id: formData.get("request_id"),
     new_reviewer_membership_id: formData.get("new_reviewer_membership_id"),

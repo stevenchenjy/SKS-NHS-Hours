@@ -1,5 +1,15 @@
 begin;
 
+-- A real teacher is distinct from the platform owner used for administration.
+insert into auth.users (id, email, aud, role, email_confirmed_at)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009', 'teacher@example.edu',
+  'authenticated', 'authenticated', statement_timestamp());
+insert into public.profiles (id, email, full_name)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009', 'teacher@example.edu', 'Terry Teacher');
+insert into public.platform_access_grants (profile_id, access_level, granted_by_profile_id)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009', 'teacher_admin', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001');
+
+
 create extension if not exists pgtap with schema extensions;
 select extensions.plan(36);
 
@@ -78,7 +88,7 @@ select extensions.throws_ok($$
 $$, '42501', 'Self-review is limited to the selected committee-head approval',
   'self review cannot reject the request');
 
-select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001');
+select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009');
 select extensions.ok(
   not exists (select 1 from public.pending_review_queue where id = pg_temp.self_request_id()),
   'teachers do not receive the request before committee approval'
@@ -87,6 +97,7 @@ select extensions.throws_ok($$
   select public.review_hour_request(pg_temp.self_request_id(), 'approve')
 $$, '42501', 'The selected committee head must complete the first approval',
   'a teacher cannot skip the self-assigned committee stage');
+select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001');
 select public.remove_membership_role('20000000-0000-4000-8000-000000000002', 'committee_head');
 select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa002');
 select extensions.throws_ok($$
@@ -98,7 +109,7 @@ select public.assign_membership_role('20000000-0000-4000-8000-000000000002', 'co
 select extensions.lives_ok($$
   select public.reassign_hour_request(pg_temp.self_request_id(),
     '20000000-0000-4000-8000-000000000007')
-$$, 'a teacher can assign another committee head');
+$$, 'an admin can assign another committee head');
 select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa002');
 select extensions.throws_ok($$
   select public.review_hour_request(pg_temp.self_request_id(), 'approve')
@@ -108,7 +119,7 @@ select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001');
 select extensions.lives_ok($$
   select public.reassign_hour_request(pg_temp.self_request_id(),
     '20000000-0000-4000-8000-000000000002')
-$$, 'a teacher can assign a committee head their own first-stage request');
+$$, 'an admin can assign a committee head their own first-stage request');
 
 select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa007');
 select extensions.throws_ok($$
@@ -169,17 +180,19 @@ select extensions.throws_ok($$
 $$, '42501', 'An active teacher administrator must complete the final approval',
   'an ordinary member cannot give final approval');
 
-select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001');
+select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009');
 select extensions.ok(
   exists (select 1 from public.pending_review_queue
     where id = pg_temp.self_request_id() and approval_stage = 'teacher'),
   'teachers receive self-approved requests in their final queue'
 );
+select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001');
 select extensions.ok(
   exists (select 1 from public.audit_events where entity_id = pg_temp.self_request_id()::text
     and action = 'hour_request.committee_approved'),
   'self approval remains visible in the audit trail'
 );
+select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009');
 select extensions.lives_ok($$
   select public.review_hour_request(pg_temp.self_request_id(), 'request_changes', 'Clarify the activity')
 $$, 'a teacher can return self-approved hours for changes');
@@ -207,14 +220,14 @@ select extensions.lives_ok($$
   select public.review_hour_request(pg_temp.self_request_id(), 'approve')
 $$, 'the committee head can repeat the first stage after resubmission');
 
-select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001');
+select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009');
 select extensions.lives_ok($$
   select public.review_hour_request(pg_temp.self_request_id(), 'approve')
 $$, 'a teacher can give final approval to a self-approved request');
 select extensions.ok((
   select status = 'approved'
     and committee_head_reviewer_membership_id = member_membership_id
-    and actual_reviewer_membership_id = '20000000-0000-4000-8000-000000000001'
+    and actual_reviewer_membership_id = (select id from public.school_year_memberships where profile_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009' and school_year_id = '10000000-0000-4000-8000-000000000001')
     and decided_at is not null
   from public.hour_requests where id = pg_temp.self_request_id()
 ), 'the final decision records a different teacher');

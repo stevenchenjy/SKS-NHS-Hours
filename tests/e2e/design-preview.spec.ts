@@ -4,7 +4,8 @@ import { expect, test } from "@playwright/test";
 const previewEnabled = process.env.NHS_DESIGN_PREVIEW === "true";
 const previewCases = [
   ["member dashboard", "/design-preview?screen=dashboard"],
-  ["teacher administrator", "/design-preview?screen=admin"],
+  ["admin", "/design-preview?screen=admin"],
+  ["teacher", "/design-preview?role=teacher_admin&section=member-progress"],
   ["committee head", "/design-preview?screen=review&role=committee_head"],
   ["president / vice president", "/design-preview?screen=review&role=president_vice_president"],
   ["log hours", "/design-preview?screen=log"],
@@ -57,7 +58,7 @@ test("local design previews have no serious accessibility violations or horizont
   await expect(adminNavigation.getByRole("link", { name: "Dashboard" })).toHaveCount(0);
   await expect(adminNavigation.getByRole("link", { name: "Log Hours" })).toHaveCount(0);
   await expect(adminNavigation.getByRole("link", { name: "My Profile" })).toHaveCount(0);
-  await expect(adminNavigation.getByRole("link", { name: "Audit trail" })).toHaveCount(0);
+  await expect(adminNavigation.getByRole("link", { name: "Audit trail" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open My Profile" })).toBeVisible();
   await expect(page.getByText("All school years", { exact: true })).toHaveCount(0);
 
@@ -77,16 +78,25 @@ test("local design previews have no serious accessibility violations or horizont
   await expect(committeeNavigation.getByRole("link", { name: "Member progress" })).toHaveCount(0);
 
   await page.goto("/design-preview?role=teacher_admin&section=member-progress");
+  const teacherNavigation = page.getByRole("navigation", { name: "Primary navigation" });
+  for (const name of ["Accounts", "Exports", "Settings", "Audit trail", "Role preview"]) {
+    await expect(teacherNavigation.getByRole("link", { name, exact: true })).toHaveCount(0);
+  }
+  await expect(teacherNavigation.getByRole("link", { name: "Events", exact: true })).toBeVisible();
+  await teacherNavigation.getByRole("link", { name: "Review requests", exact: true }).click();
+  await expect(page).toHaveURL(/role=teacher_admin&section=review-requests/);
+
+  await page.goto("/design-preview?role=platform_owner&section=member-progress");
   const previewNavigation = page.getByRole("navigation", { name: "Primary navigation" });
   await previewNavigation.getByRole("link", { name: "Accounts" }).click();
-  await expect(page).toHaveURL(/\/design-preview\?role=teacher_admin&section=accounts/);
+  await expect(page).toHaveURL(/\/design-preview\?role=platform_owner&section=accounts/);
   await expect(page.getByRole("heading", { name: "Accounts", exact: true })).toBeVisible();
   await expect(previewNavigation.getByRole("link", { name: "Accounts" })).toHaveAttribute(
     "aria-current",
     "page",
   );
   await previewNavigation.getByRole("link", { name: "Exports" }).click();
-  await expect(page).toHaveURL(/\/design-preview\?role=teacher_admin&section=exports/);
+  await expect(page).toHaveURL(/\/design-preview\?role=platform_owner&section=exports/);
   await expect(page.getByRole("heading", { name: "Exports", exact: true })).toBeVisible();
 
   await page.goto("/design-preview?role=committee_head&section=dashboard");
@@ -100,7 +110,8 @@ test("local design previews have no serious accessibility violations or horizont
     "Member",
     "Committee head",
     "President / Vice President",
-    "Teacher administrator",
+    "Teacher",
+    "Admin",
     "Back to administration",
   ]) {
     await expect(toolbar.getByRole("link", { name: label, exact: true })).toBeVisible();

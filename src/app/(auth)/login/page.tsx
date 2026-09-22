@@ -17,15 +17,16 @@ function safeNext(value: string | string[] | undefined): string {
 
 const authenticationErrors: Record<string, string> = {
   "google-not-configured": "School Google sign-in is not configured.",
-  "invalid-invitation-link": "This invitation link is malformed. Ask the NHS adviser to resend it.",
+  "invalid-invitation-link":
+    "This invitation link is malformed. Ask the portal admin to resend it.",
   "invitation-link-expired":
-    "This invitation link has expired or has already been used. If you have not set a password, use Forgot your password below. If no email arrives, contact the NHS adviser.",
+    "This invitation link has expired or has already been used. If you have not set a password, use Forgot your password below. If no email arrives, contact the portal admin.",
   "invitation-claim-failed":
-    "The invitation could not be matched to an active portal account. Contact the NHS adviser.",
+    "The invitation could not be matched to an active portal account. Contact the portal admin.",
   "password-context-required":
     "Open a fresh invitation or password-reset email before choosing a new password.",
   "password-context-failed":
-    "The password link could not be secured. Contact the NHS adviser or request a new reset link.",
+    "The password link could not be secured. Contact the portal admin or request a new reset link.",
   "password-link-expired": "This password-reset link is invalid or expired. Request a new one.",
   "invalid-password-link": "This password-reset link is malformed. Request a new one.",
 };
@@ -62,7 +63,7 @@ export default async function LoginPage({
             className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
           >
             {(error && authenticationErrors[error]) ??
-              "Authentication could not be completed. Try again or contact the NHS adviser."}
+              "Authentication could not be completed. Try again or contact the portal admin."}
           </p>
         ) : null}
         {notice && authenticationNotices[notice] ? (
@@ -96,7 +97,7 @@ export default async function LoginPage({
           >
             Forgot your password?
           </Link>
-          <span className="text-muted-foreground">Need access? Contact the NHS adviser.</span>
+          <span className="text-muted-foreground">Need access? Contact the portal admin.</span>
         </div>
       </CardContent>
     </Card>

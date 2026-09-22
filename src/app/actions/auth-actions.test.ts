@@ -59,7 +59,7 @@ describe("password reset delivery", () => {
     const result = await forgotPasswordAction({}, emailForm("member@example.edu"));
     expect(result.message).toBeUndefined();
     expect(result.error).toContain("temporarily limited");
-    expect(result.error).toContain("NHS adviser");
+    expect(result.error).toContain("portal admin");
   });
 
   it.each([

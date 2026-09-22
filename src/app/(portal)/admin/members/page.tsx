@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { redirect } from "next/navigation";
 
-import { requireReviewer } from "@/lib/dal/access";
+import { requirePortalViewer } from "@/lib/dal/access";
 import { canViewMemberProgress } from "@/lib/domain/roles";
 import { listRosterProgress } from "@/lib/dal/portal";
 import { formatRoleLabel } from "@/lib/domain/roles";
@@ -34,7 +34,7 @@ export default async function MemberRosterPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const viewer = await requireReviewer();
+  const viewer = await requirePortalViewer();
   if (!canViewMemberProgress(viewer)) redirect("/admin/requests?notice=not-authorized");
   const params = await searchParams;
   const search = param(params.search).trim().toLowerCase();

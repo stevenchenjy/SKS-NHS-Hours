@@ -103,10 +103,15 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
 
   const globalAccessLevel =
     accessGrant &&
-    (accessGrant.access_level === "teacher_admin" || accessGrant.access_level === "platform_owner")
+    (accessGrant.access_level === "teacher_admin" ||
+      accessGrant.access_level === "admin" ||
+      accessGrant.access_level === "platform_owner")
       ? (accessGrant.access_level as GlobalAccessLevel)
       : null;
-  const isTeacherAdmin = globalAccessLevel !== null;
+  const isTeacherAdmin = globalAccessLevel === "teacher_admin";
+  const isPlatformOwner = globalAccessLevel === "platform_owner";
+  const isAdmin = isPlatformOwner || globalAccessLevel === "admin";
+  const hasStaffAccess = isTeacherAdmin || isAdmin;
   const today = new Date().toISOString().slice(0, 10);
   const currentMembership = memberships.find((membership) => membershipIsActive(membership, today));
   const administratorAnchors = memberships.filter((membership) =>
@@ -129,7 +134,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     )[0];
   const activeMembership =
     profile.status === "active"
-      ? isTeacherAdmin
+      ? hasStaffAccess
         ? (administratorAnchor ?? null)
         : (currentMembership ?? null)
       : null;
@@ -149,9 +154,10 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     roles,
     globalAccessLevel,
     isMember,
-    canReview: isTeacherAdmin || roles.some((role) => reviewerRoles.has(role)),
+    canReview: !isAdmin && (isTeacherAdmin || roles.some((role) => reviewerRoles.has(role))),
     isTeacherAdmin,
-    isPlatformOwner: globalAccessLevel === "platform_owner",
+    isAdmin,
+    isPlatformOwner,
   };
 });
 
@@ -171,7 +177,7 @@ export const requireMember = requireActiveViewer;
 
 export async function requirePortalViewer(): Promise<Viewer & { activeMembership: Membership }> {
   const viewer = await requireViewer();
-  if (!viewer.activeMembership || (!viewer.isMember && !viewer.isTeacherAdmin)) {
+  if (!viewer.activeMembership || (!viewer.isMember && !viewer.isTeacherAdmin && !viewer.isAdmin)) {
     redirect("/account-expired");
   }
   return viewer as Viewer & { activeMembership: Membership };
@@ -190,11 +196,17 @@ export async function requireTeacherAdmin(): Promise<Viewer & { activeMembership
 }
 
 export async function requirePlatformOwner(): Promise<Viewer & { activeMembership: Membership }> {
-  const viewer = await requireTeacherAdmin();
+  const viewer = await requirePortalViewer();
   if (!viewer.isPlatformOwner) redirect("/admin?notice=platform-owner-required");
   return viewer;
 }
 
 export function hasAnyRole(viewer: Viewer, roles: RoleSlug[]): boolean {
   return roles.some((role) => viewer.roles.includes(role));
+}
+
+export async function requireAdmin(): Promise<Viewer & { activeMembership: Membership }> {
+  const viewer = await requirePortalViewer();
+  if (!viewer.isAdmin) redirect("/admin/members?notice=admin-required");
+  return viewer;
 }

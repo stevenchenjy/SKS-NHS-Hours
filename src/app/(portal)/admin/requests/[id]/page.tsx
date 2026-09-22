@@ -17,7 +17,7 @@ import { ProgressSummary } from "@/components/portal/progress-summary";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { ReviewDecisionPanel } from "@/components/review/review-decision-panel";
 import { Button } from "@/components/ui/button";
-import { requireReviewer } from "@/lib/dal/access";
+import { requirePortalViewer } from "@/lib/dal/access";
 import { canViewMemberProgress } from "@/lib/domain/roles";
 import {
   getHourRequest,
@@ -66,7 +66,7 @@ export default async function ReviewRequestPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const viewer = await requireReviewer();
+  const viewer = await requirePortalViewer();
   const { id } = await params;
   const noticeValue = (await searchParams).notice;
   const notice = Array.isArray(noticeValue) ? noticeValue[0] : noticeValue;
@@ -88,7 +88,7 @@ export default async function ReviewRequestPage({
       : viewer.roles.includes("committee_head") &&
         viewer.activeMembership.id === request.requested_approver_membership_id);
   const canReassign =
-    request.status === "pending" && approvalStage === "committee_head" && viewer.isTeacherAdmin;
+    request.status === "pending" && approvalStage === "committee_head" && viewer.isAdmin;
   const [progress, committeeHeads, categories] = await Promise.all([
     progressAccess ? getProgress(request.member_membership_id) : Promise.resolve(null),
     canReassign ? listActiveCommitteeHeads(request.school_year_id) : Promise.resolve([]),
@@ -335,7 +335,7 @@ export default async function ReviewRequestPage({
               </div>
             </section>
           )}
-          {request.status === "approved" && viewer.isTeacherAdmin ? (
+          {request.status === "approved" && viewer.isAdmin ? (
             <section aria-labelledby="correction-heading" className="rounded-xl border p-5">
               <h2 id="correction-heading" className="text-xl font-bold">
                 Correct approved record

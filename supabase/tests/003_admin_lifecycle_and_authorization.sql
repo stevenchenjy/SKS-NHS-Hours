@@ -1,5 +1,15 @@
 begin;
 
+-- A real teacher is distinct from the platform owner used for administration.
+insert into auth.users (id, email, aud, role, email_confirmed_at)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009', 'teacher@example.edu',
+  'authenticated', 'authenticated', statement_timestamp());
+insert into public.profiles (id, email, full_name)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009', 'teacher@example.edu', 'Terry Teacher');
+insert into public.platform_access_grants (profile_id, access_level, granted_by_profile_id)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009', 'teacher_admin', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001');
+
+
 create extension if not exists pgtap with schema extensions;
 select extensions.plan(38);
 
@@ -99,11 +109,11 @@ select extensions.lives_ok(
 -- the original assignment remains the committee head.
 reset role;
 set local role authenticated;
-select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001', true);
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config(
   'request.jwt.claims',
-  '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001","role":"authenticated","email":"admin@example.edu"}',
+  '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009","role":"authenticated","email":"admin@example.edu"}',
   true
 );
 select extensions.lives_ok(
@@ -123,7 +133,7 @@ select extensions.is(
     select actual_reviewer_membership_id
     from public.hour_requests where id = '40000000-0000-4000-8000-000000000002'
   ),
-  '20000000-0000-4000-8000-000000000001'::uuid,
+  (select id from public.school_year_memberships where profile_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa009' and school_year_id = '10000000-0000-4000-8000-000000000001'),
   'actual reviewer records the teacher administrator who acted'
 );
 
@@ -249,8 +259,8 @@ select extensions.is(
     join public.school_years school_year on school_year.id = membership.school_year_id
     where school_year.label = '2027-2028'
   ),
-  2::bigint,
-  'the destination year contains one member plus the automatic admin anchor'
+  3::bigint,
+  'the destination year contains one member plus teacher and admin anchors'
 );
 select extensions.results_eq(
   $$

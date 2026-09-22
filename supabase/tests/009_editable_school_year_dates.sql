@@ -102,7 +102,7 @@ select extensions.throws_ok(
     )
   $$,
   '42501',
-  'An active global teacher administrator is required',
+  'Admin access is required',
   'ordinary members cannot edit school-year dates'
 );
 

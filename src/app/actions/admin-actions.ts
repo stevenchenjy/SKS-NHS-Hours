@@ -13,7 +13,7 @@ import {
 } from "@/lib/auth/invitation-delivery";
 import { sendInvitationEmail } from "@/lib/auth/send-invitation-email";
 import { getServerEnvironment } from "@/lib/env";
-import { requireTeacherAdmin } from "@/lib/dal/access";
+import { requireAdmin } from "@/lib/dal/access";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { RoleSlug } from "@/lib/types";
@@ -93,7 +93,7 @@ function messageForDatabaseError(message: string): string {
     return "A matching active record already exists.";
   }
   if (normalized.includes("permission") || normalized.includes("teacher_admin")) {
-    return "An active teacher administrator role is required.";
+    return "Admin access is required.";
   }
   return "The administrative change could not be completed. Review the values and try again.";
 }
@@ -183,15 +183,15 @@ export async function inviteAccountAction(
   _previous: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
-  const viewer = await requireTeacherAdmin();
+  const viewer = await requireAdmin();
   const environment = getServerEnvironment();
   const expiresAt = new Date(Date.now() + INVITATION_VALIDITY_MS).toISOString();
   const access = invitationAccessSchema.safeParse(formData.get("access_level"));
   if (!access.success) {
     return { fieldErrors: { access_level: ["Choose one initial access level."] } };
   }
-  if (access.data === "teacher_admin" && !viewer.isPlatformOwner) {
-    return { error: "Only a platform owner can invite a teacher administrator." };
+  if (access.data === "teacher_admin" && !viewer.isAdmin) {
+    return { error: "Only an admin can invite a teacher." };
   }
   let invitation: ReturnType<typeof validateInvitation>;
   try {
@@ -251,7 +251,7 @@ export async function inviteAccountAction(
 }
 
 export async function resendInvitationAction(invitationId: string, schoolYearId?: string) {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const parsedId = z.uuid().safeParse(invitationId);
   if (!parsedId.success)
     redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "invalid-invitation" }));
@@ -278,7 +278,7 @@ export async function resendInvitationAction(invitationId: string, schoolYearId?
 }
 
 export async function revokeInvitationAction(invitationId: string, schoolYearId?: string) {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const parsedId = z.uuid().safeParse(invitationId);
   if (!parsedId.success)
     redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "invalid-invitation" }));
@@ -296,7 +296,7 @@ export async function setProfileStatusAction(
   status: "active" | "inactive",
   schoolYearId?: string,
 ) {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("set_profile_status", {
     p_profile_id: profileId,
@@ -319,7 +319,7 @@ export async function setMembershipStatusAction(
   status: "active" | "expired" | "suspended" | "archived",
   schoolYearId?: string,
 ) {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("set_membership_status", {
     p_membership_id: membershipId,
@@ -343,7 +343,7 @@ export async function assignRoleAction(
   schoolYearId: string,
   formData: FormData,
 ) {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const role = leadershipRoleSchema.safeParse(formData.get("role"));
   if (!role.success)
     redirect(accountsUrl({ schoolYearId, view: "directory", notice: "invalid-role" }));
@@ -366,7 +366,7 @@ export async function assignRoleAction(
 }
 
 export async function removeRoleAction(membershipId: string, role: RoleSlug, schoolYearId: string) {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const parsedRole = leadershipRoleSchema.safeParse(role);
   if (!parsedRole.success)
     redirect(accountsUrl({ schoolYearId, view: "directory", notice: "invalid-role" }));
@@ -389,9 +389,7 @@ export async function removeRoleAction(membershipId: string, role: RoleSlug, sch
 }
 
 export async function grantTeacherAdminAction(profileId: string, schoolYearId?: string) {
-  const viewer = await requireTeacherAdmin();
-  if (!viewer.isPlatformOwner)
-    redirect(accountsUrl({ schoolYearId, view: "directory", notice: "platform-owner-required" }));
+  await requireAdmin();
   const parsedProfileId = z.uuid().safeParse(profileId);
   if (!parsedProfileId.success)
     redirect(accountsUrl({ schoolYearId, view: "directory", notice: "invalid-account" }));
@@ -412,9 +410,7 @@ export async function grantTeacherAdminAction(profileId: string, schoolYearId?: 
 }
 
 export async function revokeTeacherAdminAction(profileId: string, schoolYearId?: string) {
-  const viewer = await requireTeacherAdmin();
-  if (!viewer.isPlatformOwner)
-    redirect(accountsUrl({ schoolYearId, view: "directory", notice: "platform-owner-required" }));
+  await requireAdmin();
   const parsedProfileId = z.uuid().safeParse(profileId);
   if (!parsedProfileId.success)
     redirect(accountsUrl({ schoolYearId, view: "directory", notice: "invalid-account" }));
@@ -435,7 +431,7 @@ export async function revokeTeacherAdminAction(profileId: string, schoolYearId?:
 }
 
 export async function transferPlatformOwnerAction(profileId: string, schoolYearId?: string) {
-  const viewer = await requireTeacherAdmin();
+  const viewer = await requireAdmin();
   if (!viewer.isPlatformOwner)
     redirect(accountsUrl({ schoolYearId, view: "directory", notice: "platform-owner-required" }));
   const parsedProfileId = z.uuid().safeParse(profileId);
@@ -462,7 +458,7 @@ export async function createSchoolYearAction(
   _previous: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
-  await requireTeacherAdmin();
+  await requireAdmin();
   let range;
   try {
     range = parseSchoolYearDateRange({
@@ -493,7 +489,7 @@ export async function createSchoolYearAction(
 }
 
 export async function changeSchoolYearStatusAction(schoolYearId: string, action: "activate") {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("activate_school_year", {
     p_school_year_id: schoolYearId,
@@ -526,7 +522,7 @@ export async function updateSchoolYearDatesAction(
   _previous: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const parsed = schoolYearDatesSchema.safeParse({
     school_year_id: formData.get("school_year_id"),
     start_date: formData.get("start_date"),
@@ -565,7 +561,7 @@ export async function addExistingAccountToSchoolYearAction(
   _previous: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const parsed = z
     .object({
       school_year_id: z.uuid(),
@@ -605,7 +601,7 @@ export async function upsertCategoryAction(
   _previous: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const parsed = categorySchema.safeParse({
     category_id: formData.get("category_id") ?? "",
     name: formData.get("name"),
@@ -631,7 +627,7 @@ export async function setSchoolYearCategoryAction(
   _previous: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const parsed = z
     .object({
       school_year_id: z.uuid(),
@@ -662,7 +658,7 @@ export async function correctApprovedRequestAction(
   _previous: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const parsed = z
     .object({
       request_id: z.uuid(),
@@ -736,7 +732,7 @@ export async function importRosterAction(
   _previous: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const file = formData.get("roster");
   const schoolYearId = z.uuid().safeParse(formData.get("school_year_id"));
   if (

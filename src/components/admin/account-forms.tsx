@@ -80,9 +80,7 @@ export function InviteAccountForm({
                 {label}
               </option>
             ))}
-            {allowTeacherAdmin ? (
-              <option value="teacher_admin">Teacher administrator</option>
-            ) : null}
+            {allowTeacherAdmin ? <option value="teacher_admin">Teacher</option> : null}
           </select>
           <FieldDescription>
             Choose one starting access level. Leadership follows the selected school year; teacher
@@ -251,8 +249,8 @@ export function RosterImportForm({
         />
         <FieldDescription>
           Up to 250 rows and 1 MB. Headers: email, full_name, and optional roles. Use one value:
-          member, committee_head, or president_vice_president. Teacher administrators must be
-          granted individually by a platform owner.
+          member, committee_head, or president_vice_president. Teachers must be granted individually
+          by a admin.
         </FieldDescription>
       </Field>
       {state.error ? (

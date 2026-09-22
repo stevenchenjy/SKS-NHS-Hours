@@ -7,7 +7,7 @@ import { CreateSchoolYearForm, SchoolYearDatesForm } from "@/components/admin/se
 import { PageHeader } from "@/components/portal/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { requireTeacherAdmin } from "@/lib/dal/access";
+import { requireAdmin } from "@/lib/dal/access";
 import { listSchoolYears } from "@/lib/dal/portal";
 
 export const metadata: Metadata = { title: "School years" };
@@ -31,7 +31,7 @@ export default async function SchoolYearsSettingsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireTeacherAdmin();
+  await requireAdmin();
   const years = await listSchoolYears();
   const rawNotice = (await searchParams).notice;
   const notice = Array.isArray(rawNotice) ? rawNotice[0] : rawNotice;

@@ -7,7 +7,7 @@ export const roleSlugs = [
 
 export type RoleSlug = (typeof roleSlugs)[number];
 export type ReviewerRole = Exclude<RoleSlug, "member">;
-export type GlobalAccessLevel = "teacher_admin" | "platform_owner";
+export type GlobalAccessLevel = "teacher_admin" | "admin" | "platform_owner";
 export type MembershipStatus = "active" | "expired" | "suspended" | "archived";
 export type SchoolYearStatus = "draft" | "active" | "closed" | "archived";
 export type HourRequestStatus =
@@ -70,6 +70,7 @@ export interface Viewer {
   isMember: boolean;
   canReview: boolean;
   isTeacherAdmin: boolean;
+  isAdmin: boolean;
   isPlatformOwner: boolean;
 }
 

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/components/portal/route-refresh", () => ({ RouteRefresh: () => null }));
 vi.mock("@/lib/dal/access", () => ({
-  requireTeacherAdmin: async () => ({ activeMembership: null, isPlatformOwner: true }),
+  requireAdmin: async () => ({ activeMembership: null, isAdmin: true, isPlatformOwner: true }),
 }));
 vi.mock("@/lib/dal/portal", () => ({
   listSchoolYears: async () => [],

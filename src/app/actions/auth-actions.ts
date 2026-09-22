@@ -106,15 +106,15 @@ export async function forgotPasswordAction(
       return {
         error:
           error.status === 429
-            ? "Password reset requests are temporarily limited. Wait a few minutes and try again. If this continues, contact the NHS adviser."
-            : "We could not send reset instructions. Please try again later or contact the NHS adviser for help accessing your account.",
+            ? "Password reset requests are temporarily limited. Wait a few minutes and try again. If this continues, contact the portal admin."
+            : "We could not send reset instructions. Please try again later or contact the portal admin for help accessing your account.",
       };
     }
   } catch {
     console.error("Password reset request failed", { code: "request_failed" });
     return {
       error:
-        "We could not send reset instructions. Please try again later or contact the NHS adviser for help accessing your account.",
+        "We could not send reset instructions. Please try again later or contact the portal admin for help accessing your account.",
     };
   }
   return { message: "If an invited account exists, password reset instructions are on the way." };

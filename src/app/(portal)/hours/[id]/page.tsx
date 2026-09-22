@@ -259,7 +259,7 @@ export default async function HourRequestPage({
                     ? "You selected yourself as the committee head. Open Review my request to approve and send it to the teachers. Your hours count only after a teacher approves."
                     : "The selected committee head must complete the first approval before the request goes to the teachers."
                 : request.status === "approved"
-                  ? "This approved record is locked. A teacher administrator must use the traceable correction process for any change."
+                  ? "This approved record is locked. An admin must use the traceable correction process for any change."
                   : request.status === "changes_requested"
                     ? "Edit the activity using the reviewer’s comment, then resubmit it."
                     : "This request remains in the service record history."}

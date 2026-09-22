@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/dal/access", () => ({ requireTeacherAdmin: async () => ({}) }));
+vi.mock("@/lib/dal/access", () => ({ requireAdmin: async () => ({}) }));
 vi.mock("@/lib/dal/portal", () => ({ listSchoolYears: async () => [] }));
 
 import SchoolYearsSettingsPage from "./page";

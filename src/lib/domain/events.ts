@@ -61,8 +61,10 @@ function asUtcClockDate(value: string): Date {
   return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
 }
 
-export function canPublishServiceEvents(viewer: Pick<Viewer, "isTeacherAdmin" | "roles">): boolean {
-  return viewer.isTeacherAdmin || viewer.roles.includes("committee_head");
+export function canPublishServiceEvents(
+  viewer: Pick<Viewer, "isTeacherAdmin" | "isAdmin" | "roles">,
+): boolean {
+  return viewer.isTeacherAdmin || viewer.isAdmin || viewer.roles.includes("committee_head");
 }
 
 export function formatServiceEventSchedule(

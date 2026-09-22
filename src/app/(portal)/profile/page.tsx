@@ -50,11 +50,15 @@ export default async function ProfilePage() {
           <div>
             <dt className="text-sm text-muted-foreground">Current roles</dt>
             <dd className="mt-1 flex flex-wrap gap-1.5">
-              {viewer.roles.map((role) => (
-                <Badge key={role} variant="outline" className="capitalize">
-                  {formatRoleLabel(role)}
-                </Badge>
-              ))}
+              {viewer.isAdmin ? (
+                <Badge variant="outline">Admin</Badge>
+              ) : (
+                viewer.roles.map((role) => (
+                  <Badge key={role} variant="outline" className="capitalize">
+                    {formatRoleLabel(role)}
+                  </Badge>
+                ))
+              )}
             </dd>
           </div>
         </dl>

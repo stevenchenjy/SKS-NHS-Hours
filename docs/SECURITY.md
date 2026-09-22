@@ -64,6 +64,14 @@ The browser is untrusted. Next.js is a trusted orchestration tier but all reques
 
 ## Authorization model
 
+**Current staff split (September 2026):** Teacher accounts can approve hours,
+view member progress, and manage events. Admin (`admin` or `platform_owner`)
+accounts manage accounts, password assistance, exports, settings, audit, and
+approved-record corrections. Admins are not teacher approvers. Server actions
+and database RPCs enforce this split even when a caller bypasses navigation.
+The owner-only `grant_admin` RPC provisions additional Admins; ownership itself
+remains a protected singleton.
+
 Authorization has two mutually exclusive application paths:
 
 ```text
@@ -71,23 +79,24 @@ member/leader:
   valid server-verified identity + active profile
   + active in-date membership/year + required annual role
 
-teacher administrator/platform owner:
+teacher/admin/platform owner:
   valid server-verified identity + active profile
   + global platform_access_grant + action-specific checks
 ```
 
 Member and student-leadership roles are assigned to school-year memberships. Global administration is a database grant, never a browser claim, and is exclusive of member/leadership roles. Teacher-only annual anchors provide same-year review/audit attribution but do not create membership progress. Prohibitions such as self-review still apply.
 
-| Subject                                             | Read                                                                                   | Mutate                                                                                               |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Anonymous                                           | Public login/help only                                                                 | Authentication initiation only; no application-table access                                          |
-| Authenticated, unprovisioned/inactive               | Account-status response only                                                           | None                                                                                                 |
-| Expired/suspended/archived membership               | Limited own historical/account-status data when school policy permits                  | No active-year submission, review, or administration                                                 |
-| Active `member`                                     | Own profile, memberships, requests, comments, and progress                             | Own draft/submit/eligible withdraw/edit-after-changes/resubmit actions                               |
-| Active `committee_head`, `president_vice_president` | Permitted active roster, member profiles/logs/history, assigned and all-pending queues | Review/reassign another member's eligible pending request                                            |
-| Global `teacher_admin`                              | Leader data plus invitations, accounts, years, categories, exports, and complete audit | Protected account/year/role/category/destination-access/correction/export workflows across all years |
-| Global `platform_owner`                             | Teacher-admin data plus synthetic read-only role preview and global grant directory    | Grant/revoke teacher admins and atomically transfer ownership                                        |
-| Elevated server client                              | Only data/Auth needed by a narrow privileged operation                                 | Never an ordinary request data path; every call requires prior teacher-admin authorization and audit |
+| Subject                                             | Read                                                                                   | Mutate                                                                                                    |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Anonymous                                           | Public login/help only                                                                 | Authentication initiation only; no application-table access                                               |
+| Authenticated, unprovisioned/inactive               | Account-status response only                                                           | None                                                                                                      |
+| Expired/suspended/archived membership               | Limited own historical/account-status data when school policy permits                  | No active-year submission, review, or administration                                                      |
+| Active `member`                                     | Own profile, memberships, requests, comments, and progress                             | Own draft/submit/eligible withdraw/edit-after-changes/resubmit actions                                    |
+| Active `committee_head`, `president_vice_president` | Permitted active roster, member profiles/logs/history, assigned and all-pending queues | Review/reassign another member's eligible pending request                                                 |
+| Global `teacher_admin`                              | Member progress, request details, teacher queue, events                                | Final hour approvals and event management                                                                 |
+| Global `admin`                                      | Accounts, setup status, exports, settings, audit, member progress, events              | Account/password assistance, teacher access, system settings, corrections, event management; no approvals |
+| Global `platform_owner`                             | Admin workspace                                                                        | Admin capabilities plus grant Admin access and transfer ownership; no approvals                           |
+| Elevated server client                              | Only data/Auth needed by a narrow privileged operation                                 | Never an ordinary request data path; every call requires prior teacher-admin authorization and audit      |
 
 UI hiding is not a control. Protected pages, Server Actions/route handlers, caller-scoped queries, database policies, and transactional functions must each reject unauthorized direct requests.
 

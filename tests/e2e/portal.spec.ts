@@ -37,7 +37,7 @@ test.beforeAll(() => {
 async function login(page: Page, email: string) {
   // Wait for the final role-specific page, not an intermediate dashboard redirect.
   const destination =
-    email === syntheticAccounts.platformOwner.email
+    email === syntheticAccounts.platformOwner.email || email === syntheticAccounts.teacher.email
       ? /\/admin\/members(?:\?|$)/
       : email === syntheticAccounts.expiredMember.email
         ? /\/account-expired(?:\?|$)/
@@ -257,7 +257,7 @@ test("selected committee head completes the first approval without approving hou
 });
 
 test("a teacher gives final approval from the shared teacher queue", async ({ page }) => {
-  await login(page, syntheticAccounts.platformOwner.email);
+  await login(page, syntheticAccounts.teacher.email);
   await expect(page.getByRole("link", { name: "Open My Profile" })).toBeVisible();
   await page.goto(`/admin/requests?search=${encodeURIComponent(assignedTitle)}`);
   await openQueueRequest(page, assignedTitle);
@@ -279,7 +279,7 @@ test("a teacher gives final approval from the shared teacher queue", async ({ pa
   ).toContainText(syntheticAccounts.committeeHead.fullName);
   await expect(
     page.getByText("Final teacher reviewer", { exact: true }).locator(".."),
-  ).toContainText(syntheticAccounts.platformOwner.fullName);
+  ).toContainText(syntheticAccounts.teacher.fullName);
 });
 
 test("simultaneous reviewers serialize to one decision", async ({ browser, baseURL, page }) => {
@@ -302,8 +302,8 @@ test("simultaneous reviewers serialize to one decision", async ({ browser, baseU
     const firstTeacherPage = await firstTeacherContext.newPage();
     const secondTeacherPage = await secondTeacherContext.newPage();
     await Promise.all([
-      login(firstTeacherPage, syntheticAccounts.platformOwner.email),
-      login(secondTeacherPage, syntheticAccounts.platformOwner.email),
+      login(firstTeacherPage, syntheticAccounts.teacher.email),
+      login(secondTeacherPage, syntheticAccounts.teacher.email),
     ]);
     await Promise.all([firstTeacherPage.goto(requestPath), secondTeacherPage.goto(requestPath)]);
     await Promise.all([
@@ -343,7 +343,7 @@ test("simultaneous reviewers serialize to one decision", async ({ browser, baseU
   await expect(requestHistory.getByText("approved", { exact: true })).toHaveCount(1);
   await expect(
     page.getByText("Final teacher reviewer", { exact: true }).locator(".."),
-  ).toContainText(syntheticAccounts.platformOwner.fullName);
+  ).toContainText(syntheticAccounts.teacher.fullName);
 });
 
 test("a committee head can approve their own hours before a teacher gives final approval", async ({
@@ -369,7 +369,7 @@ test("a committee head can approve their own hours before a teacher gives final 
     page.getByText("Final teacher reviewer", { exact: true }).locator(".."),
   ).toContainText("Not yet reviewed");
 
-  await login(page, syntheticAccounts.platformOwner.email);
+  await login(page, syntheticAccounts.teacher.email);
   await page.goto(`/admin/requests?search=${encodeURIComponent(title)}`);
   await openQueueRequest(page, title);
   await page.getByRole("button", { name: "Give final approval", exact: true }).click();
@@ -379,7 +379,7 @@ test("a committee head can approve their own hours before a teacher gives final 
   await expect(page.getByText("Approved", { exact: true })).toBeVisible();
   await expect(
     page.getByText("Final teacher reviewer", { exact: true }).locator(".."),
-  ).toContainText(syntheticAccounts.platformOwner.fullName);
+  ).toContainText(syntheticAccounts.teacher.fullName);
 });
 
 test("president and vice president cannot open the review queue without committee-head access", async ({
@@ -442,7 +442,7 @@ test("above-target member sees accurate totals while the stacked visual remains 
   await page.getByRole("button", { name: "Approve and send to teachers" }).click();
   await page.waitForURL(/decision-recorded/);
 
-  await login(page, syntheticAccounts.platformOwner.email);
+  await login(page, syntheticAccounts.teacher.email);
   await page.goto(`/admin/requests?search=${encodeURIComponent(overRequirementTitle)}`);
   await openQueueRequest(page, overRequirementTitle);
   await page.getByRole("button", { name: "Give final approval" }).click();
@@ -607,6 +607,7 @@ test("platform owner receives global admin navigation and opens a member profile
   await expect(primaryNavigation.getByRole("link", { name: "My Profile" })).toHaveCount(0);
   await expect(primaryNavigation.getByRole("link", { name: "Member progress" })).toBeVisible();
   await expect(primaryNavigation.getByRole("link", { name: "Audit trail" })).toBeVisible();
+  await expect(primaryNavigation.getByRole("link", { name: "Review requests" })).toHaveCount(0);
   await expect(primaryNavigation.getByRole("link", { name: "Role preview" })).toBeVisible();
 
   await page.goto("/admin/members?search=Morgan+Member");

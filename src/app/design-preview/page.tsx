@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { requirePlatformOwner } from "@/lib/dal/access";
+import { requireAdmin } from "@/lib/dal/access";
 import type {
   HourRequestStatus,
   ProgressRecord,
@@ -72,6 +72,7 @@ const memberViewer: Viewer = {
   isMember: true,
   canReview: false,
   isTeacherAdmin: false,
+  isAdmin: false,
   isPlatformOwner: false,
 };
 memberViewer.memberships = memberViewer.activeMembership ? [memberViewer.activeMembership] : [];
@@ -117,7 +118,17 @@ const adminViewer: Viewer = {
   isMember: false,
   canReview: true,
   isTeacherAdmin: true,
+  isAdmin: false,
   isPlatformOwner: false,
+};
+
+const ownerViewer: Viewer = {
+  ...adminViewer,
+  globalAccessLevel: "platform_owner",
+  isTeacherAdmin: false,
+  isAdmin: true,
+  isPlatformOwner: true,
+  canReview: false,
 };
 
 const progress: ProgressRecord = {
@@ -253,7 +264,8 @@ const previewServiceEvent: ServiceEvent = {
 };
 
 function EventsPreview({ viewer }: { viewer: Viewer }) {
-  const canPublish = viewer.isTeacherAdmin || viewer.roles.includes("committee_head");
+  const canPublish =
+    viewer.isTeacherAdmin || viewer.isAdmin || viewer.roles.includes("committee_head");
   const event = {
     ...previewServiceEvent,
     can_manage: canPublish,
@@ -521,15 +533,17 @@ function ReviewRequestsPreview({ assignedOnly }: { assignedOnly: boolean }) {
 }
 
 function ProfilePreview({ viewer }: { viewer: Viewer }) {
-  const roleLabels = viewer.isTeacherAdmin
-    ? ["Teacher administrator"]
-    : viewer.roles.map((role) =>
-        role === "president_vice_president"
-          ? "President / Vice President"
-          : role === "committee_head"
-            ? "Committee Head"
-            : "Member",
-      );
+  const roleLabels = viewer.isAdmin
+    ? ["Admin"]
+    : viewer.isTeacherAdmin
+      ? ["Teacher"]
+      : viewer.roles.map((role) =>
+          role === "president_vice_president"
+            ? "President / Vice President"
+            : role === "committee_head"
+              ? "Committee Head"
+              : "Member",
+        );
 
   return (
     <div className="page-container max-w-[920px]">
@@ -774,24 +788,19 @@ function localDesignPreviewEnabled(): boolean {
   }
 }
 
-type PreviewRole = "member" | "committee_head" | "president_vice_president" | "teacher_admin";
+type PreviewRole =
+  "member" | "committee_head" | "president_vice_president" | "teacher_admin" | "platform_owner";
 
 const previewSectionsByRole: Record<PreviewRole, string[]> = {
   member: ["dashboard", "events", "log", "profile"],
   committee_head: ["dashboard", "events", "log", "profile", "review-requests"],
   president_vice_president: ["dashboard", "events", "log", "profile", "member-progress"],
-  teacher_admin: [
-    "events",
-    "review-requests",
-    "member-progress",
-    "accounts",
-    "exports",
-    "settings",
-  ],
+  teacher_admin: ["events", "review-requests", "member-progress"],
+  platform_owner: ["events", "member-progress", "accounts", "exports", "settings"],
 };
 
 function defaultSectionForRole(role: PreviewRole): string {
-  return role === "teacher_admin" ? "member-progress" : "dashboard";
+  return role === "teacher_admin" || role === "platform_owner" ? "member-progress" : "dashboard";
 }
 
 function previewHref(role: PreviewRole, section: string): string {
@@ -814,8 +823,9 @@ function RolePreviewToolbar({ role, section }: { role: PreviewRole; section: str
     },
     {
       role: "teacher_admin" as const,
-      label: "Teacher administrator",
+      label: "Teacher",
     },
+    { role: "platform_owner" as const, label: "Admin" },
   ];
 
   return (
@@ -863,17 +873,19 @@ export default async function DesignPreviewPage({
   searchParams: Promise<{ screen?: string; role?: string; section?: string }>;
 }) {
   const localPreview = localDesignPreviewEnabled();
-  if (!localPreview) await requirePlatformOwner();
+  if (!localPreview) await requireAdmin();
 
   const { screen, role: requestedRole, section: requestedSection } = await searchParams;
   const role: PreviewRole =
-    requestedRole === "teacher_admin" || screen === "admin"
-      ? "teacher_admin"
-      : requestedRole === "president_vice_president"
-        ? "president_vice_president"
-        : requestedRole === "committee_head" || screen === "review"
-          ? "committee_head"
-          : "member";
+    requestedRole === "platform_owner" || screen === "admin"
+      ? "platform_owner"
+      : requestedRole === "teacher_admin"
+        ? "teacher_admin"
+        : requestedRole === "president_vice_president"
+          ? "president_vice_president"
+          : requestedRole === "committee_head" || screen === "review"
+            ? "committee_head"
+            : "member";
   const legacySection =
     screen === "admin"
       ? "member-progress"
@@ -888,21 +900,25 @@ export default async function DesignPreviewPage({
       ? candidateSection
       : defaultSectionForRole(role);
   const viewer =
-    role === "teacher_admin"
-      ? adminViewer
-      : role === "president_vice_president"
-        ? presidentViewer
-        : role === "committee_head"
-          ? committeeHeadViewer
-          : memberViewer;
+    role === "platform_owner"
+      ? ownerViewer
+      : role === "teacher_admin"
+        ? adminViewer
+        : role === "president_vice_president"
+          ? presidentViewer
+          : role === "committee_head"
+            ? committeeHeadViewer
+            : memberViewer;
   const previewName =
-    role === "teacher_admin"
-      ? "Teacher administrator"
-      : role === "president_vice_president"
-        ? "President / Vice President"
-        : role === "committee_head"
-          ? "Committee head"
-          : "Member";
+    role === "platform_owner"
+      ? "Admin"
+      : role === "teacher_admin"
+        ? "Teacher"
+        : role === "president_vice_president"
+          ? "President / Vice President"
+          : role === "committee_head"
+            ? "Committee head"
+            : "Member";
 
   return (
     <>
@@ -919,10 +935,7 @@ export default async function DesignPreviewPage({
           previewControls={<RolePreviewToolbar role={role} section={section} />}
         >
           {section === "review-request" ? (
-            <ReviewRequestPreview
-              canReview={viewer.canReview}
-              canReassign={viewer.isTeacherAdmin}
-            />
+            <ReviewRequestPreview canReview={viewer.canReview} canReassign={viewer.isAdmin} />
           ) : section === "review-requests" ? (
             <ReviewRequestsPreview assignedOnly={role === "committee_head"} />
           ) : section === "member-progress" ? (

@@ -480,7 +480,7 @@ select extensions.is(
 select extensions.throws_ok(
   $$ select public.grant_teacher_admin('dddddddd-dddd-4ddd-8ddd-ddddddddd001') $$,
   '42501',
-  'The platform owner is required',
+  'Admin access is required',
   'a non-owner teacher administrator cannot grant global access'
 );
 select extensions.throws_ok(
@@ -494,7 +494,7 @@ select extensions.throws_ok(
     )
   $$,
   '42501',
-  'The platform owner is required',
+  'Admin access is required',
   'a non-owner teacher administrator cannot invite another global administrator'
 );
 select extensions.throws_ok(
@@ -505,7 +505,7 @@ select extensions.throws_ok(
     )
   $$,
   '42501',
-  'The platform owner is required',
+  'Admin access is required',
   'a non-owner teacher administrator cannot prepare a global invitation resend'
 );
 select extensions.throws_ok(
@@ -517,7 +517,7 @@ select extensions.throws_ok(
     )
   $$,
   '42501',
-  'The platform owner is required',
+  'Admin access is required',
   'a non-owner teacher administrator cannot record a global invitation send'
 );
 select extensions.throws_ok(
@@ -527,7 +527,7 @@ select extensions.throws_ok(
     )
   $$,
   '42501',
-  'The platform owner is required',
+  'Admin access is required',
   'a non-owner teacher administrator cannot revoke a global invitation'
 );
 
@@ -650,13 +650,13 @@ select set_config('request.jwt.claim.role', 'authenticated', true);
 select extensions.throws_ok(
   $$ select public.grant_teacher_admin('dddddddd-dddd-4ddd-8ddd-ddddddddd002') $$,
   '42501',
-  'The platform owner is required',
+  'Admin access is required',
   'a demoted former owner cannot grant teacher-administrator access'
 );
 select extensions.throws_ok(
   $$ select public.revoke_teacher_admin('dddddddd-dddd-4ddd-8ddd-ddddddddd003') $$,
   '42501',
-  'The platform owner is required',
+  'Admin access is required',
   'a non-owner cannot revoke teacher-administrator access'
 );
 select extensions.throws_ok(

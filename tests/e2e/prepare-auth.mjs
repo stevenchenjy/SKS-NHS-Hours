@@ -54,6 +54,41 @@ for (const user of syntheticUsers) {
   }
 }
 
+// Browser approval tests use a teacher account separate from the owner. This
+// fixture is local-only and does not change the database suite's seeded counts.
+const { data: localUsers, error: listError } = await adminClient.auth.admin.listUsers({
+  perPage: 1000,
+});
+if (listError) throw listError;
+let teacher = localUsers.users.find((user) => user.email === "teacher@example.edu");
+if (!teacher) {
+  const { data, error } = await adminClient.auth.admin.createUser({
+    email: "teacher@example.edu",
+    password,
+    email_confirm: true,
+  });
+  if (error || !data.user) throw error ?? new Error("Could not create local teacher fixture");
+  teacher = data.user;
+} else {
+  const { error } = await adminClient.auth.admin.updateUserById(teacher.id, {
+    password,
+    email_confirm: true,
+  });
+  if (error) throw error;
+}
+const { error: teacherProfileError } = await adminClient.from("profiles").upsert({
+  id: teacher.id,
+  email: teacher.email,
+  full_name: "Terry Teacher",
+});
+if (teacherProfileError) throw teacherProfileError;
+const { error: teacherGrantError } = await adminClient.from("platform_access_grants").upsert({
+  profile_id: teacher.id,
+  access_level: "teacher_admin",
+  granted_by_profile_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001",
+});
+if (teacherGrantError) throw teacherGrantError;
+
 // One real password grant proves the running Auth service accepted the managed
 // password lifecycle without spending the local rate-limit budget for all users.
 const representativeUser = syntheticUsers.find((user) => user.email === "member@example.edu");
