@@ -463,6 +463,8 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
   page,
   context,
 }) => {
+  // This scenario spans publishing, multiple member sessions, and event management.
+  test.slow();
   await login(page, syntheticAccounts.committeeHead.email);
   await page.goto("/events");
   await expect(page.getByRole("heading", { name: "Volunteer events" })).toBeVisible();
@@ -540,8 +542,14 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
     .filter({ hasText: "Event updated" });
   await expect(eventUpdate).toContainText("Before: School library");
   await expect(eventUpdate).toContainText("Now: Main gym");
-  await eventUpdate.getByRole("button", { name: "Mark as read", exact: true }).click();
-  await expect(eventUpdate.getByText("Unread", { exact: true })).toHaveCount(0);
+  await eventUpdate.getByRole("button", { name: "Mark as read & archive", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Marked as read and moved to Archive.");
+  await expect(eventUpdate).toHaveCount(0);
+  await page.goto("/notifications?view=archive");
+  await expect(eventUpdate).toContainText("Archived · Read");
+  await expect(
+    eventUpdate.getByRole("button", { name: "Mark as read & archive", exact: true }),
+  ).toHaveCount(0);
 
   await login(page, syntheticAccounts.committeeHead.email);
   await page.goto(`${eventPath}/edit`);
