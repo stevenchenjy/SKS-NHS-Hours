@@ -641,7 +641,7 @@ test("platform owner creates a year and assigns the next leadership team", async
   await createYear.getByLabel("End date").fill("2028-06-30");
   await createYear.getByRole("button", { name: "Create draft school year" }).click();
   await expect(
-    page.getByText("Draft school year created with the fixed 20-hour member requirement."),
+    page.getByText("Draft school year created with the fixed 35-hour member requirement."),
   ).toBeVisible();
   const createdYear = page.getByRole("article").filter({ hasText: rolloverLabel });
   await expect(createdYear.getByRole("button", { name: "Close year" })).toHaveCount(0);
