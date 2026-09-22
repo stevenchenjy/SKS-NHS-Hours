@@ -88,6 +88,15 @@ Every view is declared `security_invoker`, so its underlying table policies stil
 
 Application queries must still bound and paginate result sets. A PostgREST response limit is not a safe export-completeness mechanism.
 
+`member_progress` keeps caller-level row security for roster visibility. Its
+request totals come from `private.member_request_summary`, which checks the
+caller's existing membership access before aggregating all requests for that
+membership. This keeps approved and pending totals consistent across authorized
+viewers even when they cannot read the same individual requests. The helper
+returns counts, hours, and last-activity time only; request-detail policies and
+the two-stage approval queue remain separate. Regression coverage lives in
+`supabase/tests/018_consistent_member_progress.sql`.
+
 ## Roles, grants, and RLS
 
 - `anon` has no application-table/view/function privileges.

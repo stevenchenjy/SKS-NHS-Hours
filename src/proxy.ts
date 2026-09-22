@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
+import { safeInternalPath } from "@/lib/safe-navigation";
+
 export async function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const isDevelopment = process.env.NODE_ENV === "development";
@@ -47,7 +49,19 @@ export async function proxy(request: NextRequest) {
         },
       },
     });
-    await supabase.auth.getClaims();
+    const { data } = await supabase.auth.getClaims();
+    // Preserve emailed event links before the portal layout redirects to sign-in.
+    // The data-access layer still enforces membership and event permissions.
+    if (!data?.claims && /^\/events(?:\/|$)/.test(request.nextUrl.pathname)) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set(
+        "next",
+        safeInternalPath(`${request.nextUrl.pathname}${request.nextUrl.search}`, "/events"),
+      );
+      const loginResponse = NextResponse.redirect(loginUrl);
+      response.cookies.getAll().forEach((cookie) => loginResponse.cookies.set(cookie));
+      response = loginResponse;
+    }
   }
 
   response.headers.set("Content-Security-Policy", csp);

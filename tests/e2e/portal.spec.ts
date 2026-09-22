@@ -401,6 +401,13 @@ test("changes-requested activity returns to the member for editing and resubmiss
   await page
     .getByLabel("Description (optional)")
     .fill("Sorted pantry donations after school under the supervision of Community Pantry staff.");
+  // Legacy requests can contain fractional hours; edits must use whole hours.
+  await expect(page.getByLabel("Hours")).toHaveValue("1.5");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(
+    page.getByText("Enter whole hours only (for example, 1, 2, or 3).", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Hours").fill("2");
   await page.getByRole("button", { name: "Save changes" }).click();
   await page.waitForURL(/notice=changes-saved/);
   await expect(page.getByRole("status")).toContainText("Changes saved");
@@ -454,6 +461,7 @@ test("above-target member sees accurate totals while the stacked visual remains 
 
 test("committee head publishes an event and the FIFO waitlist promotes after a drop", async ({
   page,
+  context,
 }) => {
   await login(page, syntheticAccounts.committeeHead.email);
   await page.goto("/events");
@@ -465,17 +473,34 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
     .getByLabel("What help is needed?")
     .fill("Set up donation stations and organize supplies for the community collection.");
   await page.getByLabel("Location").fill("School library");
-  await page.getByLabel("Starts").fill("2026-09-24T15:00");
-  await page.getByLabel("Ends").fill("2026-09-24T17:00");
-  await page.getByLabel("Signup deadline").fill("2026-09-23T15:00");
+  const eventDate = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const signupDate = new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10);
+  await page.getByLabel("Starts").fill(`${eventDate}T15:00`);
+  await page.getByLabel("Ends").fill(`${eventDate}T17:00`);
+  await page.getByLabel("Signup deadline").fill(`${signupDate}T15:00`);
   await page.getByLabel("People needed").fill("1");
   await page.getByRole("button", { name: "Publish event" }).click();
   await page.waitForURL(/\/events\/[0-9a-f-]+\?notice=created/);
   const eventPath = new URL(page.url()).pathname;
   await expect(page.getByRole("status")).toContainText("visible to everyone");
 
-  await login(page, syntheticAccounts.member.email);
-  await page.goto(eventPath);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.getByRole("button", { name: "Copy signup link", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Link copied", exact: true })).toBeVisible();
+  const signupLink = await page.evaluate(() => navigator.clipboard.readText());
+  expect(signupLink).toBe(new URL(eventPath, page.url()).href);
+
+  // Follow the emailed URL with no session, then sign in on the resulting page.
+  await context.clearCookies();
+  await page.goto(signupLink);
+  await expect(page).toHaveURL(/\/login\?next=/);
+  expect(new URL(page.url()).searchParams.get("next")).toBe(eventPath);
+  await page.getByLabel("School email").fill(syntheticAccounts.member.email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(signupLink);
+  await expect(page.getByRole("heading", { name: volunteerEventTitle })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy signup link", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
   await page.waitForURL(/notice=confirmed/);
   await expect(page.getByText("You’re confirmed", { exact: true })).toBeVisible();

@@ -1,5 +1,6 @@
 const notices: Record<string, string> = {
-  created: "The event is live and visible to everyone in the portal.",
+  created:
+    "The event is live and visible to everyone in the portal. Use Copy signup link to share it in your volunteer email.",
   updated: "Event changes saved. Affected volunteers have been notified.",
   ended: "The event has ended and moved to Past. Volunteers have been notified.",
   deleted: "The event was deleted and its signups cancelled. Volunteers have been notified.",

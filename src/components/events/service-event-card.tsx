@@ -6,6 +6,7 @@ import {
   signupForServiceEventAction,
 } from "@/app/actions/event-actions";
 import { EventActionSubmit } from "@/components/events/event-action-submit";
+import { CopyEventLink } from "@/components/events/copy-event-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -161,6 +162,7 @@ export function ServiceEventCard({
           {event.confirmed_count} confirmed
         </div>
         <div className="flex flex-wrap justify-end gap-2">
+          {event.can_manage && !event.is_expired ? <CopyEventLink eventId={event.id} /> : null}
           {showDetailsLink ? (
             <Button
               render={<Link href={`/events/${event.id}`} />}

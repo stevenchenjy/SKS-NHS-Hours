@@ -20,8 +20,8 @@ select extensions.throws_ok(
       'Ordinary members may not publish volunteer opportunities.',
       'School cafeteria',
       'All NHS members',
-      '2026-09-15 15:00',
-      '2026-09-15 17:00',
+      timezone('America/New_York', transaction_timestamp()) + interval '2 days',
+      timezone('America/New_York', transaction_timestamp()) + interval '2 days 2 hours',
       'Morgan Member',
       'member@example.edu',
       1
@@ -50,8 +50,8 @@ select extensions.lives_ok(
       'A capacity-one opportunity used to verify FIFO promotion.',
       'School cafeteria',
       'All active NHS members',
-      '2026-09-15 15:00',
-      '2026-09-15 17:00',
+      timezone('America/New_York', transaction_timestamp()) + interval '2 days',
+      timezone('America/New_York', transaction_timestamp()) + interval '2 days 2 hours',
       'Riley Reviewer',
       'reviewer@example.edu',
       1
