@@ -151,8 +151,6 @@ export default async function MemberRosterPage({
               <TableHead className="pl-5">Member</TableHead>
               <TableHead>Roles</TableHead>
               <TableHead className="min-w-[340px]">Approved progress</TableHead>
-              <TableHead>Approved</TableHead>
-              <TableHead>Pending</TableHead>
               <TableHead>Remaining / over</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="pr-5 text-right">
@@ -180,8 +178,6 @@ export default async function MemberRosterPage({
                   <TableCell>
                     <ProgressSummary progress={member} compact />
                   </TableCell>
-                  <TableCell>{formatHours(Number(member.approved_hours))}</TableCell>
-                  <TableCell>{formatHours(Number(member.pending_hours))}</TableCell>
                   <TableCell>
                     {Number(member.over_goal_hours) > 0
                       ? `${formatHours(Number(member.over_goal_hours))} over`
@@ -203,7 +199,7 @@ export default async function MemberRosterPage({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="h-40 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-40 text-center text-muted-foreground">
                   No members match these filters.
                 </TableCell>
               </TableRow>
