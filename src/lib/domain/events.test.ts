@@ -37,7 +37,6 @@ describe("event deadline validation", () => {
     title: "Library helpers",
     description: "Sort books",
     location: "Library",
-    volunteer_audience: "NHS members",
     starts_at: "2026-10-20T15:00",
     ends_at: "2026-10-20T17:00",
     signup_deadline: "2026-10-19T15:00",

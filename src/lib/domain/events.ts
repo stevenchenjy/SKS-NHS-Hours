@@ -1,6 +1,8 @@
 import type { Viewer } from "@/lib/types";
 import { z } from "zod";
 
+export const SERVICE_EVENT_AUDIENCE = "All active NHS members";
+
 const localDateTimeSchema = z
   .string()
   .trim()
@@ -16,7 +18,6 @@ export const serviceEventSchema = z
     title: z.string().trim().min(1, "Enter an event title.").max(160),
     description: z.string().trim().min(1, "Describe the help that is needed.").max(5_000),
     location: z.string().trim().min(1, "Enter the event location.").max(300),
-    volunteer_audience: z.string().trim().min(1, "Explain who should volunteer.").max(500),
     starts_at: localDateTimeSchema,
     ends_at: localDateTimeSchema,
     signup_deadline: localDateTimeSchema,

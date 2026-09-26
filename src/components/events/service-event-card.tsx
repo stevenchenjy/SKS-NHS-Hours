@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, Mail, MapPin, UserRound, UsersRound } from "lucide-react";
+import { CalendarDays, Mail, MapPin, UserRound } from "lucide-react";
 
 import {
   dropServiceEventSignupAction,
@@ -100,14 +100,7 @@ export function ServiceEventCard({
               <dd className="font-medium">{event.location}</dd>
             </div>
           </div>
-          <div className="flex gap-2.5">
-            <UsersRound className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-            <div>
-              <dt className="sr-only">Who should volunteer</dt>
-              <dd className="font-medium">{event.volunteer_audience}</dd>
-            </div>
-          </div>
-          <div className="flex gap-2.5">
+          <div className="flex gap-2.5 sm:col-span-2">
             <Mail className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
             <div className="min-w-0">
               <dt className="sr-only">Contact</dt>

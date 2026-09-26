@@ -6,7 +6,11 @@ import { z } from "zod";
 
 import { requireActiveViewer, requirePortalViewer } from "@/lib/dal/access";
 import { getServiceEvent } from "@/lib/dal/events";
-import { canPublishServiceEvents, serviceEventSchema } from "@/lib/domain/events";
+import {
+  canPublishServiceEvents,
+  SERVICE_EVENT_AUDIENCE,
+  serviceEventSchema,
+} from "@/lib/domain/events";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface ServiceEventFormState {
@@ -109,7 +113,7 @@ async function saveServiceEvent(
       p_title: parsed.data.title,
       p_description: parsed.data.description,
       p_location: parsed.data.location,
-      p_volunteer_audience: parsed.data.volunteer_audience,
+      p_volunteer_audience: SERVICE_EVENT_AUDIENCE,
       p_starts_at: parsed.data.starts_at,
       p_ends_at: parsed.data.ends_at,
       p_signup_deadline: parsed.data.signup_deadline,
