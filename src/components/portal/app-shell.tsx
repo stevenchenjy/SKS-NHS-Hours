@@ -153,12 +153,14 @@ export function AppShell({
   children,
   preview,
   previewControls,
+  previewContentNavigation = false,
   unreadNotifications = 0,
 }: {
   viewer: Viewer;
   children: ReactNode;
   preview?: AppShellPreview;
   previewControls?: ReactNode;
+  previewContentNavigation?: boolean;
   unreadNotifications?: number;
 }) {
   const adminOnly = (viewer.isTeacherAdmin || viewer.isAdmin) && !viewer.isMember;
@@ -279,7 +281,13 @@ export function AppShell({
       <main id="main-content" className="min-h-dvh pb-20 pt-20 lg:ml-[292px] lg:pb-0">
         {preview ? (
           <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_18rem]">
-            <div inert className="pointer-events-none order-2 min-w-0 xl:order-1">
+            <div
+              inert={!previewContentNavigation}
+              className={cn(
+                "order-2 min-w-0 xl:order-1",
+                !previewContentNavigation && "pointer-events-none",
+              )}
+            >
               {children}
             </div>
             {previewControls ? (
