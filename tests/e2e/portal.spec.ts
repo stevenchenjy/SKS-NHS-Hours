@@ -573,6 +573,27 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
     .click();
   await page.waitForURL(/view=past&notice=ended/);
   await expect(page.getByText(volunteerEventTitle, { exact: true })).toBeVisible();
+  const managedPastCard = page
+    .locator('[data-slot="card"]')
+    .filter({ hasText: volunteerEventTitle });
+  await expect(managedPastCard.getByRole("progressbar")).toBeVisible();
+  await expect(managedPastCard.getByText("1 confirmed", { exact: true })).toBeVisible();
+
+  await login(page, syntheticAccounts.member.email);
+  await page.goto("/events?view=past");
+  const memberPastCard = page
+    .locator('[data-slot="card"]')
+    .filter({ hasText: volunteerEventTitle });
+  await expect(memberPastCard).toBeVisible();
+  await expect(memberPastCard.getByRole("progressbar")).toHaveCount(0);
+  await expect(memberPastCard.getByText(/\d+ confirmed/)).toHaveCount(0);
+  await memberPastCard
+    .getByRole("button", { name: `View details for ${volunteerEventTitle}` })
+    .click();
+  await expect(page.getByRole("progressbar")).toHaveCount(0);
+  await expect(page.getByText(/\d+ confirmed/)).toHaveCount(0);
+
+  await login(page, syntheticAccounts.committeeHead.email);
   await page.goto(eventPath);
   await expect(page.getByRole("button", { name: "Edit event", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Delete event", exact: true }).click();

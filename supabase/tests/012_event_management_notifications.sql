@@ -93,6 +93,14 @@ select extensions.lives_ok($$select public.drop_service_event_signup(pg_temp.eve
 select pg_temp.actor('2');
 select public.close_service_event(pg_temp.event_id(), 'end', (select updated_at from public.service_events where id=pg_temp.event_id()));
 select extensions.ok((select is_expired from public.list_service_events(pg_temp.event_id())), 'ending moves event to Past immediately');
+select extensions.ok((select confirmed_count = 1 and waitlist_count = 0 and spots_remaining = 1
+  from public.list_service_events(pg_temp.event_id())), 'organizer still sees past event attendance');
+select pg_temp.actor('4');
+select extensions.ok((select confirmed_count is null and waitlist_count is null and spots_remaining is null
+  from public.list_service_events(pg_temp.event_id())), 'past event attendance is hidden from members in the listing API');
+select extensions.is((select my_registration_status from public.list_service_events(pg_temp.event_id())),
+  'confirmed'::text, 'members still see their own past registration status');
+select pg_temp.actor('2');
 select extensions.is((select count(*) from public.list_service_event_roster(pg_temp.event_id())), 1::bigint, 'ending retains roster');
 select extensions.throws_ok($$select pg_temp.edit_event(2)$$, '22023', 'Past events cannot be edited', 'ended event cannot be edited');
 select pg_temp.actor('4');
