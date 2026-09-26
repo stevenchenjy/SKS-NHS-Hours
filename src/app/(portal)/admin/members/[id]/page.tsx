@@ -126,27 +126,32 @@ export default async function MemberProfilePage({
                   Only approved requests count toward this total.
                 </p>
               </div>
-              <form>
-                <label htmlFor="year" className="sr-only">
-                  School year
-                </label>
-                <select
-                  id="year"
-                  name="year"
-                  defaultValue={selectedMembership.school_year_id}
-                  className="h-10 rounded-lg border bg-background px-3 text-sm"
-                  onChange={undefined}
-                >
-                  {memberships.map((membership) => (
-                    <option key={membership.id} value={membership.school_year_id}>
-                      {membership.school_year.label}
-                    </option>
-                  ))}
-                </select>
-                <Button type="submit" variant="outline" size="sm" className="ml-2">
-                  View
-                </Button>
-              </form>
+              {memberships.length > 1 ? (
+                <nav aria-label="School years" className="flex flex-wrap gap-2">
+                  {memberships.map((membership) =>
+                    membership.id === selectedMembership.id ? (
+                      <span
+                        key={membership.id}
+                        aria-current="page"
+                        className="inline-flex h-9 items-center rounded-lg bg-secondary px-3 text-sm font-medium text-secondary-foreground"
+                      >
+                        {membership.school_year.label}
+                      </span>
+                    ) : (
+                      <Link
+                        key={membership.id}
+                        href={{
+                          pathname: `/admin/members/${id}`,
+                          query: { year: membership.school_year_id },
+                        }}
+                        className="inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2"
+                      >
+                        {membership.school_year.label}
+                      </Link>
+                    ),
+                  )}
+                </nav>
+              ) : null}
             </div>
             <ProgressSummary progress={progress} />
           </section>

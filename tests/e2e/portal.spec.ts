@@ -617,6 +617,7 @@ test("platform owner receives global admin navigation and opens a member profile
     page.getByRole("heading", { name: syntheticAccounts.member.fullName }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Complete service log" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "School years" })).toHaveCount(0);
 
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(
@@ -702,11 +703,20 @@ test("platform owner creates a year and assigns the next leadership team", async
   await existingAccount.getByLabel("Existing account").selectOption({
     label: `${syntheticAccounts.expiredMember.fullName} · ${syntheticAccounts.expiredMember.email}`,
   });
+  const profileId = await existingAccount.getByLabel("Existing account").inputValue();
   await existingAccount.getByLabel("School-year access").selectOption("president_vice_president");
   await existingAccount.getByRole("button", { name: "Add to school year" }).click();
   await expect(
     existingAccount.getByText("The existing account now has access to the selected school year."),
   ).toBeVisible();
+
+  await page.goto(`/admin/members/${profileId}?year=${activeSchoolYearId}`);
+  const schoolYears = page.getByRole("navigation", { name: "School years" });
+  await expect(page.getByRole("heading", { name: "2026-2027 progress" })).toBeVisible();
+  await expect(schoolYears.locator('[aria-current="page"]')).toHaveText("2026-2027");
+  await schoolYears.getByRole("link", { name: rolloverLabel }).click();
+  await expect(page.getByRole("heading", { name: `${rolloverLabel} progress` })).toBeVisible();
+  await expect(schoolYears.locator('[aria-current="page"]')).toHaveText(rolloverLabel);
 });
 
 test("expired member receives the limited expired-account experience", async ({ page }) => {
