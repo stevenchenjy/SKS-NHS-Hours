@@ -30,7 +30,9 @@ function registrationBadge(event: ServiceEvent) {
   if (event.my_registration_status === "waitlisted") {
     return (
       <Badge variant="outline">
-        Waitlist{event.my_waitlist_position ? ` #${event.my_waitlist_position}` : ""}
+        {event.is_expired && !event.can_manage
+          ? "Waitlisted"
+          : `Waitlist${event.my_waitlist_position ? ` #${event.my_waitlist_position}` : ""}`}
       </Badge>
     );
   }
@@ -52,6 +54,7 @@ export function ServiceEventCard({
   showDetailsLink?: boolean;
 }) {
   const schedule = formatServiceEventSchedule(event.starts_at, event.ends_at);
+  const showAttendance = !event.is_expired || event.can_manage;
   const filledPercent = Math.min((event.confirmed_count / event.capacity) * 100, 100);
   const signupAction = signupForServiceEventAction.bind(null, event.id, returnPath);
   const dropAction = dropServiceEventSignupAction.bind(null, event.id, returnPath);
@@ -125,72 +128,82 @@ export function ServiceEventCard({
           {formatServiceEventDeadline(event.signup_deadline)}
         </p>
 
-        <Progress
-          value={filledPercent}
-          aria-label={`${event.confirmed_count} of ${event.capacity} volunteer spots filled`}
-        >
-          <ProgressLabel className="font-bold tabular-nums text-foreground">
-            {event.spots_remaining > 0
-              ? `${event.spots_remaining} ${event.spots_remaining === 1 ? "spot" : "spots"} left`
-              : "Full"}
-          </ProgressLabel>
-          <span className="ml-auto text-sm tabular-nums text-muted-foreground">
-            {event.capacity} {event.capacity === 1 ? "person" : "people"} needed
-          </span>
-        </Progress>
-
-        <div className="flex min-h-5 flex-wrap items-center gap-2">
-          {registrationBadge(event)}
-          {event.waitlist_count > 0 ? (
-            <span className="text-xs text-muted-foreground">
-              {event.waitlist_count} on the waitlist
+        {showAttendance ? (
+          <Progress
+            value={filledPercent}
+            aria-label={`${event.confirmed_count} of ${event.capacity} volunteer spots filled`}
+          >
+            <ProgressLabel className="font-bold tabular-nums text-foreground">
+              {event.spots_remaining > 0
+                ? `${event.spots_remaining} ${event.spots_remaining === 1 ? "spot" : "spots"} left`
+                : "Full"}
+            </ProgressLabel>
+            <span className="ml-auto text-sm tabular-nums text-muted-foreground">
+              {event.capacity} {event.capacity === 1 ? "person" : "people"} needed
             </span>
-          ) : null}
-        </div>
+          </Progress>
+        ) : null}
+
+        {showAttendance || activeRegistration ? (
+          <div className="flex min-h-5 flex-wrap items-center gap-2">
+            {registrationBadge(event)}
+            {showAttendance && event.waitlist_count > 0 ? (
+              <span className="text-xs text-muted-foreground">
+                {event.waitlist_count} on the waitlist
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </CardContent>
 
-      <CardFooter className="flex-wrap justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <UserRound className="size-4" aria-hidden="true" />
-          {event.confirmed_count} confirmed
-        </div>
-        <div className="flex flex-wrap justify-end gap-2">
-          {event.can_manage && !event.is_expired ? <CopyEventLink eventId={event.id} /> : null}
-          {showDetailsLink ? (
-            <Button
-              render={<Link href={`/events/${event.id}`} />}
-              variant="outline"
-              aria-label={`${event.can_manage ? "Manage roster for" : "View details for"} ${event.title}`}
-            >
-              {event.can_manage ? "Manage event" : "View details"}
-            </Button>
+      {showAttendance || showDetailsLink ? (
+        <CardFooter
+          className={cn("flex-wrap gap-3", showAttendance ? "justify-between" : "justify-end")}
+        >
+          {showAttendance ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <UserRound className="size-4" aria-hidden="true" />
+              {event.confirmed_count} confirmed
+            </div>
           ) : null}
-          {!event.is_expired && viewerCanSignUp ? (
-            activeRegistration ? (
-              <form action={dropAction}>
-                <EventActionSubmit
-                  label={
-                    event.my_registration_status === "waitlisted" ? "Leave waitlist" : "Drop spot"
-                  }
-                  pendingLabel="Updating…"
-                  variant="destructive"
-                />
-              </form>
-            ) : event.is_signup_closed ? (
-              <Button disabled variant="outline">
-                Signups closed
+          <div className="flex flex-wrap justify-end gap-2">
+            {event.can_manage && !event.is_expired ? <CopyEventLink eventId={event.id} /> : null}
+            {showDetailsLink ? (
+              <Button
+                render={<Link href={`/events/${event.id}`} />}
+                variant="outline"
+                aria-label={`${event.can_manage ? "Manage roster for" : "View details for"} ${event.title}`}
+              >
+                {event.can_manage ? "Manage event" : "View details"}
               </Button>
-            ) : (
-              <form action={signupAction}>
-                <EventActionSubmit
-                  label={event.spots_remaining > 0 ? "Sign up" : "Join waitlist"}
-                  pendingLabel="Joining…"
-                />
-              </form>
-            )
-          ) : null}
-        </div>
-      </CardFooter>
+            ) : null}
+            {!event.is_expired && viewerCanSignUp ? (
+              activeRegistration ? (
+                <form action={dropAction}>
+                  <EventActionSubmit
+                    label={
+                      event.my_registration_status === "waitlisted" ? "Leave waitlist" : "Drop spot"
+                    }
+                    pendingLabel="Updating…"
+                    variant="destructive"
+                  />
+                </form>
+              ) : event.is_signup_closed ? (
+                <Button disabled variant="outline">
+                  Signups closed
+                </Button>
+              ) : (
+                <form action={signupAction}>
+                  <EventActionSubmit
+                    label={event.spots_remaining > 0 ? "Sign up" : "Join waitlist"}
+                    pendingLabel="Joining…"
+                  />
+                </form>
+              )
+            ) : null}
+          </div>
+        </CardFooter>
+      ) : null}
     </Card>
   );
 }
