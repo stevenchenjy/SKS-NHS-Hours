@@ -47,7 +47,6 @@ export default async function EventsPage({
       <PageHeader
         eyebrow={viewer.activeMembership.school_year.label}
         title="Volunteer events"
-        description="Full events use a first-come waitlist that promotes the next student automatically."
         actions={
           canPublish ? (
             <Button render={<Link href="/events/new" />}>

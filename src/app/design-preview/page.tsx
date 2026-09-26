@@ -327,7 +327,6 @@ function EventsPreview({
         <PageHeader
           eyebrow="2026–2027"
           title="Volunteer events"
-          description="Full events use a first-come waitlist that promotes the next student automatically."
           actions={canPublish ? <Button>Publish event</Button> : undefined}
         />
       </div>
