@@ -9,6 +9,7 @@ const previewCases = [
   ["committee head", "/design-preview?screen=review&role=committee_head"],
   ["president / vice president", "/design-preview?screen=review&role=president_vice_president"],
   ["log hours", "/design-preview?screen=log"],
+  ["member past events", "/design-preview?role=member&section=events&view=past"],
 ] as const;
 
 test("local design previews have no serious accessibility violations or horizontal overflow", async ({
@@ -116,6 +117,46 @@ test("local design previews have no serious accessibility violations or horizont
   ]) {
     await expect(toolbar.getByRole("link", { name: label, exact: true })).toBeVisible();
   }
+});
+
+test("role preview can compare past events without enabling event actions", async ({ page }) => {
+  test.skip(!previewEnabled, "The local-only design preview is disabled.");
+
+  await page.goto("/design-preview?role=member&section=events");
+  const eventViews = page.getByRole("navigation", { name: "Event views" });
+  await expect(eventViews.getByRole("link", { name: /Active/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(page.getByText("Fall festival setup & welcome team", { exact: true })).toBeVisible();
+
+  await eventViews.getByRole("link", { name: /Past/ }).click();
+  await expect(page).toHaveURL(/role=member&section=events&view=past/);
+  await expect(eventViews.getByRole("link", { name: /Past/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  const pastEvents = page.locator('section[aria-label="Past events"]');
+  await expect(pastEvents).toHaveAttribute("inert", "");
+  await expect(pastEvents.getByText("Community garden volunteer shift")).toBeVisible();
+  await expect(pastEvents.getByText("Freshman orientation welcome team")).toBeVisible();
+  await expect(pastEvents.getByText(/\d+ confirmed/)).toHaveCount(0);
+
+  await page
+    .getByRole("complementary", { name: "Read-only role preview" })
+    .getByRole("link", { name: "Teacher", exact: true })
+    .click();
+  await expect(page).toHaveURL(/role=teacher_admin&section=events&view=past/);
+  await expect(
+    page.locator('section[aria-label="Past events"]').getByText("10 confirmed"),
+  ).toBeVisible();
+
+  await page
+    .getByRole("navigation", { name: "Event views" })
+    .getByRole("link", { name: /Active/ })
+    .click();
+  await expect(page).toHaveURL(/role=teacher_admin&section=events$/);
+  await expect(page.getByText("Fall festival setup & welcome team", { exact: true })).toBeVisible();
 });
 
 test("@mobile member dashboard and hour form previews remain usable without overflow", async ({

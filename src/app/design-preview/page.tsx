@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/portal/page-header";
 import { ProgressSummary, formatHours } from "@/components/portal/progress-summary";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { ReviewDecisionPanel } from "@/components/review/review-decision-panel";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -263,33 +263,102 @@ const previewServiceEvent: ServiceEvent = {
   can_manage: false,
 };
 
-function EventsPreview({ viewer }: { viewer: Viewer }) {
+const previewPastServiceEvents: ServiceEvent[] = [
+  {
+    ...previewServiceEvent,
+    id: "70000000-0000-4000-8000-000000000002",
+    title: "Community garden volunteer shift",
+    description:
+      "Help prepare planting beds and organize fresh produce for neighborhood distribution.",
+    location: "Community garden",
+    starts_at: "2026-08-23T13:00:00",
+    ends_at: "2026-08-23T16:00:00",
+    signup_deadline: "2026-08-22T15:00:00",
+    is_signup_closed: true,
+    ended_at: "2026-08-23T20:00:00Z",
+    updated_at: "2026-08-23T20:00:00Z",
+    capacity: 12,
+    confirmed_count: 10,
+    spots_remaining: 2,
+    is_expired: true,
+  },
+  {
+    ...previewServiceEvent,
+    id: "70000000-0000-4000-8000-000000000003",
+    title: "Freshman orientation welcome team",
+    description:
+      "Welcome incoming students, guide families to check-in, and help reset the welcome area.",
+    location: "School entrance and auditorium",
+    starts_at: "2026-08-15T09:00:00",
+    ends_at: "2026-08-15T12:00:00",
+    signup_deadline: "2026-08-14T15:00:00",
+    is_signup_closed: true,
+    ended_at: "2026-08-15T16:00:00Z",
+    updated_at: "2026-08-15T16:00:00Z",
+    capacity: 8,
+    confirmed_count: 8,
+    spots_remaining: 0,
+    is_expired: true,
+  },
+];
+
+function EventsPreview({
+  viewer,
+  role,
+  view,
+}: {
+  viewer: Viewer;
+  role: PreviewRole;
+  view: "active" | "past";
+}) {
   const canPublish =
     viewer.isTeacherAdmin || viewer.isAdmin || viewer.roles.includes("committee_head");
-  const event = {
-    ...previewServiceEvent,
-    can_manage: canPublish,
-    my_registration_status: viewer.isMember && !canPublish ? ("confirmed" as const) : null,
-  };
+  const events = (view === "past" ? previewPastServiceEvents : [previewServiceEvent]).map(
+    (event, index) => ({
+      ...event,
+      can_manage: canPublish,
+      my_registration_status:
+        viewer.isMember && !canPublish && index === 0 ? ("confirmed" as const) : null,
+    }),
+  );
   return (
     <div className="page-container">
-      <PageHeader
-        eyebrow="2026–2027"
-        title="Volunteer events"
-        description="Full events use a first-come waitlist that promotes the next student automatically."
-        actions={canPublish ? <Button>Publish event</Button> : undefined}
-      />
-      <div className="mb-6 inline-flex rounded-lg bg-muted p-1">
-        <Button size="sm">
+      <div inert className="pointer-events-none">
+        <PageHeader
+          eyebrow="2026–2027"
+          title="Volunteer events"
+          description="Full events use a first-come waitlist that promotes the next student automatically."
+          actions={canPublish ? <Button>Publish event</Button> : undefined}
+        />
+      </div>
+      <nav className="mb-6 inline-flex rounded-lg bg-muted p-1" aria-label="Event views">
+        <Link
+          href={previewHref(role, "events")}
+          className={buttonVariants({
+            size: "sm",
+            variant: view === "active" ? "default" : "ghost",
+          })}
+          aria-current={view === "active" ? "page" : undefined}
+        >
           Active <span className="ml-1">(1)</span>
-        </Button>
-        <Button size="sm" variant="ghost">
+        </Link>
+        <Link
+          href={previewHref(role, "events", "past")}
+          className={buttonVariants({ size: "sm", variant: view === "past" ? "default" : "ghost" })}
+          aria-current={view === "past" ? "page" : undefined}
+        >
           Past <span className="ml-1">(2)</span>
-        </Button>
-      </div>
-      <div className="max-w-3xl">
-        <ServiceEventCard event={event} viewerCanSignUp={viewer.isMember} />
-      </div>
+        </Link>
+      </nav>
+      <section
+        inert
+        aria-label={view === "past" ? "Past events" : "Active volunteer events"}
+        className="pointer-events-none max-w-3xl space-y-5"
+      >
+        {events.map((event) => (
+          <ServiceEventCard key={event.id} event={event} viewerCanSignUp={viewer.isMember} />
+        ))}
+      </section>
     </div>
   );
 }
@@ -803,11 +872,21 @@ function defaultSectionForRole(role: PreviewRole): string {
   return role === "teacher_admin" || role === "platform_owner" ? "member-progress" : "dashboard";
 }
 
-function previewHref(role: PreviewRole, section: string): string {
-  return `/design-preview?role=${role}&section=${section}`;
+function previewHref(role: PreviewRole, section: string, eventView?: "active" | "past"): string {
+  const params = new URLSearchParams({ role, section });
+  if (section === "events" && eventView === "past") params.set("view", "past");
+  return `/design-preview?${params.toString()}`;
 }
 
-function RolePreviewToolbar({ role, section }: { role: PreviewRole; section: string }) {
+function RolePreviewToolbar({
+  role,
+  section,
+  eventView,
+}: {
+  role: PreviewRole;
+  section: string;
+  eventView: "active" | "past";
+}) {
   const items = [
     {
       role: "member" as const,
@@ -845,6 +924,7 @@ function RolePreviewToolbar({ role, section }: { role: PreviewRole; section: str
               previewSectionsByRole[item.role].includes(section)
                 ? section
                 : defaultSectionForRole(item.role),
+              section === "events" ? eventView : undefined,
             )}
             aria-current={item.role === role ? "page" : undefined}
             className={
@@ -870,12 +950,13 @@ function RolePreviewToolbar({ role, section }: { role: PreviewRole; section: str
 export default async function DesignPreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ screen?: string; role?: string; section?: string }>;
+  searchParams: Promise<{ screen?: string; role?: string; section?: string; view?: string }>;
 }) {
   const localPreview = localDesignPreviewEnabled();
   if (!localPreview) await requireAdmin();
 
-  const { screen, role: requestedRole, section: requestedSection } = await searchParams;
+  const { screen, role: requestedRole, section: requestedSection, view } = await searchParams;
+  const eventView = view === "past" ? "past" : "active";
   const role: PreviewRole =
     requestedRole === "platform_owner" || screen === "admin"
       ? "platform_owner"
@@ -924,15 +1005,18 @@ export default async function DesignPreviewPage({
     <>
       {!localPreview ? (
         <p className="sr-only" aria-live="polite">
-          Current synthetic preview: {previewName}. Interactive controls inside the preview are
-          disabled.
+          Current synthetic preview: {previewName}. Preview navigation is available; actions that
+          change data are disabled.
         </p>
       ) : null}
       <div>
         <AppShell
           viewer={viewer}
           preview={{ role, section }}
-          previewControls={<RolePreviewToolbar role={role} section={section} />}
+          previewControls={
+            <RolePreviewToolbar role={role} section={section} eventView={eventView} />
+          }
+          previewContentNavigation={section === "events"}
         >
           {section === "review-request" ? (
             <ReviewRequestPreview canReview={viewer.canReview} canReassign={viewer.isAdmin} />
@@ -941,7 +1025,7 @@ export default async function DesignPreviewPage({
           ) : section === "member-progress" ? (
             <MemberProgressPreview />
           ) : section === "events" ? (
-            <EventsPreview viewer={viewer} />
+            <EventsPreview viewer={viewer} role={role} view={eventView} />
           ) : section === "profile" ? (
             <ProfilePreview viewer={viewer} />
           ) : section === "accounts" || section === "exports" || section === "settings" ? (
