@@ -10,7 +10,17 @@ Supabase's built-in email service has a very low project-wide quota and recipien
 
 References: [Supabase SMTP](https://supabase.com/docs/guides/auth/auth-smtp), [Auth rate limits](https://supabase.com/docs/guides/auth/rate-limits).
 
-## Recovery while SMTP is unavailable
+## Admin-assisted recovery in the portal
+
+For an existing, confirmed member with active school-year access, a global Admin can open **Accounts → Account actions → Generate reset link**. The dialog shows the member's school email and requires the Admin to confirm that they verified the requester and will use a school-approved private delivery channel. The link is displayed only in that dialog; closing it clears the portal's copy. Send it to the verified school address, and have the member open it and choose their own password. Do not open the link on the member's behalf.
+
+This action is unavailable for teachers, administrators as recipients, inactive or expired members, and pending invitations. Use **Resend** for pending invitations. The database permits one request per member every 15 minutes and at most ten requests per Admin per hour. It records the Admin, target, time, and generation outcome without storing the link or token. Generating a new recovery proof invalidates an earlier one, so ask the member to use the most recent link.
+
+The link uses `/auth/confirm?type=recovery&token_hash=...`, which first shows the non-consuming confirmation page. Its actual lifetime is controlled by the hosted Supabase Email OTP Expiration setting. The browser clipboard can retain a copied link after the dialog closes, so handle it as a password credential.
+
+Deploy `20260923010000_admin_member_recovery_links.sql` before releasing the portal action. Verify the hosted secret key, canonical application URL, and recovery expiry setting with a synthetic member before allowing school use.
+
+## Operator fallback outside the portal
 
 An authorized system operator can generate a recovery link for an existing member with the server-only Supabase Admin `generateLink({ type: "recovery", email })` API. This generates a one-time proof without sending an email. Deliver it privately to the member's verified school address using the school's normal communication channel. Do not set a shared password or place a live link in source control, logs, tickets, or public messages.
 

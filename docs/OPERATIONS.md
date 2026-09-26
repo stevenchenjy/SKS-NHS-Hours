@@ -150,10 +150,11 @@ Google sign-in is optional and must remain hidden while `NEXT_PUBLIC_GOOGLE_AUTH
 
 ### Invite, resend, deactivate, and assign annual access
 
-Use the teacher-administrator account UI for ordinary lifecycle operations; do not create application membership records manually after initial bootstrap.
+Use the Admin account UI for ordinary lifecycle operations; do not create application membership records manually after initial bootstrap.
 
 - **Invite:** validate the email and allowed domain; create pending application invitation/role metadata with no recorded send; ask Supabase Auth to accept an Invite User message carrying the exact invitation ID; then record the accepted send/count/audit. Claim membership/roles only after token-hash confirmation succeeds.
 - **Resend:** use the same pending invitation and call Auth Invite User again. Only a provider-accepted message extends expiry to seven days and increments `send_count`; a provider rejection leaves those facts unchanged. Do not use the ordinary signup-confirmation resend method and do not create a duplicate application invitation/membership. If Auth accepted the email but receipt recording failed, inspect the invitation and audit trail before another send. Preparation, acknowledgement, resend, and revocation for a teacher-admin invitation are platform-owner-only.
+- **Help an existing member reset a password:** use Accounts → the member's account actions → **Generate reset link**. Confirm the member's identity and verified school email, generate the link once, and deliver it through a school-approved private channel. Only active, confirmed member accounts are eligible. This is a credential: do not open it, paste it into tickets or chats, or store it. Admin generation is limited to one request per member per 15 minutes and ten per Admin per hour; the request and outcome are audited without the token. Teachers cannot use this action.
 - **Deactivate:** make the profile inactive or membership suspended through the protected workflow. Revoking the Auth session is additional defense, not a substitute for membership checks.
 - **Add existing account to a year:** create/reactivate a destination-year membership, fix expiration to the year end, link prior access when available, and deliberately choose Member, Committee head, or President / Vice President. Do not extend or overwrite the historical membership.
 - **Expire/archive:** retain identity, approved requests, review/correction history, and audit events. Expiration removes active submission/review authority. Expired access and access/roles in closed or archived years are read-only; continued participation uses destination-year access.
@@ -162,7 +163,7 @@ Invitation secrets and password-reset tokens must never be stored in application
 
 ## School administration procedures
 
-Every procedure below requires an active global `teacher_admin` or `platform_owner` grant unless it is explicitly a student-leader review action. Global administrators do not require in-date annual membership. Use different people for submission and review, and verify the resulting history/audit after consequential changes.
+Every procedure below requires an active global `admin` or `platform_owner` grant unless it is explicitly a teacher or student-leader review action. Global administrators do not require in-date annual membership. Use different people for submission and review, and verify the resulting history/audit after consequential changes.
 
 ### Invite and manage accounts
 
@@ -171,6 +172,7 @@ Every procedure below requires an active global `teacher_admin` or `platform_own
 3. For a roster, use **Import roster** with UTF-8 CSV headers `email,full_name,roles`. Separate combined roles with `|`. The importer accepts at most 250 account rows and 1 MB, rejects unknown/duplicate headers and duplicate emails, and validates the whole file before starting invitations. Provider/state/receipt failures after validation can still produce a partial result; resolve each reported line and use Resend rather than reimporting it blindly.
 4. Use **Invitations** to inspect status, expiry, and provider-accepted send count. Resend requests a new Auth message and updates the facts only after acceptance; Revoke prevents the portal invitation from being claimed. Only the platform owner can perform lifecycle actions on a teacher-admin invitation. Verify actual inbox delivery because Auth/SMTP is a separate system.
 5. Use **Accounts** actions to suspend/reactivate eligible open-year annual access or deactivate/reactivate a profile. Profile status affects every path; annual status is year-specific. Expired and closed/archived-year access and roles are read-only, so use destination-year access for continued participation. The database protects the final global administrator and requires ownership transfer before owner removal.
+6. For password help with an existing active member, choose **Generate reset link** from that account's actions. The dialog displays the verified school address; copy the link and deliver it privately. Use **Resend** for a pending invitation. A generated link follows the portal's two-step confirmation path and expires at the hosted Auth email OTP setting.
 
 ### Assign annual and global access
 

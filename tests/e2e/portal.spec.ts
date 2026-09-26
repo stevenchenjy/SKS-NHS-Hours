@@ -637,6 +637,35 @@ test("platform owner receives global admin navigation and opens a member profile
   await expect(page).toHaveURL(/\/admin\/accounts\?view=directory/);
 });
 
+test("platform owner can generate a member reset link in Accounts", async ({ page }) => {
+  await login(page, syntheticAccounts.platformOwner.email);
+  await page.goto("/admin/accounts?view=directory");
+
+  const memberRow = page.getByRole("row").filter({ hasText: syntheticAccounts.member.fullName });
+  await memberRow
+    .getByRole("button", { name: `Account actions for ${syntheticAccounts.member.fullName}` })
+    .click();
+  await page.getByRole("menuitem", { name: "Generate reset link" }).click();
+
+  const dialog = page.getByRole("dialog", {
+    name: `Reset password for ${syntheticAccounts.member.fullName}`,
+  });
+  await expect(dialog).toContainText(syntheticAccounts.member.email);
+  const generate = dialog.getByRole("button", { name: "Generate reset link" });
+  await expect(generate).toBeDisabled();
+  await dialog.getByRole("checkbox").check();
+  await generate.click();
+
+  const link = await dialog.getByRole("textbox", { name: "Reset link" }).inputValue();
+  const url = new URL(link);
+  expect(url.origin).toBe(new URL(process.env.NEXT_PUBLIC_APP_URL!).origin);
+  expect(url.pathname).toBe("/auth/confirm");
+  expect(url.searchParams.get("type")).toBe("recovery");
+  expect(url.searchParams.get("token_hash")).toBeTruthy();
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
 test("platform owner creates a year and assigns the next leadership team", async ({ page }) => {
   await login(page, syntheticAccounts.platformOwner.email);
   await expect(

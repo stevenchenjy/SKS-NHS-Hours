@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download, MoreHorizontal, Search, X } from "lucide-react";
+import { Download, Search, X } from "lucide-react";
 
 import {
   assignRoleAction,
@@ -21,16 +21,11 @@ import {
 import { PageHeader } from "@/components/portal/page-header";
 import { RouteRefresh } from "@/components/portal/route-refresh";
 import { AccountSetupCells } from "@/components/admin/account-setup-cells";
+import { AccountRecoveryMenu } from "@/components/admin/account-recovery-menu";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -568,168 +563,170 @@ export default async function AccountsPage({
                           <StatusBadge status={profile.status} />
                         </TableCell>
                         <TableCell className="pr-5 text-right align-top">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
-                              <MoreHorizontal aria-hidden="true" />
-                              <span className="sr-only">
-                                Account actions for {profile.full_name}
-                              </span>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {membership && !globalLabel && !isFormerAdminAnchor ? (
-                                <DropdownMenuItem
-                                  render={
-                                    <Link
-                                      href={`/admin/members/${profile.id}?year=${encodeURIComponent(selectedYearId)}`}
-                                    />
-                                  }
-                                >
-                                  Open service profile
-                                </DropdownMenuItem>
-                              ) : !membership &&
-                                !globalLabel &&
-                                profile.status === "active" &&
-                                defaultOpenSchoolYearId ? (
-                                <DropdownMenuItem
-                                  render={
-                                    <Link
-                                      href={accountsHref("add", defaultOpenSchoolYearId, {
-                                        profile: profile.id,
-                                      })}
-                                    />
-                                  }
-                                >
-                                  Add to school year
-                                </DropdownMenuItem>
-                              ) : null}
-                              {membership &&
-                              !globalLabel &&
-                              isHistoricalMembership &&
-                              !isFormerAdminAnchor &&
+                          <AccountRecoveryMenu
+                            accountName={profile.full_name}
+                            recoveryTarget={
                               profile.status === "active" &&
-                              destinationSchoolYear ? (
-                                <DropdownMenuItem
-                                  render={
-                                    <Link
-                                      href={accountsHref("add", destinationSchoolYear.id, {
-                                        profile: profile.id,
-                                      })}
-                                    />
-                                  }
-                                >
-                                  Assign access in {destinationSchoolYear.label}
-                                </DropdownMenuItem>
-                              ) : null}
-                              {membership &&
                               !globalLabel &&
-                              isHistoricalMembership &&
-                              !isFormerAdminAnchor &&
+                              displayedAccessStatus === "active" &&
+                              membershipRoles.includes("member")
+                                ? { profileId: profile.id, email: profile.email }
+                                : undefined
+                            }
+                          >
+                            {membership && !globalLabel && !isFormerAdminAnchor ? (
+                              <DropdownMenuItem
+                                render={
+                                  <Link
+                                    href={`/admin/members/${profile.id}?year=${encodeURIComponent(selectedYearId)}`}
+                                  />
+                                }
+                              >
+                                Open service profile
+                              </DropdownMenuItem>
+                            ) : !membership &&
+                              !globalLabel &&
                               profile.status === "active" &&
-                              !destinationSchoolYear ? (
-                                <DropdownMenuItem
-                                  render={<Link href="/admin/settings/school-years" />}
-                                >
-                                  Open a destination school year
-                                </DropdownMenuItem>
-                              ) : null}
-                              {membership &&
-                              !globalLabel &&
-                              isHistoricalMembership &&
-                              !isFormerAdminAnchor &&
-                              profile.status === "inactive" ? (
-                                <DropdownMenuItem disabled>
-                                  Reactivate account before assigning a new year
-                                </DropdownMenuItem>
-                              ) : null}
-                              {canGrantTeacherAdmin ? (
-                                <DropdownMenuItem
-                                  render={
-                                    <form action={grantAdmin}>
-                                      <button type="submit" className="w-full text-left">
-                                        Grant teacher
-                                      </button>
-                                    </form>
-                                  }
-                                />
-                              ) : null}
-                              {viewer.isAdmin &&
-                              record.globalAccessLevel === null &&
-                              isObviousMember ? (
-                                <DropdownMenuItem disabled>
-                                  Member accounts cannot become global admins
-                                </DropdownMenuItem>
-                              ) : null}
-                              {viewer.isAdmin &&
-                              record.globalAccessLevel === null &&
-                              profile.status === "inactive" &&
-                              (!membership || isFormerAdminAnchor) ? (
-                                <DropdownMenuItem disabled>
-                                  Reactivate account before granting administrator access
-                                </DropdownMenuItem>
-                              ) : null}
-                              {viewer.isAdmin && record.globalAccessLevel === "teacher_admin" ? (
-                                <>
-                                  {viewer.isPlatformOwner ? (
-                                    <DropdownMenuItem
-                                      render={
-                                        <Link
-                                          href={accountsHref("directory", selectedYearId, {
-                                            confirm_transfer: profile.id,
-                                          })}
-                                        />
-                                      }
-                                    >
-                                      Transfer ownership
-                                    </DropdownMenuItem>
-                                  ) : null}
+                              defaultOpenSchoolYearId ? (
+                              <DropdownMenuItem
+                                render={
+                                  <Link
+                                    href={accountsHref("add", defaultOpenSchoolYearId, {
+                                      profile: profile.id,
+                                    })}
+                                  />
+                                }
+                              >
+                                Add to school year
+                              </DropdownMenuItem>
+                            ) : null}
+                            {membership &&
+                            !globalLabel &&
+                            isHistoricalMembership &&
+                            !isFormerAdminAnchor &&
+                            profile.status === "active" &&
+                            destinationSchoolYear ? (
+                              <DropdownMenuItem
+                                render={
+                                  <Link
+                                    href={accountsHref("add", destinationSchoolYear.id, {
+                                      profile: profile.id,
+                                    })}
+                                  />
+                                }
+                              >
+                                Assign access in {destinationSchoolYear.label}
+                              </DropdownMenuItem>
+                            ) : null}
+                            {membership &&
+                            !globalLabel &&
+                            isHistoricalMembership &&
+                            !isFormerAdminAnchor &&
+                            profile.status === "active" &&
+                            !destinationSchoolYear ? (
+                              <DropdownMenuItem
+                                render={<Link href="/admin/settings/school-years" />}
+                              >
+                                Open a destination school year
+                              </DropdownMenuItem>
+                            ) : null}
+                            {membership &&
+                            !globalLabel &&
+                            isHistoricalMembership &&
+                            !isFormerAdminAnchor &&
+                            profile.status === "inactive" ? (
+                              <DropdownMenuItem disabled>
+                                Reactivate account before assigning a new year
+                              </DropdownMenuItem>
+                            ) : null}
+                            {canGrantTeacherAdmin ? (
+                              <DropdownMenuItem
+                                render={
+                                  <form action={grantAdmin}>
+                                    <button type="submit" className="w-full text-left">
+                                      Grant teacher
+                                    </button>
+                                  </form>
+                                }
+                              />
+                            ) : null}
+                            {viewer.isAdmin &&
+                            record.globalAccessLevel === null &&
+                            isObviousMember ? (
+                              <DropdownMenuItem disabled>
+                                Member accounts cannot become global admins
+                              </DropdownMenuItem>
+                            ) : null}
+                            {viewer.isAdmin &&
+                            record.globalAccessLevel === null &&
+                            profile.status === "inactive" &&
+                            (!membership || isFormerAdminAnchor) ? (
+                              <DropdownMenuItem disabled>
+                                Reactivate account before granting administrator access
+                              </DropdownMenuItem>
+                            ) : null}
+                            {viewer.isAdmin && record.globalAccessLevel === "teacher_admin" ? (
+                              <>
+                                {viewer.isPlatformOwner ? (
                                   <DropdownMenuItem
                                     render={
-                                      <form action={revokeAdmin}>
-                                        <button type="submit" className="w-full text-left">
-                                          Revoke teacher
-                                        </button>
-                                      </form>
+                                      <Link
+                                        href={accountsHref("directory", selectedYearId, {
+                                          confirm_transfer: profile.id,
+                                        })}
+                                      />
                                     }
-                                  />
-                                </>
-                              ) : null}
-                              {record.globalAccessLevel === "platform_owner" ? (
-                                <DropdownMenuItem disabled>Protected admin</DropdownMenuItem>
-                              ) : null}
-                              {!viewer.isAdmin && record.globalAccessLevel === "teacher_admin" ? (
-                                <DropdownMenuItem disabled>Managed by the admin</DropdownMenuItem>
-                              ) : null}
-                              {(membershipAction && !globalLabel) || canChangeProfileStatus ? (
-                                <DropdownMenuSeparator />
-                              ) : null}
-                              {membershipAction && !globalLabel ? (
+                                  >
+                                    Transfer ownership
+                                  </DropdownMenuItem>
+                                ) : null}
                                 <DropdownMenuItem
                                   render={
-                                    <form action={membershipAction}>
+                                    <form action={revokeAdmin}>
                                       <button type="submit" className="w-full text-left">
-                                        {membership?.status === "active"
-                                          ? `Suspend ${selectedYear?.label ?? "school-year"} access`
-                                          : `Reactivate ${selectedYear?.label ?? "school-year"} access`}
+                                        Revoke teacher
                                       </button>
                                     </form>
                                   }
                                 />
-                              ) : null}
-                              {canChangeProfileStatus ? (
-                                <DropdownMenuItem
-                                  render={
-                                    <form action={profileAction}>
-                                      <button type="submit" className="w-full text-left">
-                                        {profile.status === "active"
-                                          ? "Deactivate account everywhere"
-                                          : "Reactivate account"}
-                                      </button>
-                                    </form>
-                                  }
-                                />
-                              ) : null}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                              </>
+                            ) : null}
+                            {record.globalAccessLevel === "platform_owner" ? (
+                              <DropdownMenuItem disabled>Protected admin</DropdownMenuItem>
+                            ) : null}
+                            {!viewer.isAdmin && record.globalAccessLevel === "teacher_admin" ? (
+                              <DropdownMenuItem disabled>Managed by the admin</DropdownMenuItem>
+                            ) : null}
+                            {(membershipAction && !globalLabel) || canChangeProfileStatus ? (
+                              <DropdownMenuSeparator />
+                            ) : null}
+                            {membershipAction && !globalLabel ? (
+                              <DropdownMenuItem
+                                render={
+                                  <form action={membershipAction}>
+                                    <button type="submit" className="w-full text-left">
+                                      {membership?.status === "active"
+                                        ? `Suspend ${selectedYear?.label ?? "school-year"} access`
+                                        : `Reactivate ${selectedYear?.label ?? "school-year"} access`}
+                                    </button>
+                                  </form>
+                                }
+                              />
+                            ) : null}
+                            {canChangeProfileStatus ? (
+                              <DropdownMenuItem
+                                render={
+                                  <form action={profileAction}>
+                                    <button type="submit" className="w-full text-left">
+                                      {profile.status === "active"
+                                        ? "Deactivate account everywhere"
+                                        : "Reactivate account"}
+                                    </button>
+                                  </form>
+                                }
+                              />
+                            ) : null}
+                          </AccountRecoveryMenu>
                         </TableCell>
                       </TableRow>
                     );
