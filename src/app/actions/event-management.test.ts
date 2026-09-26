@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SERVICE_EVENT_AUDIENCE } from "@/lib/domain/events";
+
 const { rpc, viewer, getEvent, revalidate } = vi.hoisted(() => ({
   rpc: vi.fn(),
   viewer: vi.fn(),
@@ -38,7 +40,6 @@ function form() {
     title: "Library helpers",
     description: "Sort books",
     location: "Library",
-    volunteer_audience: "NHS members",
     starts_at: "2026-10-20T15:00",
     ends_at: "2026-10-20T17:00",
     signup_deadline: "2026-10-19T15:00",
@@ -60,13 +61,18 @@ beforeEach(() => {
 });
 
 describe("event management actions", () => {
-  it("sends the deadline on publish", async () => {
-    await expect(createServiceEventAction({}, form())).rejects.toThrow(
+  it("publishes for all active members regardless of submitted audience", async () => {
+    const data = form();
+    data.set("volunteer_audience", "Only selected members");
+    await expect(createServiceEventAction({}, data)).rejects.toThrow(
       `REDIRECT:/events/${id}?notice=created`,
     );
     expect(rpc).toHaveBeenCalledWith(
       "create_service_event",
-      expect.objectContaining({ p_signup_deadline: "2026-10-19T15:00" }),
+      expect.objectContaining({
+        p_signup_deadline: "2026-10-19T15:00",
+        p_volunteer_audience: SERVICE_EVENT_AUDIENCE,
+      }),
     );
   });
   it("rejects editing another organizer's event before calling the mutation", async () => {
@@ -81,7 +87,10 @@ describe("event management actions", () => {
     expect(result.values?.title).toBe("Library helpers");
     expect(rpc).toHaveBeenCalledWith(
       "update_service_event",
-      expect.objectContaining({ p_expected_updated_at: version }),
+      expect.objectContaining({
+        p_expected_updated_at: version,
+        p_volunteer_audience: SERVICE_EVENT_AUDIENCE,
+      }),
     );
   });
   it("validates the deadline before saving", async () => {

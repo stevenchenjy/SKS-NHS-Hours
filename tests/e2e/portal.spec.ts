@@ -469,6 +469,7 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
   await page.goto("/events");
   await expect(page.getByRole("heading", { name: "Volunteer events" })).toBeVisible();
   await page.getByRole("button", { name: "Publish event" }).first().click();
+  await expect(page.getByLabel("Who should volunteer?")).toHaveCount(0);
   await page.getByLabel("Event title").fill(volunteerEventTitle);
   await page
     .getByLabel("What help is needed?")
@@ -484,6 +485,7 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
   await page.waitForURL(/\/events\/[0-9a-f-]+\?notice=created/);
   const eventPath = new URL(page.url()).pathname;
   await expect(page.getByRole("status")).toContainText("visible to everyone");
+  await expect(page.getByText("All active NHS members", { exact: true })).toHaveCount(0);
 
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.getByRole("button", { name: "Copy signup link", exact: true }).click();
@@ -529,6 +531,7 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
   await expect(promotedMember).toContainText("Confirmed");
 
   await page.getByRole("button", { name: "Edit event", exact: true }).click();
+  await expect(page.getByLabel("Who should volunteer?")).toHaveCount(0);
   await page.getByLabel("Location", { exact: true }).fill("Main gym");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page.waitForURL(/notice=updated/);

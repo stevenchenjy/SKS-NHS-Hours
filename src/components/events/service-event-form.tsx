@@ -120,19 +120,6 @@ export function ServiceEventForm({
               required
             />
           </FormField>
-          <FormField name="volunteer_audience" label="Who should volunteer?" state={state}>
-            <Input
-              id="volunteer_audience"
-              name="volunteer_audience"
-              maxLength={500}
-              defaultValue={fieldValue(
-                "volunteer_audience",
-                event?.volunteer_audience ?? "All active NHS members",
-              )}
-              aria-invalid={Boolean(errorFor(state, "volunteer_audience"))}
-              required
-            />
-          </FormField>
         </FieldGroup>
       </FieldSet>
 
