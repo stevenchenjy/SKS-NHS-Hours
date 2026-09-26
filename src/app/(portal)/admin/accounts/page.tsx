@@ -434,7 +434,6 @@ export default async function AccountsPage({
                       membership.status === "archived" &&
                       membershipRoles.length === 0,
                     );
-                    const isObviousMember = Boolean(membership && !isFormerAdminAnchor);
                     const canGrantTeacherAdmin = Boolean(
                       viewer.isAdmin &&
                       record.globalAccessLevel === null &&
@@ -649,13 +648,6 @@ export default async function AccountsPage({
                                   </form>
                                 }
                               />
-                            ) : null}
-                            {viewer.isAdmin &&
-                            record.globalAccessLevel === null &&
-                            isObviousMember ? (
-                              <DropdownMenuItem disabled>
-                                Member accounts cannot become global admins
-                              </DropdownMenuItem>
                             ) : null}
                             {viewer.isAdmin &&
                             record.globalAccessLevel === null &&
