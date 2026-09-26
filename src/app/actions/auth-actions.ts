@@ -126,12 +126,7 @@ export async function updatePasswordAction(
 ): Promise<AuthFormState> {
   const parsed = z
     .object({
-      password: z
-        .string()
-        .min(12, "Use at least 12 characters.")
-        .regex(/[a-z]/, "Include a lowercase letter.")
-        .regex(/[A-Z]/, "Include an uppercase letter.")
-        .regex(/[0-9]/, "Include a number."),
+      password: z.string().min(6, "Use at least 6 characters."),
       confirmation: z.string(),
     })
     .refine((values) => values.password === values.confirmation, {

@@ -25,7 +25,7 @@ export function UpdatePasswordForm() {
             className="h-11"
           />
           <FieldDescription>
-            At least 12 characters with uppercase, lowercase, and a number.
+            At least 6 characters. No specific character types required.
           </FieldDescription>
           <FieldError>{state.fieldErrors?.password?.[0]}</FieldError>
         </Field>

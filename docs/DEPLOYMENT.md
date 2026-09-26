@@ -88,7 +88,7 @@ Confirm the intended project in both CLI output and dashboard before any databas
 For each hosted project:
 
 1. Disable public email signup and anonymous sign-in.
-2. Require at least the repository's local password baseline: 12 characters with lower case, upper case, and digits; use stronger school policy where available.
+2. Match the configured password policy: minimum 6 characters with no required character types.
 3. Enable secure password change/recent reauthentication. The application also requires a signed, user-bound, 30-minute context produced only after verified invite/recovery proof; reproduce and test the hosted setting.
 4. Set the Site URL to that environment's exact `NEXT_PUBLIC_APP_URL`.
 5. Allow only the exact redirect URLs the environment needs: `https://HOST/auth/callback`, `https://HOST/auth/recovery-callback`, and `https://HOST/update-password`; do not add wildcards to compensate for configuration errors.
