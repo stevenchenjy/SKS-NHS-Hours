@@ -522,7 +522,7 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
   await expect(page).toHaveURL(/\/notifications$/);
   await expect(notificationsLink.getByTestId("new-activity-notifications")).toHaveCount(0);
   await expect(
-    page.getByText("Your signup is confirmed. You have a spot in this event."),
+    page.getByText("Your signup is confirmed. You have a spot in this event.").first(),
   ).toBeVisible();
   await page.goto(eventPath);
   await expect(notificationsLink.getByTestId("new-activity-notifications")).toHaveCount(0);
