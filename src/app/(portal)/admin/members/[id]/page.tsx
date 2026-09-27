@@ -122,9 +122,6 @@ export default async function MemberProfilePage({
                 <h2 id="progress-title" className="text-xl font-bold">
                   {selectedMembership.school_year.label} progress
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Only approved requests count toward this total.
-                </p>
               </div>
               {memberships.length > 1 ? (
                 <nav aria-label="School years" className="flex flex-wrap gap-2">
