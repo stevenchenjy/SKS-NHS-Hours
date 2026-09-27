@@ -504,9 +504,28 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
   await expect(page).toHaveURL(signupLink);
   await expect(page.getByRole("heading", { name: volunteerEventTitle })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy signup link", exact: true })).toHaveCount(0);
+  const primaryNavigation = page.getByRole("navigation", { name: "Primary navigation" });
+  const eventsLink = primaryNavigation.getByRole("link", { name: "Events" });
+  await expect(eventsLink.getByTestId("new-activity-events")).toBeVisible();
+  await eventsLink.click();
+  await expect(page).toHaveURL(/\/events$/);
+  await expect(eventsLink.getByTestId("new-activity-events")).toHaveCount(0);
+  await page.goto(eventPath);
+  await expect(eventsLink.getByTestId("new-activity-events")).toHaveCount(0);
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
   await page.waitForURL(/notice=confirmed/);
   await expect(page.getByText("You’re confirmed", { exact: true })).toBeVisible();
+  await page.reload();
+  const notificationsLink = primaryNavigation.getByRole("link", { name: "Notifications" });
+  await expect(notificationsLink.getByTestId("new-activity-notifications")).toBeVisible();
+  await notificationsLink.click();
+  await expect(page).toHaveURL(/\/notifications$/);
+  await expect(notificationsLink.getByTestId("new-activity-notifications")).toHaveCount(0);
+  await expect(
+    page.getByText("Your signup is confirmed. You have a spot in this event."),
+  ).toBeVisible();
+  await page.goto(eventPath);
+  await expect(notificationsLink.getByTestId("new-activity-notifications")).toHaveCount(0);
 
   await login(page, syntheticAccounts.leaderMember.email);
   await page.goto(eventPath);

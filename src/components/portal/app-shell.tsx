@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType, ReactNode } from "react";
+import { startTransition, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -20,11 +20,16 @@ import {
 } from "lucide-react";
 
 import { signOutAction } from "@/app/actions/auth-actions";
+import {
+  getNavigationIndicatorsAction,
+  markNavigationSectionSeenAction,
+} from "@/app/actions/navigation-indicator-actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/events/notification-bell";
 import { Button } from "@/components/ui/button";
 import { canViewMemberProgress } from "@/lib/domain/roles";
 import { cn } from "@/lib/utils";
+import type { NavigationIndicators } from "@/lib/dal/navigation-indicators";
 import type { Viewer } from "@/lib/types";
 
 interface NavigationItem {
@@ -116,10 +121,14 @@ function NavLink({
   item,
   compact = false,
   preview,
+  hasNewActivity = false,
+  onActivate,
 }: {
   item: NavigationItem;
   compact?: boolean;
   preview?: AppShellPreview;
+  hasNewActivity?: boolean;
+  onActivate?: () => void;
 }) {
   const pathname = usePathname();
   const active = preview
@@ -127,13 +136,16 @@ function NavLink({
     : pathname === item.href ||
       (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
   const Icon = item.icon;
+  const newActivityDescriptionId = `nav-${compact ? "mobile" : "desktop"}-${item.href.slice(1)}-new`;
   return (
     <Link
       href={preview ? previewHref(preview, item.href) : item.href}
       aria-current={active ? "page" : undefined}
+      aria-describedby={hasNewActivity ? newActivityDescriptionId : undefined}
+      onClick={onActivate}
       className={cn(
         compact
-          ? "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-2 text-[0.72rem] font-medium"
+          ? "relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-2 text-[0.72rem] font-medium"
           : "relative flex min-h-11 items-center gap-3 rounded-md px-4 py-2 text-sm font-medium",
         active
           ? compact
@@ -144,6 +156,18 @@ function NavLink({
     >
       <Icon className={compact ? "size-5" : "size-[1.1rem]"} aria-hidden={true} />
       <span>{item.label}</span>
+      {hasNewActivity ? (
+        <>
+          <span
+            data-testid={`new-activity-${item.href.slice(1)}`}
+            className="pointer-events-none absolute right-3 top-2 size-2 rounded-full bg-red-500 ring-2 ring-sidebar"
+            aria-hidden="true"
+          />
+          <span id={newActivityDescriptionId} className="sr-only">
+            New activity
+          </span>
+        </>
+      ) : null}
     </Link>
   );
 }
@@ -155,6 +179,7 @@ export function AppShell({
   previewControls,
   previewContentNavigation = false,
   unreadNotifications = 0,
+  initialNavigationIndicators = { events: false, notifications: false },
 }: {
   viewer: Viewer;
   children: ReactNode;
@@ -162,7 +187,61 @@ export function AppShell({
   previewControls?: ReactNode;
   previewContentNavigation?: boolean;
   unreadNotifications?: number;
+  initialNavigationIndicators?: NavigationIndicators;
 }) {
+  const pathname = usePathname();
+  const [navigationIndicators, setNavigationIndicators] = useState(initialNavigationIndicators);
+  useEffect(() => {
+    if (preview) return;
+    let disposed = false;
+    let loading = false;
+    const openedSection =
+      pathname === "/events" ? "events" : pathname === "/notifications" ? "notifications" : null;
+    const refresh = async () => {
+      if (document.visibilityState !== "visible" || loading) return;
+      loading = true;
+      try {
+        const next = await getNavigationIndicatorsAction();
+        if (!disposed) {
+          setNavigationIndicators(openedSection ? { ...next, [openedSection]: false } : next);
+        }
+      } catch {
+        // Keep the last known indicators during a temporary connection loss.
+      } finally {
+        loading = false;
+      }
+    };
+    if (openedSection) {
+      startTransition(() => {
+        void markNavigationSectionSeenAction(openedSection).then(refresh).catch(refresh);
+      });
+    } else {
+      void refresh();
+    }
+    const timer = window.setInterval(refresh, 30_000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [pathname, preview]);
+
+  const hasNewActivity = (item: NavigationItem) =>
+    !preview &&
+    (item.href === "/events"
+      ? navigationIndicators.events && pathname !== "/events"
+      : item.href === "/notifications"
+        ? navigationIndicators.notifications && pathname !== "/notifications"
+        : false);
+  const clearIndicator = (item: NavigationItem) => () => {
+    if (item.href === "/events" || item.href === "/notifications") {
+      setNavigationIndicators((current) => ({
+        ...current,
+        [item.href.slice(1)]: false,
+      }));
+    }
+  };
   const adminOnly = (viewer.isTeacherAdmin || viewer.isAdmin) && !viewer.isMember;
   const progressAccess = canViewMemberProgress(viewer);
   const administrationNavigation = [
@@ -256,7 +335,12 @@ export function AppShell({
                   Administration
                 </p>
               ) : null}
-              <NavLink item={item} preview={preview} />
+              <NavLink
+                item={item}
+                preview={preview}
+                hasNewActivity={hasNewActivity(item)}
+                onActivate={clearIndicator(item)}
+              />
             </div>
           ))}
         </nav>
@@ -306,7 +390,14 @@ export function AppShell({
         className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-background/97 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
         {safeBottomNavigation.map((item) => (
-          <NavLink key={item.href} item={item} compact preview={preview} />
+          <NavLink
+            key={item.href}
+            item={item}
+            compact
+            preview={preview}
+            hasNewActivity={hasNewActivity(item)}
+            onActivate={clearIndicator(item)}
+          />
         ))}
       </nav>
     </div>
