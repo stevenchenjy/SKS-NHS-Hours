@@ -37,6 +37,7 @@ export function getProgressPresentation(progress: ProgressRecord) {
     pendingVisual,
     summary,
     target,
+    total: approved + pending,
   };
 }
 
@@ -56,6 +57,7 @@ export function ProgressSummary({
     pendingVisual,
     summary,
     target,
+    total,
   } = getProgressPresentation(progress);
 
   return (
@@ -96,19 +98,24 @@ export function ProgressSummary({
         aria-label="Progress legend"
         className={
           compact
-            ? "flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"
+            ? "flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"
             : "flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground"
         }
       >
-        <div className="flex items-center gap-2">
+        <div className={compact ? "flex items-center gap-1.5" : "flex items-center gap-2"}>
           <span className="size-2.5 rounded-full bg-[var(--status-approved)]" aria-hidden="true" />
           <dt>Approved</dt>
           <dd className="font-semibold text-foreground">{hours(approved)}</dd>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={compact ? "flex items-center gap-1.5" : "flex items-center gap-2"}>
           <span className="size-2.5 rounded-full bg-[var(--status-pending)]" aria-hidden="true" />
           <dt>Pending</dt>
           <dd className="font-semibold text-foreground">{hours(pending)}</dd>
+        </div>
+        <div className={compact ? "flex items-center gap-1.5" : "flex items-center gap-2"}>
+          <span className="size-2.5 rounded-full bg-[var(--status-neutral)]" aria-hidden="true" />
+          <dt title="Approved plus pending hours">Total</dt>
+          <dd className="font-semibold text-foreground">{hours(total)}</dd>
         </div>
       </dl>
     </div>

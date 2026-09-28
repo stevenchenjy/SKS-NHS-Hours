@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Search, UsersRound } from "lucide-react";
 
 import { PageHeader } from "@/components/portal/page-header";
-import { ProgressSummary, formatHours } from "@/components/portal/progress-summary";
+import { ProgressSummary } from "@/components/portal/progress-summary";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -150,8 +150,7 @@ export default async function MemberRosterPage({
             <TableRow className="bg-muted/60 hover:bg-muted/60">
               <TableHead className="w-[24%] pl-5">Member</TableHead>
               <TableHead className="w-[21%]">Roles</TableHead>
-              <TableHead className="w-[23%]">Progress</TableHead>
-              <TableHead className="w-[12%] whitespace-normal">Remaining / over</TableHead>
+              <TableHead className="w-[35%]">Progress</TableHead>
               <TableHead className="w-[11%]">Status</TableHead>
               <TableHead className="w-[9%] pr-5 text-right">
                 <span className="sr-only">Open</span>
@@ -184,11 +183,6 @@ export default async function MemberRosterPage({
                       <ProgressSummary progress={member} compact />
                     </div>
                   </TableCell>
-                  <TableCell className="whitespace-normal">
-                    {Number(member.over_goal_hours) > 0
-                      ? `${formatHours(Number(member.over_goal_hours))} over`
-                      : `${formatHours(Number(member.remaining_hours))} remaining`}
-                  </TableCell>
                   <TableCell>
                     <StatusBadge status={member.membership_status} />
                   </TableCell>
@@ -205,7 +199,7 @@ export default async function MemberRosterPage({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-40 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="h-40 text-center text-muted-foreground">
                   No members match these filters.
                 </TableCell>
               </TableRow>
@@ -237,12 +231,7 @@ export default async function MemberRosterPage({
                 ))}
               </div>
               <ProgressSummary progress={member} compact />
-              <div className="mt-3 flex items-center justify-between gap-3 text-sm">
-                <span className="text-muted-foreground">
-                  {Number(member.over_goal_hours) > 0
-                    ? `${formatHours(Number(member.over_goal_hours))} over`
-                    : `${formatHours(Number(member.remaining_hours))} remaining`}
-                </span>
+              <div className="mt-3 flex justify-end text-sm">
                 <span className="font-medium text-primary">Open profile →</span>
               </div>
             </Link>

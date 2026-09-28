@@ -31,6 +31,25 @@ function progress(overrides: Partial<ProgressRecord> = {}): ProgressRecord {
 
 describe("progress presentation", () => {
   it.each([
+    [0, 0, 0],
+    [0, 6, 6],
+    [14.5, 3.25, 17.75],
+    [40, 2, 42],
+    ["14.5", "3.25", 17.75],
+  ])("totals approved %s and pending %s hours", (approved, pending, total) => {
+    expect(
+      getProgressPresentation(
+        progress({
+          approved_hours: approved,
+          pending_hours: pending,
+          rejected_hours: 10,
+          changes_requested_hours: 5,
+        }),
+      ).total,
+    ).toBe(total);
+  });
+
+  it.each([
     [20, 15, 0, 57.14],
     [35, 0, 0, 100],
     [40, 0, 5, 114.29],
