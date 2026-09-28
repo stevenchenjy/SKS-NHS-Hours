@@ -104,9 +104,18 @@ export default async function ReviewRequestPage({
     <div className="page-container">
       <PageHeader
         eyebrow={
-          <Link href="/admin/requests" className="inline-flex items-center gap-2 hover:underline">
+          <Link
+            href={
+              request.status === "approved"
+                ? "/admin/requests?view=archive"
+                : request.committee_head_approved_at && !viewer.isTeacherAdmin
+                  ? "/admin/requests?view=awaiting-teacher"
+                  : "/admin/requests"
+            }
+            className="inline-flex items-center gap-2 hover:underline"
+          >
             <ArrowLeft className="size-4" aria-hidden="true" />
-            Back to queue
+            Back to requests
           </Link>
         }
         title="Review request"
@@ -142,7 +151,7 @@ export default async function ReviewRequestPage({
           className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
         >
           {request.status === "pending" && request.committee_head_approved_at
-            ? "The committee-head approval was recorded. The request is now in every teacher’s final-approval queue."
+            ? "Your committee-head approval was saved. You can track this request in Awaiting teacher until a teacher gives final approval."
             : request.status === "approved"
               ? "Approved and archived. This request has left every teacher’s pending queue; no further approval is needed."
               : "Your decision was recorded. The immutable request history is shown below."}

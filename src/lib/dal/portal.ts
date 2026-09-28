@@ -238,6 +238,49 @@ export async function listApprovedReviewArchive(
   ) as ApprovedReviewItem[];
 }
 
+export async function listAwaitingTeacherReviews(
+  schoolYearId: string,
+  committeeReviewerId: string,
+): Promise<PendingQueueItem[]> {
+  const supabase = await createSupabaseServerClient();
+  // Use the caller's normal RLS session. The actionable pending queue excludes
+  // committee approvals that have moved on to the teacher stage.
+  const { data, error } = await supabase
+    .from("hour_requests")
+    .select(
+      "*,categoryAssignment:school_year_categories!hour_requests_category_year_fkey(service_categories!school_year_categories_category_id_fkey(id,name)),memberMembership:school_year_memberships!hour_requests_member_year_fkey(id,profile_id,profiles!school_year_memberships_profile_id_fkey(id,full_name,email)),requestedApproverMembership:school_year_memberships!hour_requests_requested_approver_year_fkey(id,profile_id,profiles!school_year_memberships_profile_id_fkey(id,full_name))",
+    )
+    .eq("school_year_id", schoolYearId)
+    .eq("status", "pending")
+    .eq("committee_head_reviewer_membership_id", committeeReviewerId)
+    .not("committee_head_approved_at", "is", null)
+    .order("committee_head_approved_at", { ascending: true });
+  return (
+    requireData(
+      data,
+      error,
+      "Unable to load requests awaiting teacher approval",
+    ) as unknown as Record<string, unknown>[]
+  ).map((row) => {
+    const request = normalizeHourRequest(row);
+    const member = firstRelation(request.memberMembership?.profiles);
+    const approver = firstRelation(request.requestedApproverMembership?.profiles);
+    const waitingSince = request.committee_head_approved_at!;
+    return {
+      ...request,
+      member_profile_id: request.memberMembership?.profile_id ?? "",
+      member_name: member?.full_name ?? "Member",
+      member_email: member?.email,
+      category_name: request.category?.name ?? "Category",
+      requested_approver_name: approver?.full_name ?? "Committee head",
+      approval_stage: "teacher",
+      assigned_to_current_user: false,
+      waiting_since: waitingSince,
+      waiting_days: Math.max(0, Math.floor((Date.now() - Date.parse(waitingSince)) / 86_400_000)),
+    } as PendingQueueItem;
+  });
+}
+
 export async function listPendingQueue(
   schoolYearId: string,
   requestedApproverId?: string,

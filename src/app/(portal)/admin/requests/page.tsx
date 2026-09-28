@@ -16,7 +16,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requireReviewer } from "@/lib/dal/access";
-import { listApprovedReviewArchive, listPendingQueue } from "@/lib/dal/portal";
+import {
+  listApprovedReviewArchive,
+  listAwaitingTeacherReviews,
+  listPendingQueue,
+} from "@/lib/dal/portal";
 
 export const metadata: Metadata = { title: "Review requests" };
 
@@ -34,10 +38,16 @@ export default async function ReviewQueuePage({
   const search = value(params.search).trim().toLowerCase();
   const notice = value(params.notice);
   const archived = value(params.view) === "archive";
-  const all = await (archived ? listApprovedReviewArchive : listPendingQueue)(
-    viewer.activeMembership.school_year_id,
-    viewer.isTeacherAdmin ? undefined : viewer.activeMembership.id,
-  );
+  const awaitingTeacher = !viewer.isTeacherAdmin && value(params.view) === "awaiting-teacher";
+  const all = awaitingTeacher
+    ? await listAwaitingTeacherReviews(
+        viewer.activeMembership.school_year_id,
+        viewer.activeMembership.id,
+      )
+    : await (archived ? listApprovedReviewArchive : listPendingQueue)(
+        viewer.activeMembership.school_year_id,
+        viewer.isTeacherAdmin ? undefined : viewer.activeMembership.id,
+      );
   const queue = all.filter(
     (request) =>
       !search ||
@@ -55,7 +65,7 @@ export default async function ReviewQueuePage({
         description={
           viewer.isTeacherAdmin
             ? "These requests already have committee-head approval. One teacher’s approval completes the request and moves it to Archive for all teachers."
-            : "Complete the first approval for requests that members assigned to you. Approved requests move automatically to all teachers."
+            : "Approve requests assigned to you, then track them in Awaiting teacher. They move to Archive after a teacher gives final approval."
         }
       />
       {notice === "decision-recorded" ? (
@@ -67,13 +77,31 @@ export default async function ReviewQueuePage({
         </p>
       ) : null}
 
-      <nav aria-label="Review request views" className="mb-6 flex gap-2">
+      <nav aria-label="Review request views" className="mb-6 flex flex-wrap gap-2">
         <Button
-          variant={archived ? "outline" : "default"}
-          render={<Link href="/admin/requests" aria-current={!archived ? "page" : undefined} />}
+          variant={archived || awaitingTeacher ? "outline" : "default"}
+          render={
+            <Link
+              href="/admin/requests"
+              aria-current={!archived && !awaitingTeacher ? "page" : undefined}
+            />
+          }
         >
           Pending
         </Button>
+        {!viewer.isTeacherAdmin ? (
+          <Button
+            variant={awaitingTeacher ? "default" : "outline"}
+            render={
+              <Link
+                href="/admin/requests?view=awaiting-teacher"
+                aria-current={awaitingTeacher ? "page" : undefined}
+              />
+            }
+          >
+            Awaiting teacher
+          </Button>
+        ) : null}
         <Button
           variant={archived ? "default" : "outline"}
           render={
@@ -86,6 +114,12 @@ export default async function ReviewQueuePage({
           Archive
         </Button>
       </nav>
+      {awaitingTeacher ? (
+        <p className="mb-5 text-sm text-muted-foreground">
+          You completed the committee-head approval for these requests. The hours remain pending
+          until a teacher gives final approval; then the requests move to Archive.
+        </p>
+      ) : null}
       {archived ? (
         <p className="mb-5 text-sm text-muted-foreground">
           Approved requests are saved here with the teacher’s decision. No further approval is
@@ -96,13 +130,17 @@ export default async function ReviewQueuePage({
         <p className="text-sm font-semibold">
           {archived
             ? "Approved requests"
-            : viewer.isTeacherAdmin
-              ? "Teacher approval queue"
-              : "Assigned to me"}{" "}
+            : awaitingTeacher
+              ? "Awaiting teacher approval"
+              : viewer.isTeacherAdmin
+                ? "Teacher approval queue"
+                : "Assigned to me"}{" "}
           ({all.length})
         </p>
         <form className="flex w-full gap-2 lg:max-w-md">
-          {archived ? <input type="hidden" name="view" value="archive" /> : null}
+          {archived || awaitingTeacher ? (
+            <input type="hidden" name="view" value={archived ? "archive" : "awaiting-teacher"} />
+          ) : null}
           <label htmlFor="search" className="sr-only">
             Search requests
           </label>
@@ -178,7 +216,7 @@ export default async function ReviewQueuePage({
                   </TableCell>
                   <TableCell className="pr-5 text-right">
                     <Button render={<Link href={`/admin/requests/${request.id}`} />} size="sm">
-                      {archived ? "View history" : "Review"}
+                      {archived || awaitingTeacher ? "View history" : "Review"}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -188,7 +226,9 @@ export default async function ReviewQueuePage({
                 <TableCell colSpan={8} className="h-36 text-center text-muted-foreground">
                   {archived
                     ? "No approved requests match this view."
-                    : "No pending requests match this view."}
+                    : awaitingTeacher
+                      ? "No requests are awaiting teacher approval in this view."
+                      : "No pending requests match this view."}
                 </TableCell>
               </TableRow>
             )}

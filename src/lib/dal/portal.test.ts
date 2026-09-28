@@ -9,7 +9,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: createSupabaseServerClientMock,
 }));
 
-import { listAccountDirectory, listAuditEvents } from "./portal";
+import { listAccountDirectory, listAuditEvents, listAwaitingTeacherReviews } from "./portal";
 
 const PROFILE_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003";
 const MEMBERSHIP_ID = "20000000-0000-4000-8000-000000000003";
@@ -49,6 +49,7 @@ const profile = {
 function query(result: { data: unknown; error: { message: string } | null }) {
   const builder: Record<string, ReturnType<typeof vi.fn> | unknown> = {
     select: vi.fn(),
+    not: vi.fn(),
     eq: vi.fn(),
     order: vi.fn(),
     in: vi.fn(),
@@ -58,6 +59,7 @@ function query(result: { data: unknown; error: { message: string } | null }) {
       Promise.resolve(result).then(resolve, reject),
   };
   (builder.select as ReturnType<typeof vi.fn>).mockReturnValue(builder);
+  (builder.not as ReturnType<typeof vi.fn>).mockReturnValue(builder);
   (builder.eq as ReturnType<typeof vi.fn>).mockReturnValue(builder);
   (builder.order as ReturnType<typeof vi.fn>).mockReturnValue(builder);
   (builder.in as ReturnType<typeof vi.fn>).mockReturnValue(builder);
@@ -173,6 +175,54 @@ describe("listAuditEvents global-event visibility", () => {
     await expect(listAuditEvents(SCHOOL_YEAR_ID)).resolves.toEqual([]);
     expect(auditQuery.or).toHaveBeenCalledWith(
       `school_year_id.eq.${SCHOOL_YEAR_ID},school_year_id.is.null`,
+    );
+  });
+});
+
+describe("requests awaiting teacher approval", () => {
+  it("scopes tracking to the current year and committee reviewer without reopening their queue", async () => {
+    const builder = query({
+      data: [
+        {
+          id: "request",
+          status: "pending",
+          hours: "2.00",
+          title: "Concession",
+          committee_head_approved_at: "2026-09-28T16:27:19Z",
+          memberMembership: {
+            profile_id: PROFILE_ID,
+            profiles: { full_name: "Test Member", email: "member@example.edu" },
+          },
+          requestedApproverMembership: { profiles: { full_name: "Test Reviewer" } },
+          categoryAssignment: { service_categories: { id: "category", name: "Concessions" } },
+        },
+      ],
+      error: null,
+    });
+    const from = vi.fn().mockReturnValue(builder);
+    createSupabaseServerClientMock.mockResolvedValue({ from });
+    const rows = await listAwaitingTeacherReviews(SCHOOL_YEAR_ID, MEMBERSHIP_ID);
+    expect(from).toHaveBeenCalledWith("hour_requests");
+    expect(builder.eq).toHaveBeenCalledWith("school_year_id", SCHOOL_YEAR_ID);
+    expect(builder.eq).toHaveBeenCalledWith("status", "pending");
+    expect(builder.eq).toHaveBeenCalledWith("committee_head_reviewer_membership_id", MEMBERSHIP_ID);
+    expect(builder.not).toHaveBeenCalledWith("committee_head_approved_at", "is", null);
+    expect(rows[0]).toMatchObject({
+      member_name: "Test Member",
+      category_name: "Concessions",
+      hours: "2.00",
+      requested_approver_name: "Test Reviewer",
+      approval_stage: "teacher",
+      assigned_to_current_user: false,
+      waiting_since: "2026-09-28T16:27:19Z",
+    });
+  });
+  it("reports query failure rather than showing a misleading empty list", async () => {
+    createSupabaseServerClientMock.mockResolvedValue({
+      from: vi.fn().mockReturnValue(query({ data: null, error: { message: "denied" } })),
+    });
+    await expect(listAwaitingTeacherReviews(SCHOOL_YEAR_ID, MEMBERSHIP_ID)).rejects.toThrow(
+      "Unable to load requests awaiting teacher approval: denied",
     );
   });
 });
