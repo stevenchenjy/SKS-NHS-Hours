@@ -62,12 +62,12 @@ select extensions.throws_ok(
 select pg_temp.act_as('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001');
 select extensions.throws_ok(
   $$select * from public.reserve_member_recovery_link('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001')$$,
-  '22023', 'An active member account is required',
+  '22023', 'An active member or teacher account is required',
   'an admin account is not an eligible target'
 );
 select extensions.throws_ok(
   $$select * from public.reserve_member_recovery_link('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa008')$$,
-  '22023', 'An active member account is required',
+  '22023', 'An active member or teacher account is required',
   'an expired member is not an eligible target'
 );
 select extensions.is(

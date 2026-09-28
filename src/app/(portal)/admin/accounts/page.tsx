@@ -566,9 +566,10 @@ export default async function AccountsPage({
                             accountName={profile.full_name}
                             recoveryTarget={
                               profile.status === "active" &&
-                              !globalLabel &&
-                              displayedAccessStatus === "active" &&
-                              membershipRoles.includes("member")
+                              (record.globalAccessLevel === "teacher_admin" ||
+                                (!globalLabel &&
+                                  displayedAccessStatus === "active" &&
+                                  membershipRoles.includes("member")))
                                 ? { profileId: profile.id, email: profile.email }
                                 : undefined
                             }
