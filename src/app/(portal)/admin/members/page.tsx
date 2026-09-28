@@ -69,7 +69,7 @@ export default async function MemberRosterPage({
     <div className="page-container">
       <PageHeader eyebrow={viewer.activeMembership.school_year.label} title="Members" />
 
-      <form className="mb-6 grid gap-3 rounded-xl border bg-muted/35 p-4 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_repeat(4,minmax(150px,auto))_auto]">
+      <form className="mb-6 grid gap-3 rounded-xl border bg-muted/35 p-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-[minmax(180px,1fr)_repeat(4,minmax(0,1fr))_auto]">
         <label className="relative">
           <span className="sr-only">Search members</span>
           <Search
@@ -144,16 +144,16 @@ export default async function MemberRosterPage({
       <p className="mb-3 text-sm text-muted-foreground">
         {roster.length} member{roster.length === 1 ? "" : "s"} shown
       </p>
-      <div className="hidden overflow-hidden rounded-xl border lg:block">
-        <Table>
+      <div className="hidden overflow-hidden rounded-xl border xl:block">
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow className="bg-muted/60 hover:bg-muted/60">
-              <TableHead className="pl-5">Member</TableHead>
-              <TableHead>Roles</TableHead>
-              <TableHead className="min-w-[340px]">Approved progress</TableHead>
-              <TableHead>Remaining / over</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="pr-5 text-right">
+              <TableHead className="w-[24%] pl-5">Member</TableHead>
+              <TableHead className="w-[21%]">Roles</TableHead>
+              <TableHead className="w-[23%]">Progress</TableHead>
+              <TableHead className="w-[12%] whitespace-normal">Remaining / over</TableHead>
+              <TableHead className="w-[11%]">Status</TableHead>
+              <TableHead className="w-[9%] pr-5 text-right">
                 <span className="sr-only">Open</span>
               </TableHead>
             </TableRow>
@@ -162,23 +162,29 @@ export default async function MemberRosterPage({
             {roster.length ? (
               roster.map((member) => (
                 <TableRow key={member.membership_id}>
-                  <TableCell className="pl-5">
+                  <TableCell className="whitespace-normal break-words pl-5">
                     <p className="font-semibold">{member.full_name}</p>
                     <p className="text-xs text-muted-foreground">{member.email}</p>
                   </TableCell>
                   <TableCell>
                     <div className="flex max-w-[220px] flex-wrap gap-1">
                       {member.roles?.map((memberRole) => (
-                        <Badge key={memberRole} variant="outline" className="capitalize">
+                        <Badge
+                          key={memberRole}
+                          variant="outline"
+                          className="whitespace-normal capitalize"
+                        >
                           {formatRoleLabel(memberRole)}
                         </Badge>
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <ProgressSummary progress={member} compact />
+                  <TableCell className="whitespace-normal">
+                    <div className="max-w-xs">
+                      <ProgressSummary progress={member} compact />
+                    </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-normal">
                     {Number(member.over_goal_hours) > 0
                       ? `${formatHours(Number(member.over_goal_hours))} over`
                       : `${formatHours(Number(member.remaining_hours))} remaining`}
@@ -208,7 +214,7 @@ export default async function MemberRosterPage({
         </Table>
       </div>
 
-      <div className="space-y-3 lg:hidden">
+      <div className="space-y-3 xl:hidden">
         {roster.length ? (
           roster.map((member) => (
             <Link
@@ -217,13 +223,28 @@ export default async function MemberRosterPage({
               className="block rounded-xl border p-5"
             >
               <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0 break-words">
                   <h2 className="font-semibold">{member.full_name}</h2>
                   <p className="text-sm text-muted-foreground">{member.email}</p>
                 </div>
                 <StatusBadge status={member.membership_status} />
               </div>
+              <div className="mb-3 flex flex-wrap gap-1">
+                {member.roles?.map((memberRole) => (
+                  <Badge key={memberRole} variant="outline" className="whitespace-normal">
+                    {formatRoleLabel(memberRole)}
+                  </Badge>
+                ))}
+              </div>
               <ProgressSummary progress={member} compact />
+              <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">
+                  {Number(member.over_goal_hours) > 0
+                    ? `${formatHours(Number(member.over_goal_hours))} over`
+                    : `${formatHours(Number(member.remaining_hours))} remaining`}
+                </span>
+                <span className="font-medium text-primary">Open profile →</span>
+              </div>
             </Link>
           ))
         ) : (

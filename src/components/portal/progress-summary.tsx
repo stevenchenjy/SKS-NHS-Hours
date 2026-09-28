@@ -59,21 +59,19 @@ export function ProgressSummary({
   } = getProgressPresentation(progress);
 
   return (
-    <div className={compact ? "space-y-2" : "space-y-4"}>
-      <div className="flex items-baseline justify-between gap-4">
-        <p className={compact ? "text-sm font-medium" : "text-base font-medium"}>
-          Approved and pending progress
+    <div className={compact ? "min-w-0 space-y-2" : "space-y-4"}>
+      {compact ? (
+        <p className="whitespace-normal text-sm font-medium">
+          {hours(approved)} / {hours(target)} hours approved
         </p>
-        <span
-          className={
-            compact
-              ? "shrink-0 text-sm text-muted-foreground"
-              : "shrink-0 text-base text-muted-foreground"
-          }
-        >
-          {hours(actual)}% approved · {hours(pendingPercentage)}% pending
-        </span>
-      </div>
+      ) : (
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <p className="text-base font-medium">Approved and pending progress</p>
+          <span className="text-base text-muted-foreground">
+            {hours(actual)}% approved · {hours(pendingPercentage)}% pending
+          </span>
+        </div>
+      )}
       <div
         role="progressbar"
         aria-label="Approved service-hour progress"
