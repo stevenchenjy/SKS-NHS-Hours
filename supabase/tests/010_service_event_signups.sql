@@ -3,6 +3,8 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select extensions.plan(22);
 
+-- Keep event creation and signup ahead of the clock as the test date advances.
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
