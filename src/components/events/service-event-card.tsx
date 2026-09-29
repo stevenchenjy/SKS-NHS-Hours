@@ -45,11 +45,13 @@ function registrationBadge(event: ServiceEvent) {
 export function ServiceEventCard({
   event,
   viewerCanSignUp,
+  viewerCanViewRoster = false,
   returnPath = "/events",
   showDetailsLink = true,
 }: {
   event: ServiceEvent;
   viewerCanSignUp: boolean;
+  viewerCanViewRoster?: boolean;
   returnPath?: string;
   showDetailsLink?: boolean;
 }) {
@@ -172,9 +174,13 @@ export function ServiceEventCard({
               <Button
                 render={<Link href={`/events/${event.id}`} />}
                 variant="outline"
-                aria-label={`${event.can_manage ? "Manage roster for" : "View details for"} ${event.title}`}
+                aria-label={`${event.can_manage ? "Manage roster for" : viewerCanViewRoster ? "View signups for" : "View details for"} ${event.title}`}
               >
-                {event.can_manage ? "Manage event" : "View details"}
+                {event.can_manage
+                  ? "Manage event"
+                  : viewerCanViewRoster
+                    ? "View signups"
+                    : "View details"}
               </Button>
             ) : null}
             {!event.is_expired && viewerCanSignUp ? (

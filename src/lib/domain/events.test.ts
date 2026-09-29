@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canPublishServiceEvents,
+  canViewServiceEventRoster,
   formatServiceEventSchedule,
   serviceEventSchema,
 } from "@/lib/domain/events";
@@ -15,6 +16,27 @@ describe("service event domain", () => {
     expect(
       canPublishServiceEvents({ isAdmin: false, isTeacherAdmin: false, roles: ["member"] }),
     ).toBe(false);
+  });
+
+  it("shows current same-year signups to a president without granting event management", () => {
+    const president = {
+      activeMembership: { school_year_id: "current-year" },
+      isMember: true,
+      roles: ["member", "president_vice_president"] as const,
+    };
+    const event = { can_manage: false, is_expired: false, school_year_id: "current-year" };
+    expect(canViewServiceEventRoster(president, event)).toBe(true);
+    expect(canViewServiceEventRoster(president, { ...event, school_year_id: "other-year" })).toBe(
+      false,
+    );
+    expect(canViewServiceEventRoster(president, { ...event, is_expired: true })).toBe(false);
+    expect(canViewServiceEventRoster({ ...president, roles: ["member"] as const }, event)).toBe(
+      false,
+    );
+    expect(canViewServiceEventRoster({ ...president, isMember: false }, event)).toBe(false);
+    expect(
+      canViewServiceEventRoster({ ...president, isMember: false }, { ...event, can_manage: true }),
+    ).toBe(true);
   });
 
   it("formats school-local event timestamps without applying a browser time-zone shift", () => {

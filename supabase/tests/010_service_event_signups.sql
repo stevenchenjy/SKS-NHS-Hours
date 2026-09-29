@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(22);
+select extensions.plan(24);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003', true);
@@ -264,6 +264,30 @@ select extensions.is(
 
 reset role;
 set local role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa006', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa006","role":"authenticated","email":"vice-president@example.edu"}',
+  true
+);
+select extensions.is(
+  (select count(*) from public.list_service_event_roster(
+    (select id from public.service_events where title = 'Service event workflow test')
+  )),
+  1::bigint,
+  'active vice president can see another organizer’s current signup roster'
+);
+select extensions.is(
+  (select can_manage from public.list_service_events(
+    (select id from public.service_events where title = 'Service event workflow test')
+  )),
+  false,
+  'roster access does not grant event management'
+);
+
+reset role;
+set local role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config(
@@ -279,7 +303,7 @@ select extensions.throws_ok(
     )
   $$,
   '42501',
-  'Only this event organizer or a teacher administrator can view its roster',
+  'Only an event manager or active school-year president can view its roster',
   'ordinary members cannot access an event roster'
 );
 

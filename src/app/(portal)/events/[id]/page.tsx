@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { requirePortalViewer } from "@/lib/dal/access";
 import { getServiceEvent, listServiceEventRoster } from "@/lib/dal/events";
+import { canViewServiceEventRoster } from "@/lib/domain/events";
 
 export const metadata: Metadata = { title: "Volunteer event" };
 
@@ -57,7 +58,8 @@ export default async function ServiceEventDetailPage({
   if (!parsedId.success) notFound();
   const event = await getServiceEvent(parsedId.data);
   if (!event) notFound();
-  const roster = event.can_manage ? await listServiceEventRoster(event.id) : [];
+  const canViewRoster = canViewServiceEventRoster(viewer, event);
+  const roster = canViewRoster ? await listServiceEventRoster(event.id) : [];
   const confirmed = roster.filter((entry) => entry.status === "confirmed");
   const waitlisted = roster.filter((entry) => entry.status === "waitlisted");
 
@@ -70,7 +72,7 @@ export default async function ServiceEventDetailPage({
             All events
           </Link>
         }
-        title={event.can_manage ? "Event roster" : "Event details"}
+        title={canViewRoster ? "Event roster" : "Event details"}
         actions={
           event.can_manage ? (
             <EventManagementControls
@@ -82,7 +84,7 @@ export default async function ServiceEventDetailPage({
           ) : undefined
         }
         description={
-          event.can_manage
+          canViewRoster
             ? "Monitor confirmed volunteers and the first-come waitlist. Open spots are filled automatically when someone drops."
             : "Review the opportunity details and manage your signup."
         }
@@ -98,7 +100,7 @@ export default async function ServiceEventDetailPage({
         />
       </div>
 
-      {event.can_manage ? (
+      {canViewRoster ? (
         <section aria-labelledby="roster-heading" className="mt-10">
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>

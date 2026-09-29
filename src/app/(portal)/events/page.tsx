@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/empty";
 import { requirePortalViewer } from "@/lib/dal/access";
 import { listServiceEvents } from "@/lib/dal/events";
-import { canPublishServiceEvents } from "@/lib/domain/events";
+import { canPublishServiceEvents, canViewServiceEventRoster } from "@/lib/domain/events";
 
 export const metadata: Metadata = { title: "Volunteer events" };
 
@@ -84,7 +84,12 @@ export default async function EventsPage({
           className="grid items-stretch gap-5 xl:grid-cols-2"
         >
           {visibleEvents.map((event) => (
-            <ServiceEventCard key={event.id} event={event} viewerCanSignUp={viewer.isMember} />
+            <ServiceEventCard
+              key={event.id}
+              event={event}
+              viewerCanSignUp={viewer.isMember}
+              viewerCanViewRoster={canViewServiceEventRoster(viewer, event)}
+            />
           ))}
         </section>
       ) : (

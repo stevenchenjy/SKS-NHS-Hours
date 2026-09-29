@@ -1,4 +1,4 @@
-import type { Viewer } from "@/lib/types";
+import type { RoleSlug, ServiceEvent, Viewer } from "@/lib/types";
 import { z } from "zod";
 
 export const SERVICE_EVENT_AUDIENCE = "All active NHS members";
@@ -66,6 +66,22 @@ export function canPublishServiceEvents(
   viewer: Pick<Viewer, "isTeacherAdmin" | "isAdmin" | "roles">,
 ): boolean {
   return viewer.isTeacherAdmin || viewer.isAdmin || viewer.roles.includes("committee_head");
+}
+
+export function canViewServiceEventRoster(
+  viewer: Pick<Viewer, "isMember"> & {
+    activeMembership: { school_year_id: string } | null;
+    roles: readonly RoleSlug[];
+  },
+  event: Pick<ServiceEvent, "can_manage" | "is_expired" | "school_year_id">,
+): boolean {
+  return (
+    event.can_manage ||
+    (!event.is_expired &&
+      viewer.isMember &&
+      viewer.activeMembership?.school_year_id === event.school_year_id &&
+      viewer.roles.includes("president_vice_president"))
+  );
 }
 
 export function formatServiceEventSchedule(
