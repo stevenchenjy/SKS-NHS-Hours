@@ -164,9 +164,6 @@ export default async function ReviewRequestPage({
                 <span>Activity</span>
                 <span className="text-primary">{request.title ?? "Untitled draft"}</span>
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Submitted {date(request.submitted_at)}
-              </p>
             </div>
             <div className="p-6">
               <p className="whitespace-pre-wrap text-base leading-7">
@@ -200,19 +197,6 @@ export default async function ReviewRequestPage({
                   </dd>
                 </div>
               </dl>
-              <div className="mt-6 rounded-lg bg-muted/55 p-4 text-sm">
-                <p className="font-semibold">
-                  {request.committee_head_approved_at
-                    ? `Committee-head approval completed ${date(request.committee_head_approved_at)}`
-                    : "Waiting for committee-head approval"}
-                </p>
-                {!request.committee_head_approved_at && (
-                  <p className="mt-1 text-muted-foreground">
-                    The request will enter the shared teacher queue after the selected committee
-                    head approves it.
-                  </p>
-                )}
-              </div>
             </div>
           </section>
 
