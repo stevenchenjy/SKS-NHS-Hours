@@ -31,12 +31,12 @@ function progress(overrides: Partial<ProgressRecord> = {}): ProgressRecord {
 
 describe("progress presentation", () => {
   it.each([
-    [0, 0, 0],
-    [0, 6, 6],
-    [14.5, 3.25, 17.75],
-    [40, 2, 42],
-    ["14.5", "3.25", 17.75],
-  ])("totals approved %s and pending %s hours", (approved, pending, total) => {
+    [0, 0, 5],
+    [0, 6, 11],
+    [14.5, 3.25, 22.75],
+    [40, 2, 47],
+    ["14.5", "3.25", 22.75],
+  ])("totals approved %s, pending %s, and changes requested hours", (approved, pending, total) => {
     expect(
       getProgressPresentation(
         progress({
@@ -73,12 +73,13 @@ describe("progress presentation", () => {
     );
   });
 
-  it("uses the approved and pending wording in the zero state", () => {
+  it("names each visible status in the zero state", () => {
     expect(getProgressPresentation(progress())).toMatchObject({
-      summary: "0 of 20 approved · 0 pending · 20 approved hours remaining",
+      summary: "0 of 20 approved · 0 pending · 0 changes requested · 20 approved hours remaining",
       approvedVisual: 0,
       pendingPercentage: 0,
       pendingVisual: 0,
+      changesRequestedVisual: 0,
     });
   });
 
@@ -93,7 +94,8 @@ describe("progress presentation", () => {
         }),
       ),
     ).toMatchObject({
-      summary: "14.5 of 20 approved · 3.25 pending · 5.5 approved hours remaining",
+      summary:
+        "14.5 of 20 approved · 3.25 pending · 0 changes requested · 5.5 approved hours remaining",
       approvedVisual: 72.5,
       pendingPercentage: 16.25,
       pendingVisual: 16.25,
@@ -112,10 +114,29 @@ describe("progress presentation", () => {
         }),
       ),
     ).toMatchObject({
-      summary: "22.5 of 20 approved · 4 pending · 2.5 approved hours over requirement",
+      summary:
+        "22.5 of 20 approved · 4 pending · 0 changes requested · 2.5 approved hours over requirement",
       approvedVisual: 100,
       pendingPercentage: 20,
       pendingVisual: 0,
     });
+  });
+
+  it("keeps hours needing changes visible without counting them as pending or approved", () => {
+    const result = getProgressPresentation(
+      progress({
+        target_hours: 35,
+        changes_requested_hours: 5,
+        remaining_hours: 35,
+      }),
+    );
+    expect(result).toMatchObject({
+      approved: 0,
+      pending: 0,
+      changesRequested: 5,
+      total: 5,
+      summary: "0 of 35 approved · 0 pending · 5 changes requested · 35 approved hours remaining",
+    });
+    expect(result.changesRequestedPercentage).toBeCloseTo(14.29, 2);
   });
 });

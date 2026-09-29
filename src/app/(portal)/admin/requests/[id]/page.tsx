@@ -120,20 +120,15 @@ export default async function ReviewRequestPage({
         }
         title="Review request"
         description={
-          <span className="inline-flex flex-wrap items-center gap-3">
-            <span className="font-semibold text-foreground">
-              {request.title ?? "Untitled draft"}
-            </span>
-            <StatusBadge
-              status={
-                request.status === "pending"
-                  ? approvalStage === "teacher"
-                    ? "pending_teacher_approval"
-                    : "pending_committee_approval"
-                  : request.status
-              }
-            />
-          </span>
+          <StatusBadge
+            status={
+              request.status === "pending"
+                ? approvalStage === "teacher"
+                  ? "pending_teacher_approval"
+                  : "pending_committee_approval"
+                : request.status
+            }
+          />
         }
       />
 
@@ -162,8 +157,12 @@ export default async function ReviewRequestPage({
         <div className="space-y-8">
           <section aria-labelledby="activity-heading" className="rounded-xl border">
             <div className="border-b px-6 py-5">
-              <h2 id="activity-heading" className="text-xl font-bold">
-                Activity
+              <h2
+                id="activity-heading"
+                className="flex flex-wrap items-baseline gap-x-3 text-xl font-bold"
+              >
+                <span>Activity</span>
+                <span className="text-primary">{request.title ?? "Untitled draft"}</span>
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Submitted {date(request.submitted_at)}
@@ -207,11 +206,12 @@ export default async function ReviewRequestPage({
                     ? `Committee-head approval completed ${date(request.committee_head_approved_at)}`
                     : "Waiting for committee-head approval"}
                 </p>
-                <p className="mt-1 text-muted-foreground">
-                  {request.committee_head_approved_at
-                    ? "All teachers can now review this request. One teacher decision completes the process."
-                    : "The request will enter the shared teacher queue after the selected committee head approves it."}
-                </p>
+                {!request.committee_head_approved_at && (
+                  <p className="mt-1 text-muted-foreground">
+                    The request will enter the shared teacher queue after the selected committee
+                    head approves it.
+                  </p>
+                )}
               </div>
             </div>
           </section>

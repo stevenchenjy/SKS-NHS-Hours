@@ -14,6 +14,7 @@ function hours(value: number): string {
 export function getProgressPresentation(progress: ProgressRecord) {
   const approved = number(progress.approved_hours);
   const pending = number(progress.pending_hours);
+  const changesRequested = number(progress.changes_requested_hours);
   const target = number(progress.target_hours);
   const remaining = number(progress.remaining_hours);
   const over = number(progress.over_goal_hours);
@@ -22,7 +23,13 @@ export function getProgressPresentation(progress: ProgressRecord) {
   const pendingPercentage = target > 0 ? Math.max((pending / target) * 100, 0) : 0;
   const pendingVisual =
     target > 0 ? Math.min(pendingPercentage, Math.max(100 - approvedVisual, 0)) : 0;
-  const summary = `${hours(approved)} of ${hours(target)} approved · ${hours(pending)} pending · ${
+  const changesRequestedPercentage =
+    target > 0 ? Math.max((changesRequested / target) * 100, 0) : 0;
+  const changesRequestedVisual =
+    target > 0
+      ? Math.min(changesRequestedPercentage, Math.max(100 - approvedVisual - pendingVisual, 0))
+      : 0;
+  const summary = `${hours(approved)} of ${hours(target)} approved · ${hours(pending)} pending · ${hours(changesRequested)} changes requested · ${
     over > 0
       ? `${hours(over)} approved hours over requirement`
       : `${hours(Math.max(remaining, 0))} approved hours remaining`
@@ -32,12 +39,15 @@ export function getProgressPresentation(progress: ProgressRecord) {
     actual,
     approved,
     approvedVisual,
+    changesRequested,
+    changesRequestedPercentage,
+    changesRequestedVisual,
     pending,
     pendingPercentage,
     pendingVisual,
     summary,
     target,
-    total: approved + pending,
+    total: approved + pending + changesRequested,
   };
 }
 
@@ -52,6 +62,9 @@ export function ProgressSummary({
     actual,
     approved,
     approvedVisual,
+    changesRequested,
+    changesRequestedPercentage,
+    changesRequestedVisual,
     pending,
     pendingPercentage,
     pendingVisual,
@@ -64,9 +77,10 @@ export function ProgressSummary({
     <div className={compact ? "min-w-0 space-y-2" : "space-y-4"}>
       {!compact && (
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <p className="text-base font-medium">Approved and pending progress</p>
+          <p className="text-base font-medium">Service-hour progress</p>
           <span className="text-base text-muted-foreground">
-            {hours(actual)}% approved · {hours(pendingPercentage)}% pending
+            {hours(actual)}% approved · {hours(pendingPercentage)}% pending ·{" "}
+            {hours(changesRequestedPercentage)}% changes requested
           </span>
         </div>
       )}
@@ -89,6 +103,11 @@ export function ProgressSummary({
           className="h-full shrink-0 bg-[var(--status-pending)] transition-[width]"
           style={{ width: `${pendingVisual}%` }}
         />
+        <span
+          data-progress-segment="changes-requested"
+          className="h-full shrink-0 bg-[var(--status-pending)] opacity-50 transition-[width]"
+          style={{ width: `${changesRequestedVisual}%` }}
+        />
       </div>
       <dl
         aria-label="Progress legend"
@@ -109,8 +128,16 @@ export function ProgressSummary({
           <dd className="font-semibold text-foreground">{hours(pending)}</dd>
         </div>
         <div className={compact ? "flex items-center gap-1.5" : "flex items-center gap-2"}>
+          <span
+            className="size-2.5 rounded-full bg-[var(--status-pending)] opacity-50"
+            aria-hidden="true"
+          />
+          <dt>Changes requested</dt>
+          <dd className="font-semibold text-foreground">{hours(changesRequested)}</dd>
+        </div>
+        <div className={compact ? "flex items-center gap-1.5" : "flex items-center gap-2"}>
           <span className="size-2.5 rounded-full bg-[var(--status-neutral)]" aria-hidden="true" />
-          <dt title="Approved plus pending hours">Total</dt>
+          <dt title="Approved, pending, and changes requested hours">Total</dt>
           <dd className="font-semibold text-foreground">{hours(total)}</dd>
         </div>
       </dl>
