@@ -62,11 +62,7 @@ export function ProgressSummary({
 
   return (
     <div className={compact ? "min-w-0 space-y-2" : "space-y-4"}>
-      {compact ? (
-        <p className="whitespace-normal text-sm font-medium">
-          {hours(approved)} / {hours(target)} hours approved
-        </p>
-      ) : (
+      {!compact && (
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <p className="text-base font-medium">Approved and pending progress</p>
           <span className="text-base text-muted-foreground">
