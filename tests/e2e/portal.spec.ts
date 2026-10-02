@@ -390,6 +390,23 @@ test("president and vice president cannot open the review queue without committe
   await expect(page).toHaveURL(/\/dashboard\?notice=not-authorized/);
 });
 
+test("president can read another member service log and activity details", async ({ page }) => {
+  await login(page, syntheticAccounts.leaderMember.email);
+  await page.goto("/admin/members/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003");
+  const log = page.getByRole("region", { name: "Complete service log" });
+  await expect(log.getByText("No service requests for this school year.")).toHaveCount(0);
+  const activity = log.getByRole("row").filter({ hasText: "Community Cleanup" });
+  await expect(activity).toBeVisible();
+  await activity.getByRole("link", { name: "View", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/requests\/40000000-0000-4000-8000-000000000002/);
+  await expect(page.getByText("Collected litter in a supervised park cleanup.")).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: /Approve and send to teachers|Give final approval|Request changes|Reject request/,
+    }),
+  ).toHaveCount(0);
+});
+
 test("changes-requested activity returns to the member for editing and resubmission", async ({
   page,
 }) => {

@@ -40,7 +40,7 @@ select extensions.is((select pending_hours from public.member_progress where mem
 select extensions.is((select pending_count from public.member_progress where membership_id = '20000000-0000-4000-8000-000000000003'), 3::bigint, 'unassigned leader sees all three pending requests in the count');
 select extensions.is((select approved_hours from public.member_progress where membership_id = '20000000-0000-4000-8000-000000000003'), 12.5::numeric, 'approved totals also include requests reviewed by other people');
 select extensions.is((select remaining_hours from public.member_progress where membership_id = '20000000-0000-4000-8000-000000000003'), 22.5::numeric, 'pending totals do not count toward the requirement');
-select extensions.is((select count(*) from public.hour_requests where member_membership_id = '20000000-0000-4000-8000-000000000003'), 0::bigint, 'complete totals do not expose individual request details');
+select extensions.is((select count(*) from public.hour_requests where member_membership_id = '20000000-0000-4000-8000-000000000003'), 6::bigint, 'President / Vice President sees the complete service log alongside totals');
 select extensions.is((select count(*) from public.pending_review_queue where member_membership_id = '20000000-0000-4000-8000-000000000003'), 0::bigint, 'complete totals do not add another head work to the queue');
 select extensions.throws_ok($$ select public.review_hour_request('40000000-0000-4000-8000-000000000002', 'approve') $$, '42501', null, 'unassigned leader still cannot approve the request');
 

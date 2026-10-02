@@ -97,6 +97,12 @@ returns counts, hours, and last-activity time only; request-detail policies and
 the two-stage approval queue remain separate. Regression coverage lives in
 `supabase/tests/018_consistent_member_progress.sql`.
 
+Activity details, review history, corrections, and reviewer names share
+`private.can_view_hour_request`. Active President / Vice President memberships
+can read all request statuses for their school year; Teachers, Admins, and the
+platform owner retain global read access. This does not grant approval rights.
+Ordinary members and committee heads retain their existing access limits.
+
 ## Roles, grants, and RLS
 
 - `anon` has no application-table/view/function privileges.
