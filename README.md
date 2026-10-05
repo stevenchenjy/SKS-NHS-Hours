@@ -1,8 +1,21 @@
 # NHS Service Hours Portal
 
-A private, school-year-based portal for National Honor Society members to submit service hours and for authorized student leaders and teacher administrators to review, report, and audit them.
+An invite-only portal for National Honor Society members to record service hours, find service events, and follow their progress through the school year. Committee heads review submissions first; teachers make the final approval. Administrators can manage accounts, school years, reports, and the history of changes.
 
-The application separates authentication from authorization: signing in is not enough. Members and student leaders require an active profile plus eligible school-year access. Teacher administrators receive a separate global grant that is not a membership and does not expire with a school year. PostgreSQL constraints, grants, Row Level Security, and transactional functions are the final data-integrity boundary.
+The source code is public, while access to the application and student records is restricted. The local setup uses synthetic test data so the workflows can be explored without loading real student records.
+
+If you are visiting from my [personal website](https://stevenchenjy.github.io/), start with [The member workflow](#the-member-workflow). Technical setup follows below.
+
+## The member workflow
+
+1. Sign in with an invited account and active school-year access.
+2. Save a draft or submit a service-hour entry to a committee head.
+3. Respond to requested changes, or follow the entry through committee-head review and final teacher approval.
+4. See approved and pending hours separately against the annual requirement of **35 approved hours**.
+
+Members can also browse service events and sign up before the deadline. Available places are confirmed; once an event is full, new signups enter a first-in, first-out waitlist. Event-management and notification features support changes, cancellations, and sign-up rosters.
+
+New entries, edits, and corrections use **whole hours from 1 to 24** for a single service date. Historical quarter-hour records remain readable and are included in exact progress calculations. Only approved hours count toward the requirement; pending hours are shown separately.
 
 ## Capabilities
 
@@ -10,9 +23,16 @@ The application separates authentication from authorization: signing in is not e
 - Annual member access with `member`, `committee_head`, and combined `president_vice_president` roles; global `teacher_admin` and single `platform_owner` access are separate
 - Draft, submit, withdraw, changes-requested, resubmit, approve, reject, and reassign workflow
 - Committee-head self-approval with required final teacher approval, concurrent-decision protection, immutable review history, and traceable corrections
-- Exact quarter-hour calculations with a fixed 35-approved-hour requirement and a stacked approved/pending progress bar
+- Whole-hour entry validation, exact accounting for historical quarter-hour records, a fixed 35-approved-hour requirement, and a stacked approved/pending progress bar
+- Service events with capacity/deadline checks, signups, waitlists, authorized rosters, updates, and notifications
 - Leader queues and member history; consolidated account/invitation/role administration; school-year, category, audit, CSV, and read-only role-preview workflows
 - Responsive, keyboard-accessible interface with textual status/progress equivalents
+
+## Access and data integrity
+
+Signing in does not automatically grant access. Members and student leaders require an active profile plus eligible school-year access. Teacher administrators receive a separate global grant that is not a membership and does not expire with a school year. PostgreSQL constraints, grants, Row Level Security, and transactional functions enforce the data-integrity boundary.
+
+The repository includes automated checks and a verification ledger. A feature's presence in the code or a listed test command should not be read as confirmation of a current production rollout; see [docs/QA.md](docs/QA.md) for recorded checks and their limits.
 
 ## Stack
 
@@ -24,7 +44,7 @@ The application separates authentication from authorization: signing in is not e
 
 ## Local development
 
-Prerequisites: Node.js 22 recommended (Next.js minimum 20.9), pnpm 11.19.0 through Corepack, Docker, and Supabase CLI 2.x.
+Prerequisites: Node.js **22–24** (the package's supported range; CI uses Node 22), pnpm 11.19.0 through Corepack, Docker, and Supabase CLI 2.x. Run these commands from the repository root:
 
 ```bash
 corepack enable
