@@ -6,6 +6,9 @@ export interface AccountSetupStatus {
   email: string;
   password_set: boolean;
   first_portal_visit_at: string | null;
+  email_verified_at?: string | null;
+  password_completed_at?: string | null;
+  google_linked?: boolean;
 }
 
 export async function listAccountSetupStatus(schoolYearId: string): Promise<AccountSetupStatus[]> {

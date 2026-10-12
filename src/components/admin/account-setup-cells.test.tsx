@@ -10,7 +10,7 @@ describe("account setup milestones", () => {
         status={{ email: "member@example.edu", password_set: true, first_portal_visit_at: null }}
       />,
     );
-    expect(html).toContain("Password set");
+    expect(html).toContain("Password confirmed");
     expect(html).toContain("No visit recorded");
     expect(html).not.toContain("Entered portal");
   });
@@ -25,7 +25,7 @@ describe("account setup milestones", () => {
         }}
       />,
     );
-    expect(html).toContain("Not set");
+    expect(html).toContain("Password not confirmed");
     expect(html).toContain("Entered portal");
     expect(html).toContain('dateTime="2026-09-15T02:00:00.000Z"');
     expect(html).toContain("Sep 14, 2026, 10:00 PM EDT");
@@ -34,7 +34,7 @@ describe("account setup milestones", () => {
   it("does not label unavailable data as an unfinished account", () => {
     const html = renderToStaticMarkup(<AccountSetupCells status={undefined} />);
     expect(html).toContain("Unavailable");
-    expect(html).not.toContain("Not set");
+    expect(html).not.toContain("Password not confirmed");
     expect(html).not.toContain("No visit recorded");
   });
 });

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { claimInvitationOrConfirmExistingProfile } from "@/lib/auth/claim-invitation";
 import {
   createPasswordUpdateContext,
   PASSWORD_UPDATE_CONTEXT_COOKIE,
@@ -59,11 +58,6 @@ export async function POST(request: Request) {
     return errorResponse(passwordLinkErrorReason(result.error, "recovery"));
   }
 
-  if (!(await claimInvitationOrConfirmExistingProfile(supabase, result.data.user))) {
-    await supabase.auth.signOut();
-    return errorResponse("invitation-claim-failed", 403);
-  }
-
   let context: string;
   try {
     context = await createPasswordUpdateContext(
@@ -71,7 +65,7 @@ export async function POST(request: Request) {
       getPasswordUpdateContextSecret(),
     );
   } catch {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     return errorResponse("password-context-failed", 500);
   }
 

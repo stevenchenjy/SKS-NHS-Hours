@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, codex/login-closed-beta]
 
 permissions:
   contents: read
@@ -58,7 +58,9 @@ jobs:
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [application, database]
+    # Browser QA builds the app itself; keep it independent of the application
+    # dependency-audit gate so an upstream advisory does not hide auth regressions.
+    needs: [database]
     env:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       ALLOWED_EMAIL_DOMAINS: example.edu

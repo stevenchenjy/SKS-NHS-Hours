@@ -17,6 +17,7 @@
     "test:e2e:prepare": "node tests/e2e/prepare-auth.mjs",
     "test:e2e:ui": "playwright test --ui",
     "test:db": "supabase test db",
+    "check:auth-config": "node scripts/check-auth-config.mts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"

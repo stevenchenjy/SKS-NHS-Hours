@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { parseSignInPolicy, type SignInPolicy } from "@/lib/auth/sign-in-policy";
 
 const serverEnvironmentSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
@@ -9,15 +10,22 @@ const serverEnvironmentSchema = z.object({
   SUPABASE_SECRET_KEY: z.string().min(20).optional(),
   PASSWORD_UPDATE_CONTEXT_SECRET: z.string().min(32).optional(),
   ALLOWED_EMAIL_DOMAINS: z.string().default(""),
-  NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: z.enum(["true", "false"]).default("false"),
+  AUTH_GOOGLE_MODE: z.enum(["disabled", "beta", "enabled"]).default("disabled"),
+  AUTH_GOOGLE_BETA_APPROVED: z.enum(["true", "false"]).default("false"),
+  GOOGLE_AUTH_ALLOWED_DOMAINS: z.string().default(""),
+  AUTH_BETA_ALLOWED_EMAILS: z.string().default(""),
+  AUTH_PRODUCTION_SUPABASE_URL: z.url().optional(),
+  NHS_SUPPORT_EMAIL: z.email().optional(),
+  VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
   NHS_DESIGN_PREVIEW: z.enum(["true", "false"]).default("false"),
 });
 
-export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema> & {
-  allowedEmailDomains: string[];
-  googleAuthEnabled: boolean;
-  designPreviewEnabled: boolean;
-};
+export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema> &
+  SignInPolicy & {
+    allowedEmailDomains: string[];
+    googleAuthEnabled: boolean;
+    designPreviewEnabled: boolean;
+  };
 
 let cachedEnvironment: ServerEnvironment | undefined;
 
@@ -35,10 +43,20 @@ export function getServerEnvironment(): ServerEnvironment {
 
   cachedEnvironment = {
     ...parsed.data,
+    ...parseSignInPolicy({
+      mode: parsed.data.AUTH_GOOGLE_MODE,
+      googleDomains: parsed.data.GOOGLE_AUTH_ALLOWED_DOMAINS,
+      betaEmails: parsed.data.AUTH_BETA_ALLOWED_EMAILS,
+      appUrl: parsed.data.NEXT_PUBLIC_APP_URL,
+      supabaseUrl: parsed.data.NEXT_PUBLIC_SUPABASE_URL,
+      productionSupabaseUrl: parsed.data.AUTH_PRODUCTION_SUPABASE_URL,
+      vercelEnvironment: parsed.data.VERCEL_ENV,
+      humanBetaApproved: parsed.data.AUTH_GOOGLE_BETA_APPROVED === "true",
+    }),
     allowedEmailDomains: parsed.data.ALLOWED_EMAIL_DOMAINS.split(",")
       .map((domain) => domain.trim().toLowerCase())
       .filter(Boolean),
-    googleAuthEnabled: parsed.data.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true",
+    googleAuthEnabled: parsed.data.AUTH_GOOGLE_MODE !== "disabled",
     designPreviewEnabled: parsed.data.NHS_DESIGN_PREVIEW === "true",
   };
 

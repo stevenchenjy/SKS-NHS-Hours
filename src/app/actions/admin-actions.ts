@@ -12,6 +12,8 @@ import {
   type PreparedInvitationDelivery,
 } from "@/lib/auth/invitation-delivery";
 import { sendInvitationEmail } from "@/lib/auth/send-invitation-email";
+import { provisionGoogleAccount } from "@/lib/auth/provision-google-account";
+import { isSchoolGoogleEmail } from "@/lib/auth/sign-in-policy";
 import { getServerEnvironment } from "@/lib/env";
 import { requireAdmin } from "@/lib/dal/access";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -150,17 +152,30 @@ async function recordInvitationSendSuccess(
 async function sendPreparedInvitation(
   supabase: ServerSupabaseClient,
   input: { invitationId: string; expiresAt: string },
-): Promise<InvitationDeliveryOutcome> {
+): Promise<InvitationDeliveryOutcome | "google-ready"> {
   const environment = getServerEnvironment();
-  return coordinateInvitationDelivery({
+  let googleReady = false;
+  const outcome = await coordinateInvitationDelivery({
     prepare: () => prepareInvitationSend(supabase, input.invitationId),
-    send: (invitation, idempotencyKey) =>
-      sendInvitationEmail(
-        createSupabaseAdminClient(),
+    send: async (invitation, idempotencyKey) => {
+      const admin = createSupabaseAdminClient();
+      if (isSchoolGoogleEmail(invitation.email, environment)) {
+        await provisionGoogleAccount(admin, invitation);
+        const { data: current, error } = await supabase
+          .from("invitations")
+          .select("status,expires_at")
+          .eq("id", invitation.invitationId)
+          .maybeSingle();
+        if (error) throw error;
+        googleReady = current?.status === "pending" && Date.parse(current.expires_at) > Date.now();
+      }
+      return sendInvitationEmail(
+        admin,
         invitation,
         idempotencyKey,
         environment.NEXT_PUBLIC_APP_URL,
-      ),
+      );
+    },
     onProviderError: (error) => {
       // Keep credentials, tokens, email addresses, and provider message bodies out of logs.
       const details = error as { code?: unknown; status?: unknown } | null;
@@ -177,6 +192,7 @@ async function sendPreparedInvitation(
         expiresAt: input.expiresAt,
       }),
   });
+  return googleReady && outcome === "provider-failed" ? "google-ready" : outcome;
 }
 
 export async function inviteAccountAction(
@@ -229,6 +245,13 @@ export async function inviteAccountAction(
   if (!invitationId) return { error: "The invitation record did not return an identifier." };
 
   const delivery = await sendPreparedInvitation(supabase, { invitationId, expiresAt });
+  if (delivery === "google-ready") {
+    revalidatePath("/admin/accounts");
+    return {
+      message:
+        "School Google sign-in is prepared for this pending roster invitation. The optional password setup email could not be sent; use Resend after email delivery is restored. The roster deadline is unchanged and no email send was recorded.",
+    };
+  }
   if (delivery !== "sent" && delivery !== "recovery-sent") {
     revalidatePath("/admin/accounts");
     return {
@@ -272,7 +295,12 @@ export async function resendInvitationAction(invitationId: string, schoolYearId?
     accountsUrl({
       schoolYearId,
       view: "invitations",
-      notice: delivery === "recovery-sent" ? "invitation-recovery-sent" : "invitation-resent",
+      notice:
+        delivery === "google-ready"
+          ? "invitation-google-ready"
+          : delivery === "recovery-sent"
+            ? "invitation-recovery-sent"
+            : "invitation-resent",
     }),
   );
 }
@@ -837,6 +865,10 @@ export async function importRosterAction(
       invitationId,
       expiresAt: invitation.expiresAt,
     });
+    if (delivery === "google-ready") {
+      errors.push(`line ${line}: school Google sign-in ready; optional password email not sent`);
+      continue;
+    }
     if (delivery !== "sent" && delivery !== "recovery-sent") {
       errors.push(
         delivery === "record-failed"

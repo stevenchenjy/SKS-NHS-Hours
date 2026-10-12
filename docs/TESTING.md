@@ -167,7 +167,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=example-publishable-key-that-is-long-enough
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000 \
 PASSWORD_UPDATE_CONTEXT_SECRET=build-only-password-context-secret-000000000000 \
 ALLOWED_EMAIL_DOMAINS=example.edu \
-NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false \
+AUTH_GOOGLE_MODE=disabled \
 NHS_DESIGN_PREVIEW=false \
 pnpm build
 ```
@@ -180,7 +180,7 @@ A placeholder build proves compilation only. It does not prove connectivity, Aut
 
 - **application:** install, format, lint, typecheck, unit, audit, and production build on Node 22;
 - **database:** start Supabase and run pgTAP; and
-- **browser:** wait for application/database jobs, start/reset the local Supabase stack, export local keys to job environment, prepare login-capable synthetic users through the local Auth admin API, install Chromium, and run Playwright. Failed runs retain synthetic Playwright artifacts for seven days.
+- **browser:** wait for the database job, start/reset the local Supabase stack, export local keys to job environment, prepare login-capable synthetic users through the local Auth admin API, install Chromium, and run Playwright with its own application build. Browser QA runs independently of the application dependency-audit gate, so an upstream advisory cannot hide authentication regressions. Failed runs retain synthetic Playwright artifacts for seven days.
 
 Require the relevant checks through branch protection. A workflow definition in Git is not a passing run; inspect job output from the exact commit. Do not print exported Supabase environment files or secret values.
 
@@ -188,7 +188,7 @@ Require the relevant checks through branch protection. A workflow definition in 
 
 Automated checks do not replace these manual groups in `docs/QA.md`:
 
-- invite/recovery token-hash confirmation, exact invitation claim, seven-day expiry, 48-hour user-bound password context, provider-accepted send receipt, fresh Invite User resend, PKCE recovery fallback, invalid/expired/used/revoked invite, ordinary-session password denial, Google disabled/enabled, and sign-out lifecycle;
+- invite/recovery token-hash confirmation, exact invitation claim, seven-day roster deadline, 48-hour email proof and user-bound password context, provider-accepted send receipt, fresh Invite User resend, PKCE recovery fallback, invalid/expired/used/revoked invite, ordinary-session password denial, Google disabled/enabled, and sign-out lifecycle;
 - every role and direct URL/ID substitution, including expired former leaders;
 - draft/submit/withdraw/change/resubmit/review/reassign/correct flows;
 - queue filters, pagination, empty/loading/network/stale/double-submit states;

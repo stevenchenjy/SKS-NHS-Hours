@@ -26,7 +26,7 @@ Student leadership is deliberately reassigned for each school year. Teacher admi
 
 The Members area is intentionally read-only progress/history, not a second account-status editor. Settings no longer has a separate Roles page workflow.
 
-Accounts and Invitations show **Password setup** and **First portal visit** separately. Password setup reflects whether the authentication account currently has a password; administrators never receive the password or its hash. A visit is recorded only when the authenticated portal opens in the browser, not when an invitation is accepted or a page is prefetched. The first timestamp is retained across later visits. Visit tracking started September 14, 2026, so **No visit recorded** does not rule out use before tracking began.
+Accounts and Invitations show **Sign-in setup** and **First portal visit** separately. Password confirmation requires a recorded password change after email verification or a password-authenticated sign-in. A random temporary invitation password is not completion. Older accounts remain **Password not confirmed** until observed, which does not mean their password is unusable. Email verification and Google connection are shown separately; administrators never receive passwords or hashes. A visit is recorded only when the authenticated portal opens in the browser, not when an invitation is accepted or a page is prefetched. The first timestamp is retained across later visits. Visit tracking started September 14, 2026, so **No visit recorded** does not rule out use before tracking began.
 
 ## Invite one account
 
@@ -34,7 +34,7 @@ Accounts and Invitations show **Password setup** and **First portal visit** sepa
 2. Enter the normalized email and full name.
 3. Choose one initial access option: Member, Committee head, President / Vice President, or Teacher administrator.
 4. Submit once and read the result.
-5. Open **Invitations** to confirm the pending record, seven-day expiry, and accepted send count.
+5. Open **Invitations** to confirm the pending record, seven-day roster deadline, and accepted send count. Email links have a separate 48-hour target lifetime; check hosted configuration before relying on that target.
 6. Verify delivery through the configured Auth/SMTP provider. A portal success message confirms provider acceptance, not inbox delivery.
 
 Committee head and President / Vice President automatically include member access. Teacher administrator is exclusive, global, and can only be invited by the platform owner. Give staff a distinct administration identity if their existing profile has member participation or service history.

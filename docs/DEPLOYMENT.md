@@ -64,7 +64,10 @@ Configure every value separately for its environment.
 | `SUPABASE_SECRET_KEY`                  | Server only    | Elevated secret key; the local CLI's legacy service-role value is also supported                |
 | `PASSWORD_UPDATE_CONTEXT_SECRET`       | Server only    | Dedicated random value of at least 32 bytes for signed invite/recovery password-update contexts |
 | `ALLOWED_EMAIL_DOMAINS`                | Server only    | Comma-separated lowercase school domains; does not provision access                             |
-| `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED`      | Browser/server | `false` until Google and redirects are fully configured                                         |
+| `AUTH_GOOGLE_MODE`                     | Server         | `disabled` by default; use the isolated `beta` procedure in `docs/AUTH_BETA.md`                 |
+| `AUTH_GOOGLE_BETA_APPROVED`            | Server         | Required `true` for full Google rollout after human beta approval                               |
+| `GOOGLE_AUTH_ALLOWED_DOMAINS`          | Server         | Exact school Google domains                                                                     |
+| `NHS_SUPPORT_EMAIL`                    | Server         | Approved help contact                                                                           |
 | `SERVER_ACTION_ALLOWED_ORIGINS`        | Server config  | Normally empty; reviewed comma-separated additional trusted origins only                        |
 | `NHS_DESIGN_PREVIEW`                   | Server only    | `false` or absent in Preview/Production                                                         |
 
@@ -89,23 +92,23 @@ For each hosted project:
 
 1. Disable public email signup and anonymous sign-in.
 2. Match the configured password policy: minimum 6 characters with no required character types.
-3. Enable secure password change/recent reauthentication. The application also requires a signed, user-bound, 48-hour context produced only after verified invite/recovery proof; reproduce and test the hosted setting.
+3. Disable the extra password-change email challenge in the isolated beta. The application requires a signed, user-bound, 48-hour context produced only after verified invite/recovery proof; reproduce and test the hosted setting.
 4. Set the Site URL to that environment's exact `NEXT_PUBLIC_APP_URL`.
 5. Allow only the exact redirect URLs the environment needs: `https://HOST/auth/callback`, `https://HOST/auth/recovery-callback`, and `https://HOST/update-password`; do not add wildcards to compensate for configuration errors.
 6. Replace the hosted **Invite User** template with the reviewed equivalent of `supabase/templates/invite.html`. Its link must use `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite`, which `src/app/auth/confirm/route.ts` verifies before the application claim.
 7. Replace the hosted **Reset Password** template with `supabase/templates/recovery.html`. Its link must use `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`; keep `/auth/recovery-callback` allowlisted as the verified PKCE fallback for a stock recovery template.
-8. Set the hosted email OTP expiry to `604800` seconds. The application invitation and Auth invite token are intentionally aligned to seven days; this shared setting also governs recovery and other email links, while the post-verification password form lasts 48 hours.
+8. Set the hosted email OTP expiry to `172800` seconds (48 hours). Roster invitations remain valid for seven days; the email proof and the post-verification 48-hour browser form are separate clocks. Apply the matching email wording and run the read-only hosted preflight.
 9. Configure school-approved SMTP and sender identity; verify initial Invite User, fresh Invite User resend, and password-reset delivery with safe accounts. Disable link tracking that rewrites Auth URLs and assess email-security prefetch behavior.
 10. Set Auth rate limits appropriate to the environment and review abuse monitoring.
 11. Confirm expired, used, revoked, malformed, and ambiguous invitations fail safely; provider rejection does not advance application send facts; ordinary/stale sessions cannot change a password without verified context; and an unprovisioned Auth identity receives no portal data.
 
 Local Auth behavior in `supabase/config.toml` is not proof of hosted settings.
 
-The verified password form lasts 48 hours. With secure password change enabled, Supabase asks for an email verification code when the session is older than 24 hours. Verify the same-form code entry, invalid-code correction, resend, and failed/rate-limited delivery paths with a safe account; verify real email delivery separately from local mocks.
+The verified password form lasts 48 hours and completes into an authenticated portal session. Disable the extra day-two password email challenge in the isolated beta. The compatibility code path remains tested for older environments, including reload and resend with blank password fields. Verify real inbox delivery separately from local simulations.
 
 ### Optional Google OAuth
 
-Keep `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false` unless Google is fully configured.
+Keep `AUTH_GOOGLE_MODE=disabled` for the current production release. Use `beta` only on the isolated preview described in `docs/AUTH_BETA.md`; full rollout requires recorded human beta approval and `AUTH_GOOGLE_BETA_APPROVED=true`.
 
 1. Create a school-controlled Google OAuth application.
 2. Add the callback URI Supabase shows for the environment to Google's exact authorized redirect list.
@@ -184,7 +187,7 @@ The repository's `.github/workflows/ci.yml` runs formatting, lint, typecheck, un
 Use safe test accounts and non-sensitive records:
 
 1. public signup and anonymous application access are unavailable;
-2. the hosted Invite User template targets `/auth/confirm`, verifies an invite token hash, expires at seven days, claims the exact invitation ID, and creates a 48-hour user-bound password context; Resend issues a fresh Invite User message and only provider acceptance advances `sent_at`/`send_count`;
+2. the hosted Invite User template targets `/auth/confirm`, verifies an invite token hash, uses a 48-hour email proof, creates a 48-hour user-bound password context, and checks or retries the exact roster invitation claim before password update; Resend issues a fresh Invite User message and only provider acceptance advances `sent_at`/`send_count`;
 3. the hosted Reset Password template verifies a recovery token hash (and the allowlisted PKCE fallback works), while an ordinary or expired-context session cannot open/submit the password form;
 4. OAuth/recovery callbacks return only to exact allowlisted hosts;
 5. unprovisioned, inactive, and expired identities receive no protected data;

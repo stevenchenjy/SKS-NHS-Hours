@@ -13,6 +13,9 @@ import {
 import { safeInternalPath } from "@/lib/safe-navigation";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { claimInvitationOrConfirmExistingProfile } from "@/lib/auth/claim-invitation";
+import { isBetaTester, isSchoolGoogleEmail } from "@/lib/auth/sign-in-policy";
+import { PASSWORD_VERIFICATION_COOKIE } from "@/lib/auth/password-verification";
 
 export interface AuthFormState {
   message?: string;
@@ -23,9 +26,7 @@ export interface AuthFormState {
 }
 
 const loginSchema = z.object({
-  email: z
-    .email("Enter a valid school email address.")
-    .transform((value) => value.trim().toLowerCase()),
+  email: z.string().trim().toLowerCase().pipe(z.email("Enter a valid school email address.")),
   password: z.string().min(1, "Enter your password."),
 });
 
@@ -41,20 +42,60 @@ export async function loginAction(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
+  const environment = getServerEnvironment();
+  if (!isBetaTester(parsed.data.email, environment))
+    return {
+      error:
+        "This test portal is only open to invited beta testers. Use the current NHS portal for your account.",
+    };
   try {
-    assertAllowedEmail(parsed.data.email, getServerEnvironment().allowedEmailDomains);
+    assertAllowedEmail(parsed.data.email, environment.allowedEmailDomains);
   } catch (error) {
     return { error: error instanceof Error ? error.message : "This account is not allowed." };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
+    if (error) {
+      if (error.code === "email_not_confirmed")
+        return {
+          error:
+            "Your email has not been verified yet. Open your invitation and select Continue, or request reset instructions.",
+        };
+      if (error.status === 429)
+        return {
+          error:
+            "Too many sign-in attempts. Please wait before trying again. Your email and password are still in this form.",
+        };
+      return {
+        error:
+          error.code === "invalid_credentials" || error.status === 400
+            ? "The email or password is incorrect. Check your school email and password, or use Forgot your password."
+            : "The sign-in service is temporarily unavailable. Please retry here; you do not need a new invitation.",
+      };
+    }
+    if (!data.user)
+      return { error: "The sign-in service did not complete your session. Please retry here." };
+    if (!(await claimInvitationOrConfirmExistingProfile(supabase, data.user))) {
+      return {
+        error:
+          "You signed in, but your NHS roster access is not ready. Contact NHS support to check your invitation or membership.",
+      };
+    }
+    // The signed JWT's password AMR is checked by the database. Telemetry failure
+    // must never block an otherwise successful sign-in during migration rollout.
+    try {
+      const { error: milestoneError } = await supabase.rpc("record_password_sign_in");
+      if (milestoneError)
+        console.error("Password sign-in milestone failed", { code: milestoneError.code });
+    } catch {
+      console.error("Password sign-in milestone failed", { code: "request_failed" });
+    }
+  } catch {
     return {
       error:
-        error.status === 400
-          ? "The email or password is incorrect, or the invitation has not been accepted."
-          : "We could not sign you in. Please try again.",
+        "We could not check your NHS access because the service is temporarily unavailable. Retry here; you do not need a new invitation.",
     };
   }
 
@@ -66,17 +107,39 @@ export async function googleLoginAction(formData: FormData) {
   if (!environment.googleAuthEnabled) {
     redirect("/login?error=google-not-configured");
   }
+  const email =
+    typeof formData.get("email") === "string"
+      ? String(formData.get("email")).trim().toLowerCase()
+      : undefined;
+  if (environment.googleAuthMode === "beta" && !isSchoolGoogleEmail(email, environment))
+    redirect("/login?error=beta-not-invited");
 
   const next = safeInternalPath(formData.get("next"));
   const callback = new URL("/auth/callback", environment.NEXT_PUBLIC_APP_URL);
   callback.searchParams.set("next", next);
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: callback.toString() },
-  });
-  if (error || !data.url) redirect("/login?error=oauth-failed");
-  redirect(data.url);
+  let providerUrl: string | null = null;
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: callback.toString(),
+        scopes: "openid email profile",
+        queryParams: {
+          prompt: "select_account",
+          ...(email ? { login_hint: email } : {}),
+          ...(environment.googleAllowedDomains.length === 1
+            ? { hd: environment.googleAllowedDomains[0] }
+            : {}),
+        },
+      },
+    });
+    if (!error) providerUrl = data.url;
+  } catch {
+    /* Keep provider failures separate from credential errors. */
+  }
+  if (!providerUrl) redirect("/login?error=oauth-failed");
+  redirect(providerUrl);
 }
 
 export async function forgotPasswordAction(
@@ -91,6 +154,11 @@ export async function forgotPasswordAction(
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
 
   const environment = getServerEnvironment();
+  if (!isBetaTester(parsed.data.email, environment))
+    return {
+      error:
+        "This test portal is only open to invited beta testers. Request help through the current NHS portal.",
+    };
   try {
     assertAllowedEmail(parsed.data.email, environment.allowedEmailDomains);
   } catch {
@@ -109,7 +177,7 @@ export async function forgotPasswordAction(
       return {
         error:
           error.status === 429
-            ? "Password reset requests are temporarily limited. Wait a few minutes and try again. If this continues, contact the portal admin."
+            ? "Password reset requests are temporarily limited because email delivery has reached its sending limit. Try again later or contact NHS support for a reset link."
             : "We could not send reset instructions. Please try again later or contact the portal admin for help accessing your account.",
       };
     }
@@ -145,14 +213,25 @@ export async function updatePasswordAction(
       confirmation: formData.get("confirmation"),
       verificationCode: formData.get("verificationCode") ?? "",
     });
-  if (!parsed.success)
+  const resending = formData.get("intent") === "resend-verification-code";
+  if (!parsed.success && !resending)
     return { ...verificationState, fieldErrors: parsed.error.flatten().fieldErrors };
 
   const supabase = await createSupabaseServerClient();
+  let userResult;
+  try {
+    userResult = await supabase.auth.getUser();
+  } catch {
+    return {
+      ...verificationState,
+      error:
+        "We could not reach the password service. Check your connection and retry on this form.",
+    };
+  }
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser();
+  } = userResult;
   if (userError && (userError.status === undefined || userError.status >= 500)) {
     return {
       ...verificationState,
@@ -175,8 +254,30 @@ export async function updatePasswordAction(
       requiresNewPasswordLink: true,
     };
   }
+  if (!isBetaTester(user.email, getServerEnvironment()))
+    return { error: "This test portal is only open to invited beta testers." };
+  try {
+    if (!(await claimInvitationOrConfirmExistingProfile(supabase, user)))
+      return {
+        error:
+          "Your email is verified, but NHS roster access is not ready. Contact NHS support to check your invitation. Keep this page open.",
+      };
+  } catch {
+    return {
+      ...verificationState,
+      error:
+        "We could not check your NHS access. Retry on this form; your verified link has been kept.",
+    };
+  }
 
   async function sendVerificationCode(): Promise<AuthFormState> {
+    cookieStore.set(PASSWORD_VERIFICATION_COOKIE, context!.nonce, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/update-password",
+      maxAge: context!.expiresAt - Math.floor(Date.now() / 1000),
+    });
     try {
       const { error } = await supabase.auth.reauthenticate();
       if (error) {
@@ -188,7 +289,7 @@ export async function updatePasswordAction(
           requiresPasswordVerification: true,
           error:
             error.status === 429
-              ? "Verification emails are temporarily limited. Wait a few minutes, then select Resend verification code. If this continues, ask the portal admin for a fresh reset link."
+              ? "Verification emails are temporarily limited by the email sending limit. Try Resend verification code later or contact NHS support. Keep this page open."
               : "We could not send a verification code. Try Resend verification code later, or ask the portal admin for a fresh reset link. Your password has not been changed.",
         };
       }
@@ -207,8 +308,13 @@ export async function updatePasswordAction(
     }
   }
 
-  if (formData.get("intent") === "resend-verification-code") return sendVerificationCode();
-  if (_previous.requiresPasswordVerification && !parsed.data.verificationCode) {
+  if (resending) return sendVerificationCode();
+  if (!parsed.success)
+    return { ...verificationState, fieldErrors: parsed.error.flatten().fieldErrors };
+  const needsCode =
+    _previous.requiresPasswordVerification ||
+    cookieStore.get(PASSWORD_VERIFICATION_COOKIE)?.value === context.nonce;
+  if (needsCode && !parsed.data.verificationCode) {
     return {
       requiresPasswordVerification: true,
       fieldErrors: { verificationCode: ["Enter the verification code from your account email."] },
@@ -296,12 +402,43 @@ export async function updatePasswordAction(
     };
   }
   cookieStore.delete({ name: PASSWORD_UPDATE_CONTEXT_COOKIE, path: "/update-password" });
-  await supabase.auth.signOut();
-  redirect("/login?notice=password-updated");
+  cookieStore.delete({ name: PASSWORD_VERIFICATION_COOKIE, path: "/update-password" });
+  redirect("/dashboard?notice=password-updated");
 }
 
 export async function signOutAction() {
   const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/login");
+}
+
+export async function retryPortalAccessAction(): Promise<AuthFormState> {
+  let signedIn = false;
+  try {
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    if (error && (error.status === undefined || error.status >= 500))
+      return { error: "The sign-in service is temporarily unavailable. Please retry later." };
+    if (!user)
+      return {
+        error: "Your sign-in session is missing. Return to sign in using Google or your password.",
+      };
+    if (!isBetaTester(user.email, getServerEnvironment()))
+      return { error: "This test portal is only open to invited beta testers." };
+    signedIn = await claimInvitationOrConfirmExistingProfile(supabase, user);
+    if (!signedIn)
+      return {
+        error:
+          "Your NHS roster access is not ready. Use the support contact below to check your invitation.",
+      };
+  } catch {
+    return {
+      error: "We could not check NHS access. Your sign-in has been kept; please retry later.",
+    };
+  }
+  if (signedIn) redirect("/dashboard");
+  return {};
 }

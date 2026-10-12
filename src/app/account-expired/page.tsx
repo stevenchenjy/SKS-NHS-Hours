@@ -7,6 +7,8 @@ import { StatusBadge } from "@/components/portal/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getViewer } from "@/lib/dal/access";
+import { inactiveMembershipMessage } from "@/lib/auth/membership-message";
+import { SupportContact } from "@/components/auth/support-contact";
 
 export const metadata: Metadata = { title: "Membership inactive" };
 
@@ -35,8 +37,11 @@ export default async function AccountExpiredPage() {
         </CardHeader>
         <CardContent className="space-y-6 px-7 py-7">
           <p className="text-base leading-7 text-muted-foreground">
-            You can sign in, but you cannot submit or review service hours until a teacher
-            administrator renews or reactivates your school-year membership.
+            {inactiveMembershipMessage(
+              latest,
+              new Date().toISOString().slice(0, 10),
+              viewer?.profile.status === "active",
+            )}
           </p>
           {latest ? (
             <dl className="grid gap-4 rounded-lg border bg-background p-5 sm:grid-cols-3">
@@ -57,9 +62,9 @@ export default async function AccountExpiredPage() {
             </dl>
           ) : null}
           <div className="flex flex-col gap-3 border-t pt-6 sm:flex-row">
-            <p className="flex-1 text-sm leading-6 text-muted-foreground">
-              Contact your NHS adviser through the school’s usual channel to request renewal.
-            </p>
+            <div className="flex-1">
+              <SupportContact />
+            </div>
             <form action={signOutAction}>
               <Button type="submit" variant="outline" className="w-full sm:w-auto">
                 <LogOut data-icon="inline-start" aria-hidden="true" />

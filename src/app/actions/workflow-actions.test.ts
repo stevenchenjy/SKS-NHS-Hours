@@ -1,12 +1,22 @@
 import { File as NodeFile } from "node:buffer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { rpc, sendEmail, viewer, revalidate } = vi.hoisted(() => ({
-  rpc: vi.fn(),
-  sendEmail: vi.fn(),
-  viewer: vi.fn(),
-  revalidate: vi.fn(),
-}));
+const { rpc, sendEmail, viewer, revalidate, provisionGoogle, readInvitation, environment } =
+  vi.hoisted(() => ({
+    rpc: vi.fn(),
+    sendEmail: vi.fn(),
+    viewer: vi.fn(),
+    revalidate: vi.fn(),
+    provisionGoogle: vi.fn(),
+    readInvitation: vi.fn(),
+    environment: {
+      allowedEmailDomains: ["example.edu"],
+      NEXT_PUBLIC_APP_URL: "https://example.edu",
+      googleAuthMode: "disabled",
+      googleAllowedDomains: [] as string[],
+      betaAllowedEmails: [] as string[],
+    },
+  }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: revalidate }));
 vi.mock("next/navigation", () => ({
@@ -15,14 +25,19 @@ vi.mock("next/navigation", () => ({
   },
 }));
 vi.mock("@/lib/dal/access", () => ({ requireActiveViewer: viewer, requireAdmin: viewer }));
-vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient: async () => ({ rpc }) }));
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient: async () => {
+    const query = { select: vi.fn(), eq: vi.fn(), maybeSingle: readInvitation };
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    return { rpc, from: () => query };
+  },
+}));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({}) }));
 vi.mock("@/lib/auth/send-invitation-email", () => ({ sendInvitationEmail: sendEmail }));
+vi.mock("@/lib/auth/provision-google-account", () => ({ provisionGoogleAccount: provisionGoogle }));
 vi.mock("@/lib/env", () => ({
-  getServerEnvironment: () => ({
-    allowedEmailDomains: ["example.edu"],
-    NEXT_PUBLIC_APP_URL: "https://example.edu",
-  }),
+  getServerEnvironment: () => environment,
 }));
 
 import { correctApprovedRequestAction, importRosterAction } from "./admin-actions";
@@ -57,6 +72,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   rpc.mockReset();
   sendEmail.mockReset();
+  provisionGoogle.mockReset().mockResolvedValue(undefined);
+  readInvitation
+    .mockReset()
+    .mockResolvedValue({
+      data: { status: "pending", expires_at: new Date(Date.now() + 86400000).toISOString() },
+      error: null,
+    });
+  environment.googleAuthMode = "disabled";
+  environment.googleAllowedDomains = [];
+  environment.betaAllowedEmails = [];
   vi.stubGlobal("File", NodeFile);
   viewer.mockResolvedValue({
     roles: ["member"],
@@ -180,6 +205,33 @@ describe("roster delivery results", () => {
     const result = await importRosterAction({}, roster());
     expect(result.error).toBeUndefined();
     expect(result.message).toBe("1 invitation or account-recovery email sent.");
+    expect(provisionGoogle).not.toHaveBeenCalled();
+  });
+  it("keeps Google-ready roster access separate from a failed optional email", async () => {
+    prepare();
+    environment.googleAuthMode = "beta";
+    environment.googleAllowedDomains = ["example.edu"];
+    environment.betaAllowedEmails = ["member@example.edu"];
+    sendEmail.mockRejectedValue({ code: "over_email_send_rate_limit", status: 429 });
+    const result = await importRosterAction({}, roster());
+    expect(result.error).toContain("school Google sign-in ready; optional password email not sent");
+    expect(result.message).toBeUndefined();
+    expect(provisionGoogle).toHaveBeenCalledOnce();
+    expect(rpc.mock.calls.some(([name]) => name === "record_invitation_send_success")).toBe(false);
+  });
+  it("does not promise Google access for an expired roster invitation", async () => {
+    prepare();
+    environment.googleAuthMode = "beta";
+    environment.googleAllowedDomains = ["example.edu"];
+    environment.betaAllowedEmails = ["member@example.edu"];
+    readInvitation.mockResolvedValue({
+      data: { status: "pending", expires_at: "2020-01-01T00:00:00Z" },
+      error: null,
+    });
+    sendEmail.mockRejectedValue({ code: "over_email_send_rate_limit", status: 429 });
+    const result = await importRosterAction({}, roster());
+    expect(result.error).toContain("email not accepted");
+    expect(result.error).not.toContain("Google sign-in ready");
   });
   it("shows rejected rows as errors rather than a green success message", async () => {
     rpc.mockResolvedValue({ error: { message: "duplicate invitation" }, data: null });

@@ -8,11 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { MIN_PASSWORD_LENGTH, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
+import { PasswordInput } from "@/components/auth/password-input";
 
 const initialState: AuthFormState = {};
 
-export function UpdatePasswordForm() {
-  const [state, action, pending] = useActionState(updatePasswordAction, initialState);
+export function UpdatePasswordForm({
+  requiresVerification = false,
+}: {
+  requiresVerification?: boolean;
+}) {
+  const [state, action, pending] = useActionState(updatePasswordAction, {
+    ...initialState,
+    requiresPasswordVerification: requiresVerification,
+  });
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
@@ -21,10 +29,9 @@ export function UpdatePasswordForm() {
       <FieldGroup>
         <Field data-invalid={Boolean(state.fieldErrors?.password)}>
           <FieldLabel htmlFor="password">New password</FieldLabel>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             autoComplete="new-password"
             minLength={MIN_PASSWORD_LENGTH}
             value={password}
@@ -38,10 +45,9 @@ export function UpdatePasswordForm() {
         </Field>
         <Field data-invalid={Boolean(state.fieldErrors?.confirmation)}>
           <FieldLabel htmlFor="confirmation">Confirm password</FieldLabel>
-          <Input
+          <PasswordInput
             id="confirmation"
             name="confirmation"
-            type="password"
             autoComplete="new-password"
             value={confirmation}
             onChange={(event) => setConfirmation(event.target.value)}
@@ -104,15 +110,19 @@ export function UpdatePasswordForm() {
           variant="outline"
           className="w-full"
           disabled={pending}
+          formNoValidate
           onClick={() => setVerificationCode("")}
         >
           Resend verification code
         </Button>
       ) : null}
       <p className="text-sm leading-6 text-muted-foreground">
-        If a password is rejected, correct it and retry on this form. Your link was already used to
-        open this page; reopening it will not restart password setup.
+        Correct any errors and retry here. You can return to /update-password in this browser while
+        this setup session is valid. Once saved, you will enter the portal automatically.
       </p>
+      <Link href="/login" className="text-sm font-medium text-primary underline">
+        Already know your password? Back to sign in
+      </Link>
     </form>
   );
 }

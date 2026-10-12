@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Mail } from "lucide-react";
 
 import { forgotPasswordAction, type AuthFormState } from "@/app/actions/auth-actions";
@@ -12,6 +12,7 @@ const initialState: AuthFormState = {};
 
 export function ForgotPasswordForm() {
   const [state, action, pending] = useActionState(forgotPasswordAction, initialState);
+  const [email, setEmail] = useState("");
   return (
     <form action={action} className="space-y-5" noValidate>
       <Field data-invalid={Boolean(state.fieldErrors?.email)}>
@@ -21,6 +22,8 @@ export function ForgotPasswordForm() {
           name="email"
           type="email"
           autoComplete="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
           required
           aria-invalid={Boolean(state.fieldErrors?.email)}
           className="h-11"
@@ -46,7 +49,8 @@ export function ForgotPasswordForm() {
       </Button>
       <p className="text-sm leading-6 text-muted-foreground">
         Use the school email from your invitation and check your spam or junk folder. If no email
-        arrives, contact the portal admin to check your account and email delivery.
+        arrives, use the NHS support contact below. Request one link and use the latest email;
+        requesting another replaces the earlier reset link.
       </p>
     </form>
   );

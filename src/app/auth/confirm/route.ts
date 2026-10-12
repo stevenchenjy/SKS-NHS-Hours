@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { claimInvitationOrConfirmExistingProfile } from "@/lib/auth/claim-invitation";
 import {
   createPasswordUpdateContext,
   PASSWORD_UPDATE_CONTEXT_COOKIE,
@@ -72,11 +71,6 @@ export async function POST(request: Request) {
     return redirect(`/login?error=${reason}`);
   }
 
-  if (!(await claimInvitationOrConfirmExistingProfile(supabase, data.user))) {
-    await supabase.auth.signOut();
-    return redirect("/login?error=invitation-claim-failed");
-  }
-
   let context: string;
   try {
     context = await createPasswordUpdateContext(
@@ -84,11 +78,13 @@ export async function POST(request: Request) {
       getPasswordUpdateContextSecret(),
     );
   } catch {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     return redirect("/login?error=password-context-failed");
   }
 
   const response = redirect("/update-password");
+  // Provisioning is retried on /update-password after this proof is secured.
+  // A database outage must not strand the student with a consumed email link.
   response.cookies.set(PASSWORD_UPDATE_CONTEXT_COOKIE, context, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

@@ -5,10 +5,10 @@ import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function GlobalError({
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <main
@@ -21,12 +21,15 @@ export default function GlobalError({
         </span>
         <h1 className="mt-5 text-2xl font-bold">This page could not be loaded</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          No change was submitted. Try the request again; if the problem continues, contact the NHS
-          adviser.
+          The service may be temporarily unavailable. Your sign-in has been kept. Retry this page;
+          if the problem continues, open NHS access help.
         </p>
-        <Button type="button" onClick={reset} className="mt-6">
+        <Button type="button" onClick={retry} className="mt-6">
           Try again
         </Button>
+        <a href="/access-help" className="mt-4 block text-sm font-medium text-primary underline">
+          NHS access help
+        </a>
       </div>
     </main>
   );

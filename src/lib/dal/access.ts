@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { GlobalAccessLevel, Membership, RoleSlug, SchoolYear, Viewer } from "@/lib/types";
+import { isBetaTester } from "@/lib/auth/sign-in-policy";
+import { getServerEnvironment } from "@/lib/env";
 
 const reviewerRoles = new Set<RoleSlug>(["committee_head", "teacher_admin"]);
 
@@ -34,7 +36,10 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     error: userError,
   } = await supabase.auth.getUser();
 
+  if (userError && (userError.status === undefined || userError.status >= 500))
+    throw new Error("The sign-in service is temporarily unavailable. Please retry.");
   if (userError || !user) return null;
+  if (!isBetaTester(user.email, getServerEnvironment())) redirect("/login?error=beta-not-invited");
 
   const [
     { data: profile, error: profileError },
@@ -60,7 +65,11 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
       .maybeSingle(),
   ]);
 
-  if (profileError || membershipError || accessGrantError || !profile) return null;
+  if (profileError || membershipError || accessGrantError)
+    throw new Error(
+      "Your NHS access could not be loaded. Please retry; your sign-in has been kept.",
+    );
+  if (!profile) redirect("/access-help?reason=not-provisioned");
 
   const rawMemberships = (membershipRows ?? []) as unknown as MembershipRow[];
   const membershipIds = rawMemberships.map((membership) => membership.id);

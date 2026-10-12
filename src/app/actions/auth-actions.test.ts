@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   resetPasswordForEmail,
+  signInWithPassword,
+  claim,
+  rpc,
   getUser,
   updateUser,
   reauthenticate,
@@ -10,11 +13,14 @@ const {
   redirect,
 } = vi.hoisted(() => ({
   resetPasswordForEmail: vi.fn(),
+  signInWithPassword: vi.fn(),
+  claim: vi.fn(),
+  rpc: vi.fn(),
   getUser: vi.fn(),
   updateUser: vi.fn(),
   reauthenticate: vi.fn(),
   signOut: vi.fn(),
-  cookieStore: { get: vi.fn(), delete: vi.fn() },
+  cookieStore: { get: vi.fn(), set: vi.fn(), delete: vi.fn() },
   redirect: vi.fn((path: string) => {
     throw new Error(`REDIRECT:${path}`);
   }),
@@ -22,13 +28,27 @@ const {
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
-    auth: { resetPasswordForEmail, getUser, updateUser, reauthenticate, signOut },
+    auth: {
+      signInWithPassword,
+      resetPasswordForEmail,
+      getUser,
+      updateUser,
+      reauthenticate,
+      signOut,
+    },
+    rpc,
   }),
 }));
 vi.mock("next/headers", () => ({ cookies: async () => cookieStore }));
 vi.mock("next/navigation", () => ({ redirect }));
+vi.mock("@/lib/auth/claim-invitation", () => ({ claimInvitationOrConfirmExistingProfile: claim }));
 
-import { forgotPasswordAction, updatePasswordAction } from "./auth-actions";
+import {
+  loginAction,
+  forgotPasswordAction,
+  updatePasswordAction,
+  signOutAction,
+} from "./auth-actions";
 import { createPasswordUpdateContext } from "@/lib/auth/password-update-context";
 
 const signingSecret = "test-only-password-context-secret-00000000";
@@ -46,6 +66,12 @@ beforeEach(async () => {
   vi.stubEnv("ALLOWED_EMAIL_DOMAINS", "example.edu");
   vi.stubEnv("PASSWORD_UPDATE_CONTEXT_SECRET", signingSecret);
   resetPasswordForEmail.mockReset().mockResolvedValue({ error: null });
+  signInWithPassword.mockReset().mockResolvedValue({
+    data: { user: { id: "test-member", email: "member@example.edu" } },
+    error: null,
+  });
+  claim.mockReset().mockResolvedValue(true);
+  rpc.mockReset().mockResolvedValue({ error: null });
   getUser.mockReset().mockResolvedValue({ data: { user: { id: "test-member" } }, error: null });
   updateUser.mockReset().mockResolvedValue({ error: null });
   reauthenticate.mockReset().mockResolvedValue({ error: null });
@@ -57,6 +83,7 @@ beforeEach(async () => {
     ),
   });
   cookieStore.delete.mockReset();
+  cookieStore.set.mockReset();
   redirect.mockClear();
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -73,14 +100,14 @@ describe("password setup and retry", () => {
     "accepts %s with six or more characters and no required character types",
     async (password) => {
       await expect(updatePasswordAction({}, passwordForm(password))).rejects.toThrow(
-        "REDIRECT:/login?notice=password-updated",
+        "REDIRECT:/dashboard?notice=password-updated",
       );
       expect(updateUser).toHaveBeenCalledExactlyOnceWith({ password });
       expect(cookieStore.delete).toHaveBeenCalledWith({
         name: "nhs-password-update-context",
         path: "/update-password",
       });
-      expect(signOut).toHaveBeenCalledOnce();
+      expect(signOut).not.toHaveBeenCalled();
     },
   );
 
@@ -111,7 +138,7 @@ describe("password setup and retry", () => {
       expect(signOut).not.toHaveBeenCalled();
       expect(console.error).toHaveBeenCalledWith("Password update failed", { code, status: 422 });
       await expect(updatePasswordAction(result, passwordForm("newpass"))).rejects.toThrow(
-        "REDIRECT:/login?notice=password-updated",
+        "REDIRECT:/dashboard?notice=password-updated",
       );
     },
   );
@@ -147,7 +174,7 @@ describe("password setup and retry", () => {
     const form = passwordForm("abcdef");
     form.set("verificationCode", " 123456 ");
     await expect(updatePasswordAction(result, form)).rejects.toThrow(
-      "REDIRECT:/login?notice=password-updated",
+      "REDIRECT:/dashboard?notice=password-updated",
     );
     expect(updateUser).toHaveBeenLastCalledWith({ password: "abcdef", nonce: "123456" });
     expect(reauthenticate).toHaveBeenCalledOnce();
@@ -177,11 +204,49 @@ describe("password setup and retry", () => {
   });
 
   it("resends a code only after verifying the signed password context", async () => {
-    const form = passwordForm("abcdef");
+    const form = passwordForm("", "mismatch");
     form.set("intent", "resend-verification-code");
     const result = await updatePasswordAction({ requiresPasswordVerification: true }, form);
     expect(result.message).toContain("sent a verification code");
     expect(reauthenticate).toHaveBeenCalledOnce();
+    expect(updateUser).not.toHaveBeenCalled();
+    expect(cookieStore.delete).not.toHaveBeenCalled();
+  });
+
+  it("retains password verification state for a reload without extending the context", async () => {
+    updateUser.mockResolvedValueOnce({ error: { code: "reauthentication_needed", status: 400 } });
+    await updatePasswordAction({}, passwordForm("abcdef"));
+    expect(cookieStore.set).toHaveBeenCalledWith(
+      "nhs-password-verification",
+      expect.any(String),
+      expect.objectContaining({
+        path: "/update-password",
+        httpOnly: true,
+        maxAge: expect.any(Number),
+      }),
+    );
+    const [name, value] = cookieStore.set.mock.calls[0]!;
+    const getContext = cookieStore.get.getMockImplementation();
+    cookieStore.get.mockImplementation((key) => (key === name ? { value } : getContext?.(key)));
+    const result = await updatePasswordAction({}, passwordForm("abcdef"));
+    expect(result.requiresPasswordVerification).toBe(true);
+    expect(result.fieldErrors?.verificationCode).toBeTruthy();
+    expect(reauthenticate).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the verified context when roster access is temporarily unavailable", async () => {
+    claim.mockRejectedValue(new Error("database unavailable"));
+    const result = await updatePasswordAction({}, passwordForm("abcdef"));
+    expect(result.error).toContain("verified link has been kept");
+    expect(result.requiresNewPasswordLink).toBeUndefined();
+    expect(updateUser).not.toHaveBeenCalled();
+    expect(cookieStore.delete).not.toHaveBeenCalled();
+  });
+
+  it("requires roster access before changing a password", async () => {
+    claim.mockResolvedValue(false);
+    const result = await updatePasswordAction({}, passwordForm("abcdef"));
+    expect(result.error).toContain("roster access is not ready");
     expect(updateUser).not.toHaveBeenCalled();
     expect(cookieStore.delete).not.toHaveBeenCalled();
   });
@@ -310,7 +375,7 @@ describe("password reset delivery", () => {
     const result = await forgotPasswordAction({}, emailForm("member@example.edu"));
     expect(result.message).toBeUndefined();
     expect(result.error).toContain("temporarily limited");
-    expect(result.error).toContain("portal admin");
+    expect(result.error).toContain("NHS support");
   });
 
   it.each([
@@ -332,5 +397,52 @@ describe("password reset delivery", () => {
     const result = await forgotPasswordAction({}, emailForm("member@example.edu"));
     expect(result.message).toBeUndefined();
     expect(result.error).toContain("could not send");
+  });
+});
+
+describe("password sign-in", () => {
+  it("signs out only the current device", async () => {
+    await expect(signOutAction()).rejects.toThrow("REDIRECT:/login");
+    expect(signOut).toHaveBeenCalledExactlyOnceWith({ scope: "local" });
+  });
+  it("does not block a valid sign-in when milestone recording has a network failure", async () => {
+    rpc.mockRejectedValue(new Error("milestone service unavailable"));
+    const form = emailForm("member@example.edu");
+    form.set("password", "abcdef");
+    await expect(loginAction({}, form)).rejects.toThrow("REDIRECT:/dashboard");
+    expect(signOut).not.toHaveBeenCalled();
+  });
+  it("normalizes pasted addresses, claims pending invitations, and preserves the session", async () => {
+    const form = emailForm(" Member@Example.EDU ");
+    form.set("password", "abcdef");
+    await expect(loginAction({}, form)).rejects.toThrow("REDIRECT:/dashboard");
+    expect(signInWithPassword).toHaveBeenCalledWith({
+      email: "member@example.edu",
+      password: "abcdef",
+    });
+    expect(claim).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith("record_password_sign_in");
+    expect(signOut).not.toHaveBeenCalled();
+  });
+  it.each([
+    [{ code: "invalid_credentials", status: 400 }, "incorrect"],
+    [{ code: "email_not_confirmed", status: 400 }, "not been verified"],
+    [{ code: "over_request_rate_limit", status: 429 }, "Too many"],
+    [{ code: "unexpected_failure", status: 503 }, "temporarily unavailable"],
+  ])("distinguishes sign-in failure %j", async (error, expected) => {
+    signInWithPassword.mockResolvedValue({ data: { user: null }, error });
+    const form = emailForm("member@example.edu");
+    form.set("password", "abcdef");
+    const result = await loginAction({}, form);
+    expect(result.error).toContain(expected);
+    expect(claim).not.toHaveBeenCalled();
+  });
+  it("reports a network outage without discarding credentials or claiming an expired invitation", async () => {
+    signInWithPassword.mockRejectedValue(new Error("offline"));
+    const form = emailForm("member@example.edu");
+    form.set("password", "abcdef");
+    const result = await loginAction({}, form);
+    expect(result.error).toContain("temporarily unavailable");
+    expect(result.error).not.toContain("expired");
   });
 });

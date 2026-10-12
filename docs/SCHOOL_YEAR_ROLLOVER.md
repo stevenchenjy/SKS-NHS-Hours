@@ -93,3 +93,7 @@ After pending work and required exports are handled, close the prior year. Closi
 ## Recovery
 
 If the wrong access was assigned, correct the destination-year row through Accounts. If dates or activation were wrong, use the protected school-year workflow and preserve audit history. Do not repair a transition with direct table updates, deletes, copied requests, or renamed identities.
+
+## Returning-account sign-in rehearsal
+
+Use existing profiles when assigning the next-year roster. Passwords and linked Google identities do not need to be recreated. Before activation, a future/draft member sees that the year is not open yet; this must not be reported as an expired invitation. Test with a returning member after activation, an invited account that has not yet claimed its profile, and a global Admin who can still assist. Password and Google sign-in both attempt the authorized pending invitation claim. Record school ownership of Google OAuth, email delivery, Supabase, Vercel, GitHub, and billing, and have a successor Admin generate a safe test recovery link before handoff.

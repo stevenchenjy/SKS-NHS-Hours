@@ -122,7 +122,7 @@ Request hours remain exact positive whole-hour amounts with a universal 24-hour 
 
 Invitation metadata includes normalized email/name, school year, status (`pending`, `accepted`, `revoked`, `expired`), expiry, inviter membership, acceptance/revocation actors/timestamps, last send time/count, and timestamps. A partial unique index permits only one pending invitation per email/year.
 
-The application issues seven-day invitations and hosted Supabase email OTP expiry must be `604800` seconds to match. A new invitation starts with `send_count = 0` and `sent_at = null`. `prepare_invitation_send` validates the still-pending invitation without mutating those facts. After Supabase Auth accepts the Invite User call, `record_invitation_send_success` atomically sets the accepted expiry/time, increments the count, and writes `invitation.sent` or `invitation.resent`. Its UUID idempotency key prevents an acknowledgement retry from double-counting. A direct privileged RPC must not be used to create a different lifetime or fabricate provider acceptance.
+The application issues seven-day roster invitations. Hosted email invitation/reset proof expiry must be `172800` seconds (48 hours), and the UI labels the roster deadline separately from the email expiry. A new invitation starts with `send_count = 0` and `sent_at = null`. `prepare_invitation_send` validates the still-pending invitation without mutating those facts. After Supabase Auth accepts the Invite User call, `record_invitation_send_success` atomically sets the accepted expiry/time, increments the count, and writes `invitation.sent` or `invitation.resent`. Its UUID idempotency key prevents an acknowledgement retry from double-counting. A direct privileged RPC must not be used to create a different lifetime or fabricate provider acceptance.
 
 `invitation_roles` records the proposed role set. No invite token, reset token, password, OAuth secret, or Auth session belongs in either table. Supabase Auth owns the secret-bearing link; the application stores status/audit metadata only.
 
@@ -343,3 +343,5 @@ The current eight-file suite has passed dialect parsing and plan-count validatio
 - hosted Auth/invitation and complete paginated CSV integration checks.
 
 The authored cases define the intended database and application-integration boundary, but the current native boundary is not established until the exact-commit CI database suite passes. Even after that pass, do not claim the production data boundary is complete until the remaining hosted and operational gates pass.
+
+Authentication completion is stored in `private.account_auth_milestones`. A trigger observes password changes after email verification; `record_password_sign_in` requires the signed Auth JWT password AMR. No historical hashes or portal visits are backfilled as password proof.

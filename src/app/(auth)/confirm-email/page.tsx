@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SupportContact } from "@/components/auth/support-contact";
 
 export const metadata: Metadata = {
   title: "Continue to password setup",
@@ -50,6 +51,14 @@ export default async function ConfirmEmailPage({
         <Link href="/login" className="text-sm text-primary hover:underline">
           Back to sign in
         </Link>
+        <Link
+          href="/update-password"
+          prefetch={false}
+          className="text-sm text-primary hover:underline"
+        >
+          Already verified this link? Resume password setup
+        </Link>
+        <SupportContact />
       </CardContent>
     </Card>
   );

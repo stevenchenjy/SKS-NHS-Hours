@@ -21,6 +21,7 @@ describe("AccountExpiredPage", () => {
     getViewerMock.mockResolvedValue({
       activeMembership: { id: "membership-1" },
       isMember: true,
+      profile: { status: "active" },
       isTeacherAdmin: false,
       memberships: [],
     });
@@ -35,6 +36,7 @@ describe("AccountExpiredPage", () => {
       activeMembership: { id: "membership-1" },
       isMember: false,
       isTeacherAdmin: true,
+      profile: { status: "active" },
       memberships: [],
     });
 
@@ -46,6 +48,7 @@ describe("AccountExpiredPage", () => {
   it("keeps inactive members on the limited account screen", async () => {
     getViewerMock.mockResolvedValue({
       activeMembership: null,
+      profile: { status: "active" },
       isMember: false,
       isTeacherAdmin: false,
       memberships: [],

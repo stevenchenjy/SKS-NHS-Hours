@@ -10,12 +10,22 @@ import {
 } from "@/lib/auth/password-update-context";
 import { getPasswordUpdateContextSecret } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { claimInvitationOrConfirmExistingProfile } from "@/lib/auth/claim-invitation";
+import { PASSWORD_VERIFICATION_COOKIE } from "@/lib/auth/password-verification";
+import { isBetaTester } from "@/lib/auth/sign-in-policy";
+import { getServerEnvironment } from "@/lib/env";
+import { SupportContact } from "@/components/auth/support-contact";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Choose a password" };
 
 export default async function UpdatePasswordPage() {
   const supabase = await createSupabaseServerClient();
-  const [{ data }, cookieStore] = await Promise.all([supabase.auth.getUser(), cookies()]);
+  const [{ data, error }, cookieStore] = await Promise.all([supabase.auth.getUser(), cookies()]);
+  if (error && (error.status === undefined || error.status >= 500))
+    throw new Error(
+      "The password service is temporarily unavailable. Your setup session has not been discarded.",
+    );
   const context = data.user
     ? await verifyPasswordUpdateContext(
         cookieStore.get(PASSWORD_UPDATE_CONTEXT_COOKIE)?.value,
@@ -24,6 +34,15 @@ export default async function UpdatePasswordPage() {
       )
     : null;
   if (!data.user || !context) redirect("/login?error=password-context-required");
+  if (!isBetaTester(data.user.email, getServerEnvironment()))
+    redirect("/login?error=beta-not-invited");
+  let accessReady = false;
+  let unavailable = false;
+  try {
+    accessReady = await claimInvitationOrConfirmExistingProfile(supabase, data.user);
+  } catch {
+    unavailable = true;
+  }
 
   return (
     <Card className="py-0 shadow-sm">
@@ -33,12 +52,33 @@ export default async function UpdatePasswordPage() {
         </CardTitle>
         <CardDescription className="text-base">
           Your link has been verified. Keep this page open and save your password within 48 hours of
-          verification, using this browser. After 24 hours, you may be asked to enter a verification
-          code sent to your account email.
+          verification, using this browser. You can return to this page if you close it.
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-6 py-7">
-        <UpdatePasswordForm />
+      <CardContent className="flex flex-col gap-5 px-6 py-7">
+        {accessReady ? (
+          <UpdatePasswordForm
+            requiresVerification={
+              cookieStore.get(PASSWORD_VERIFICATION_COOKIE)?.value === context.nonce
+            }
+          />
+        ) : (
+          <div className="flex flex-col gap-4">
+            <p role="alert">
+              {unavailable
+                ? "Your email is verified, but we could not load your NHS access. Your setup session is still available; retry here without reopening the email link."
+                : "Your email is verified, but your NHS roster access is not ready. Contact NHS support to check your invitation."}
+            </p>
+            <Link
+              href="/update-password"
+              prefetch={false}
+              className="font-medium text-primary underline"
+            >
+              Retry access check
+            </Link>
+          </div>
+        )}
+        <SupportContact />
       </CardContent>
     </Card>
   );

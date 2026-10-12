@@ -1,4 +1,5 @@
 import { SchoolBrand } from "@/components/auth/school-brand";
+import { BetaNotice } from "@/components/auth/beta-notice";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,7 +8,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <SchoolBrand />
       </aside>
       <main id="main-content" className="flex items-center justify-center px-5 py-12 sm:px-10">
-        <div className="w-full max-w-[460px]">{children}</div>
+        <div className="w-full max-w-[460px]">
+          <BetaNotice />
+          {children}
+        </div>
       </main>
     </div>
   );

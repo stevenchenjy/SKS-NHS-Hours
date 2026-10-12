@@ -1,10 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClientMock } = vi.hoisted(() => ({
+const { createSupabaseServerClientMock, policy } = vi.hoisted(() => ({
   createSupabaseServerClientMock: vi.fn(),
+  policy: {
+    googleAuthMode: "disabled",
+    betaAllowedEmails: [] as string[],
+    googleAllowedDomains: [] as string[],
+  },
 }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/env", () => ({
+  getServerEnvironment: () => policy,
+}));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: createSupabaseServerClientMock,
 }));
@@ -118,7 +126,53 @@ function viewerClient(
 describe("getViewer role loading", () => {
   beforeEach(() => {
     createSupabaseServerClientMock.mockReset();
+    policy.googleAuthMode = "disabled";
+    policy.betaAllowedEmails = [];
     vi.setSystemTime(new Date("2026-08-29T12:00:00.000Z"));
+  });
+
+  it("reports an Auth outage without treating the user as signed out", async () => {
+    const { client, from } = viewerClient({ data: [], error: null });
+    client.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: { status: 503 },
+    } as never);
+    createSupabaseServerClientMock.mockResolvedValue(client);
+    await expect(getViewer()).rejects.toThrow("temporarily unavailable");
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("reports a profile lookup outage without redirecting to login", async () => {
+    const { client, from } = viewerClient({ data: [], error: null });
+    from.mockImplementation((table) =>
+      query(
+        table === "profiles"
+          ? { data: null, error: { message: "database unavailable" } }
+          : { data: [], error: null },
+      ),
+    );
+    createSupabaseServerClientMock.mockResolvedValue(client);
+    await expect(getViewer()).rejects.toThrow("Your NHS access could not be loaded");
+  });
+
+  it("routes a verified identity without a profile to access help instead of a login loop", async () => {
+    const { client, from } = viewerClient({ data: [], error: null });
+    from.mockImplementation(() => query({ data: null, error: null }));
+    createSupabaseServerClientMock.mockResolvedValue(client);
+    await expect(getViewer()).rejects.toMatchObject({
+      digest: expect.stringContaining("/access-help?reason=not-provisioned"),
+    });
+  });
+
+  it("blocks an existing direct Auth session outside the beta cohort", async () => {
+    policy.googleAuthMode = "beta";
+    policy.betaAllowedEmails = ["junyuc2027@sks.org"];
+    const { client, from } = viewerClient({ data: [], error: null });
+    createSupabaseServerClientMock.mockResolvedValue(client);
+    await expect(getViewer()).rejects.toMatchObject({
+      digest: expect.stringContaining("beta-not-invited"),
+    });
+    expect(from).not.toHaveBeenCalled();
   });
 
   afterEach(() => {

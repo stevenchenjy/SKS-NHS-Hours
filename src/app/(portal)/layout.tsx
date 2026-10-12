@@ -3,6 +3,7 @@ import { PortalVisitTracker } from "@/components/portal/portal-visit-tracker";
 import { requirePortalViewer } from "@/lib/dal/access";
 import { getNavigationIndicators } from "@/lib/dal/navigation-indicators";
 import { unreadNotificationCount } from "@/lib/dal/notifications";
+import { BetaNotice } from "@/components/auth/beta-notice";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const viewer = await requirePortalViewer();
@@ -17,6 +18,7 @@ export default async function PortalLayout({ children }: { children: React.React
       initialNavigationIndicators={navigationIndicators}
     >
       <PortalVisitTracker />
+      <BetaNotice />
       {children}
     </AppShell>
   );

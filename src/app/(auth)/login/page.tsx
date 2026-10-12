@@ -7,6 +7,10 @@ import { SchoolBrand } from "@/components/auth/school-brand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { safeInternalPath } from "@/lib/safe-navigation";
+import { getServerEnvironment } from "@/lib/env";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { SupportContact } from "@/components/auth/support-contact";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -17,6 +21,18 @@ function safeNext(value: string | string[] | undefined): string {
 
 const authenticationErrors: Record<string, string> = {
   "google-not-configured": "School Google sign-in is not configured.",
+  "beta-not-invited":
+    "This test portal is only open to invited beta testers. Use your approved school Google account, or return to the current NHS portal.",
+  "school-google-required":
+    "Choose your school Google account, using the school email on your NHS roster.",
+  "google-cancelled":
+    "Google sign-in was cancelled or blocked. Try again with your school account, or use your portal password below.",
+  "oauth-failed":
+    "We could not start Google sign-in. Try again later or use your portal password below.",
+  "missing-code":
+    "Google did not finish sign-in. Select the Google button again, or use your portal password.",
+  "callback-failed":
+    "Google sign-in could not be completed in this browser. Start again here using the same browser, or use your portal password.",
   "invalid-invitation-link":
     "This invitation link is malformed. Ask the portal admin to resend it.",
   "invitation-link-expired":
@@ -46,7 +62,8 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const next = safeNext(params.next);
-  const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
+  const environment = getServerEnvironment();
+  const googleEnabled = environment.googleAuthEnabled;
   const error = Array.isArray(params.error) ? params.error[0] : params.error;
   const notice = Array.isArray(params.notice) ? params.notice[0] : params.notice;
 
@@ -80,10 +97,23 @@ export default async function LoginPage({
         ) : null}
         {googleEnabled ? (
           <>
-            <form action={googleLoginAction}>
+            <form action={googleLoginAction} className="flex flex-col gap-4">
               <input type="hidden" name="next" value={next} />
-              <Button type="submit" variant="outline" size="lg" className="h-11 w-full">
-                Continue with school Google
+              {environment.googleAuthMode === "beta" ? (
+                <Field>
+                  <FieldLabel htmlFor="google-email">Beta school email</FieldLabel>
+                  <Input
+                    id="google-email"
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    required
+                    className="h-11"
+                  />
+                </Field>
+              ) : null}
+              <Button type="submit" size="lg" className="h-11 w-full">
+                Sign in with school Google
               </Button>
             </form>
             <div className="flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
@@ -94,14 +124,33 @@ export default async function LoginPage({
           </>
         ) : null}
         <LoginForm next={next} />
-        <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+        {error &&
+        [
+          "invitation-link-expired",
+          "password-link-expired",
+          "password-verification-failed",
+        ].includes(error) ? (
+          <div className="flex flex-col gap-2 text-sm">
+            <Link
+              href="/update-password"
+              prefetch={false}
+              className="font-medium text-primary underline"
+            >
+              Resume password setup in this browser
+            </Link>
+            <Link href="/forgot-password" className="font-medium text-primary underline">
+              Request a fresh reset link
+            </Link>
+          </div>
+        ) : null}
+        <div className="flex flex-col gap-2 text-sm">
           <Link
             href="/forgot-password"
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
             Forgot your password?
           </Link>
-          <span className="text-muted-foreground">Need access? Contact the portal admin.</span>
+          <SupportContact />
         </div>
       </CardContent>
     </Card>

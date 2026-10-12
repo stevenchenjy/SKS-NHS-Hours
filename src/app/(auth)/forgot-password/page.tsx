@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { ArrowLeft } from "lucide-react";
 
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
+import { SupportContact } from "@/components/auth/support-contact";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = { title: "Reset password" };
@@ -28,8 +29,9 @@ export default async function ForgotPasswordPage() {
           We will email reset instructions when the address belongs to an invited account.
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-6 py-7">
+      <CardContent className="flex flex-col gap-5 px-6 py-7">
         <ForgotPasswordForm />
+        <SupportContact />
       </CardContent>
     </Card>
   );

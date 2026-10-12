@@ -96,12 +96,13 @@ describe("explicit email link confirmation", () => {
     expect(createContext).not.toHaveBeenCalled();
   });
 
-  it("requires application access after email verification", async () => {
+  it("secures verified proof before the password page checks roster access", async () => {
     claim.mockResolvedValue(false);
     const response = await POST(request());
-    expect(response.headers.get("location")).toContain("invitation-claim-failed");
-    expect(signOut).toHaveBeenCalled();
-    expect(createContext).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toContain("/update-password");
+    expect(signOut).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
+    expect(createContext).toHaveBeenCalled();
   });
 
   it("does not label a provider outage as an expired link", async () => {

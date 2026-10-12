@@ -1,6 +1,6 @@
 # NHS Service Hours Portal — Operations and deployment
 
-This runbook covers local development, Supabase and Vercel setup, account bootstrap, release, backup, restore, rollback, and routine administration. It deliberately contains no real project references, credentials, student data, or test passwords.
+This runbook covers local development, Supabase and Vercel setup, account bootstrap, release, backup, restore, rollback, and routine administration. It contains no credentials or test passwords. The isolated authentication beta has its own school-approved tester and support configuration in `docs/AUTH_BETA.md`.
 
 The checked-in sources of truth are:
 
@@ -45,7 +45,12 @@ Create `.env.local` from `.env.example`. `.env.local` is ignored by Git.
 | `SUPABASE_SECRET_KEY`                  | Server only          | Required for privileged account operations | Elevated Supabase secret key; use the local CLI's legacy service-role value only for local development   |
 | `PASSWORD_UPDATE_CONTEXT_SECRET`       | Server only          | Required for password-update proof         | At least 32 random bytes for signing the 48-hour invite/recovery context; use a dedicated hosted value   |
 | `ALLOWED_EMAIL_DOMAINS`                | Server only          | Recommended                                | Comma-separated lowercase school domains; this supplements invitations and never grants access by itself |
-| `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED`      | Browser and server   | Yes                                        | `true` only after Google and Supabase OAuth are configured; otherwise `false`                            |
+| `AUTH_GOOGLE_MODE`                     | Server               | Yes                                        | `disabled` by default; isolated `beta`; `enabled` only after real-person beta approval                   |
+| `AUTH_GOOGLE_BETA_APPROVED`            | Server               | For rollout                                | `true` only after recording human beta results; default `false`                                          |
+| `GOOGLE_AUTH_ALLOWED_DOMAINS`          | Server               | For Google                                 | Exact school Google domains; matching domain alone grants no portal access                               |
+| `AUTH_BETA_ALLOWED_EMAILS`             | Server               | For beta                                   | Explicit volunteer emails; applies to Google, passwords, recovery, and portal entry                      |
+| `AUTH_PRODUCTION_SUPABASE_URL`         | Server               | For beta                                   | Prevents beta from using the production database                                                         |
+| `NHS_SUPPORT_EMAIL`                    | Server               | Before real use                            | Approved support mailbox; current beta contact is in `docs/AUTH_BETA.md`                                 |
 | `SERVER_ACTION_ALLOWED_ORIGINS`        | Server configuration | Optional                                   | Comma-separated additional trusted origins, without paths; normally empty on a single-origin deployment  |
 | `NHS_DESIGN_PREVIEW`                   | Server only          | Optional                                   | Local design-fixture switch; must be `false` or absent in Preview and Production                         |
 
@@ -123,30 +128,24 @@ A matching email domain alone never satisfies steps 2–5. Public email signup a
 In Supabase Dashboard → Authentication:
 
 1. Disable public email signup and anonymous sign-in.
-2. Require a minimum 12-character password with lowercase, uppercase, and digits, or a stronger school policy.
-3. Enable secure password change/recent reauthentication. The checked-in local setting is enabled, and the application additionally requires a signed, user-bound invite/recovery context; reproduce and test the hosted setting rather than treating the local file as proof.
+2. Require a minimum **6-character password with no required character types**. Check the live Auth settings; a local file or UI label does not change hosted policy.
+3. Disable the additional secure-password-change email reauthentication challenge in the isolated beta. The portal requires a signed, user-bound, 48-hour invite/recovery context before its password form can update a password. Retain compatibility handling for environments still using the challenge; code resend works without password fields and survives page reload.
 4. Set the Site URL to the exact canonical application origin.
 5. Add exact redirect URLs `https://HOST/auth/callback`, `https://HOST/auth/recovery-callback`, and `https://HOST/update-password` for production and the protected preview environment. Keep localhost URLs only in local development; do not use wildcards.
 6. Replace the hosted **Invite User** template with the reviewed equivalent of `supabase/templates/invite.html`. Its action URL must be `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite`.
 7. Replace the hosted **Reset Password** template with the reviewed equivalent of `supabase/templates/recovery.html`. Its action URL must be `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`. `/auth/recovery-callback` remains a PKCE fallback for a stock recovery template; both paths require fresh Auth proof before password update.
-8. Set the hosted email OTP expiration to `604800` seconds so the Auth invite token and the application's seven-day invitation metadata expire together. This shared Auth value also governs recovery and other email links; after a token is verified, the portal's separate password-update context lasts only 48 hours.
+8. Set hosted email OTP expiration to `172800` seconds (48 hours), matching the reviewed email wording. This governs unopened invitation/reset proofs. The roster invitation deadline remains seven days and is labelled separately. After verification the browser receives a separate 48-hour setup context; the link is consumed, while the form can be resumed in that browser.
 9. Configure a school-controlled SMTP provider before inviting real users. Confirm the From name/address, bounce handling, rate limits, and invitation/password-reset delivery. Disable link tracking that rewrites Auth links and assess the school's email-link prefetching behavior.
 10. Set sensible Auth rate limits and review failed-login/email-delivery telemetry.
 11. Test first invite, Resend (a fresh Invite User email), provider rejection, provider-accepted/receipt-failed messaging, expired/used/revoked invite behavior, token-hash and PKCE recovery, ordinary/stale-session password-change denial, context expiry, sign-out, and an expired membership before release.
 
 Do not blindly run `supabase config push` against production: the checked-in Auth URLs are local-development values. Either maintain an environment-specific reviewed config or reproduce the production values in the dashboard and record the change.
 
-### Optional Google OAuth
+### School Google sign-in and closed beta
 
-Google sign-in is optional and must remain hidden while `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false`.
+Google sign-in remains disabled until `AUTH_GOOGLE_MODE` is explicitly configured. The old public Google flag no longer enables it. Follow [the isolated beta runbook](AUTH_BETA.md): use a separate Supabase project, a protected Vercel Preview, exact school domains, and a server-side tester list. Do not enable the production Google provider or deploy this branch to production during beta. `enabled` also requires `AUTH_GOOGLE_BETA_APPROVED=true` after recorded human testing.
 
-1. In Google Cloud, create a Web OAuth client owned by the school.
-2. Add Supabase's provider callback URL, shown by the Supabase Google provider screen, as an authorized redirect URI in Google.
-3. Add the client ID and secret to Supabase Dashboard → Authentication → Providers → Google.
-4. Keep the application callback URL in Supabase's redirect allowlist.
-5. Restrict the Google consent screen/client to the school organization if policy requires it.
-6. Set `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` in only the configured Vercel environments and redeploy.
-7. Verify that a Google-authenticated but unprovisioned account receives no portal data.
+Run `pnpm check:auth-config` with the target environment and a Management API token before release. It is read-only and detects password, expiry, SMTP, email-template, provider, and redirect drift. It does not prove that an email reached an inbox or that the school allowed Google OAuth.
 
 ### Invite, resend, deactivate, and assign annual access
 

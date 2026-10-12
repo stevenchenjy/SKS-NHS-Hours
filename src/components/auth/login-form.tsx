@@ -1,17 +1,20 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { LogIn } from "lucide-react";
 
 import { loginAction, type AuthFormState } from "@/app/actions/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/auth/password-input";
 
 const initialState: AuthFormState = {};
 
 export function LoginForm({ next = "/dashboard" }: { next?: string }) {
   const [state, action, pending] = useActionState(loginAction, initialState);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   return (
     <form action={action} className="space-y-5" noValidate>
       <input type="hidden" name="next" value={next} />
@@ -24,6 +27,8 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
             type="email"
             autoComplete="email"
             inputMode="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             required
             aria-invalid={Boolean(state.fieldErrors?.email)}
             className="h-11"
@@ -32,10 +37,11 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
         </Field>
         <Field data-invalid={Boolean(state.fieldErrors?.password)}>
           <FieldLabel htmlFor="password">Password</FieldLabel>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
             required
             aria-invalid={Boolean(state.fieldErrors?.password)}

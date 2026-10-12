@@ -15,6 +15,11 @@ afterEach(() => {
 });
 
 describe("password form recovery", () => {
+  it("shows a pending code challenge immediately after reloading", () => {
+    render(<UpdatePasswordForm requiresVerification />);
+    expect(screen.getByLabelText("Verification code")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Resend verification code" })).toBeVisible();
+  });
   it("keeps passwords while showing, correcting, and resending the verification code", async () => {
     updatePassword
       .mockResolvedValueOnce({ requiresPasswordVerification: true, message: "Code sent." })

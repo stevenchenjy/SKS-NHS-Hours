@@ -17,16 +17,22 @@ export function AccountSetupCells({ status }: { status: AccountSetupStatus | und
     <>
       <TableCell className="align-top">
         {status ? (
-          <Badge
-            variant="outline"
-            className={
-              status.password_set
-                ? "border-primary/25 bg-primary/5 text-primary"
-                : "border-[var(--status-pending)]/30 bg-[var(--status-pending-bg)] text-[var(--status-pending)]"
-            }
-          >
-            {status.password_set ? "Password set" : "Not set"}
-          </Badge>
+          <div className="flex flex-col items-start gap-1">
+            <Badge
+              variant="outline"
+              className={
+                status.password_set
+                  ? "border-primary/25 bg-primary/5 text-primary"
+                  : "border-[var(--status-pending)]/30 bg-[var(--status-pending-bg)] text-[var(--status-pending)]"
+              }
+            >
+              {status.password_set ? "Password confirmed" : "Password not confirmed"}
+            </Badge>
+            {status.email_verified_at ? (
+              <span className="text-xs text-muted-foreground">Email verified</span>
+            ) : null}
+            {status.google_linked ? <Badge variant="outline">Google connected</Badge> : null}
+          </div>
         ) : (
           <span className="text-sm text-muted-foreground">Unavailable</span>
         )}

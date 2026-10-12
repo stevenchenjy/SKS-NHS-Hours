@@ -166,6 +166,8 @@ export default async function AccountsPage({
     "platform-owner-transferred",
   ].includes(notice);
   const invitationNotices: Record<string, string> = {
+    "invitation-google-ready":
+      "School Google sign-in is prepared for this pending roster invitation. The optional password setup email was not sent. The roster deadline and email send count are unchanged.",
     "invitation-resent":
       "Invitation email sent. Ask the recipient to check their inbox and spam folder.",
     "invitation-recovery-sent":
@@ -352,8 +354,10 @@ export default async function AccountsPage({
 
       {selectedYearId && (view === "directory" || view === "invitations") ? (
         <p className="mb-5 text-sm text-muted-foreground">
-          Password setup and portal entry are tracked separately. First visits are recorded from
-          September 14, 2026; earlier visits may not appear.
+          Password confirmation, verified email, Google connection, and portal entry are separate
+          milestones. A temporary invitation password does not count as a confirmed password. Older
+          passwords remain unconfirmed until a password sign-in or change is recorded. First visits
+          are recorded from September 14, 2026; earlier visits may not appear.
         </p>
       ) : null}
 
@@ -388,7 +392,7 @@ export default async function AccountsPage({
               <TableHeader>
                 <TableRow className="bg-muted/60 hover:bg-muted/60">
                   <TableHead className="pl-5">Account</TableHead>
-                  <TableHead>Password setup</TableHead>
+                  <TableHead>Sign-in setup</TableHead>
                   <TableHead>First portal visit</TableHead>
                   <TableHead className="min-w-[280px]">Access and roles</TableHead>
                   <TableHead>School-year access</TableHead>
@@ -812,7 +816,9 @@ export default async function AccountsPage({
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
               Invitations are for people who have not activated an account. Once accepted, the
               person appears under Accounts. Pending or expired invitations can be resent or revoked
-              here.
+              here. The roster deadline is separate from the email link expiry shown in the
+              invitation email. A link may need resending while the roster invitation is still
+              pending.
             </p>
           </div>
           <div className="overflow-hidden rounded-xl border">
@@ -822,10 +828,10 @@ export default async function AccountsPage({
                   <TableHead className="pl-5">Invitee</TableHead>
                   <TableHead>Initial access</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Password setup</TableHead>
+                  <TableHead>Sign-in setup</TableHead>
                   <TableHead>First portal visit</TableHead>
                   <TableHead>Last sent</TableHead>
-                  <TableHead>Expires</TableHead>
+                  <TableHead>Roster deadline</TableHead>
                   <TableHead>Send count</TableHead>
                   <TableHead className="pr-5 text-right">
                     <span className="sr-only">Actions</span>
