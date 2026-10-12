@@ -4,9 +4,11 @@ There is no shared or default portal password. Each member chooses a password af
 
 The password policy is **at least 6 characters, with no required character types**. The hosted Supabase Auth settings must match `minimum_password_length = 6` and `password_requirements = ""` in `supabase/config.toml`. Changing the form or local configuration alone does not change hosted Auth. Keep secure password change enabled.
 
-After selecting **Continue to set password**, keep the password form open in the same browser and finish within 12 hours. The original link has already been consumed at this point. A rejected password does not consume the form's password-update context: correct the password and retry on that page. Password policy failures, reuse of the current password, and temporary provider/network failures must not instruct the user to get another link. A missing/expired context or invalid authentication session does require fresh verification.
+After selecting **Continue to set password**, keep the password form open in the same browser and finish within 48 hours. The original link has already been consumed at this point. A rejected password does not consume the form's password-update context: correct the password and retry on that page. Password policy failures, reuse of the current password, and temporary provider/network failures must not instruct the user to get another link. A missing/expired context or invalid authentication session does require fresh verification.
 
-The 12-hour window applies to new verifications after deployment. Already-open forms retain the expiry signed when they were verified. This form window is separate from the email link's hosted OTP expiration setting.
+The 48-hour window applies to new verifications after deployment. Already-open forms retain the expiry signed when they were verified. This form window is separate from the email link's hosted OTP expiration setting.
+
+Secure password change remains enabled. Supabase requires reauthentication for sessions older than 24 hours, so the password form requests an email verification code when the provider asks for it. Enter the latest code on the same form; the original 48-hour context is not renewed. Invalid codes can be corrected, and **Resend verification code** requests a replacement. Failed or rate-limited code delivery is reported without claiming that an email was sent; ask the portal admin for a fresh recovery link if email delivery remains unavailable.
 
 If a recipient sees an expired/invalid-link error, first check whether their password form is still open in the same browser or whether they already saved a password and can sign in. Otherwise generate one fresh link, deliver the complete latest URL privately, and have them complete the form without reopening the original link. Do not generate more links while the recipient is using one. Admin-generated links do not rely on reset-email delivery quotas.
 
@@ -49,7 +51,7 @@ Check the Auth confirmation timestamp and application invitation status before a
 The portal now handles token-hash links in two steps:
 
 1. `GET` or `HEAD /auth/confirm` opens `/confirm-email` without verifying or consuming the token.
-2. The member selects **Continue to set password**. A same-origin `POST /auth/confirm` verifies the token, checks application access, and issues the signed 12-hour password context. A 303 redirect opens the password form.
+2. The member selects **Continue to set password**. A same-origin `POST /auth/confirm` verifies the token, checks application access, and issues the signed 48-hour password context. A 303 redirect opens the password form.
 
 Use the checked-in `supabase/templates/invite.html` and `supabase/templates/recovery.html` in the hosted Auth settings. Stock `{{ .ConfirmationURL }}` templates send readers to Supabase verification first and therefore do not gain the portal's protection against GET prefetching. Changing templates only affects future messages; existing consumed links require fresh recovery proof.
 

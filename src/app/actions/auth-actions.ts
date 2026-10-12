@@ -19,6 +19,7 @@ export interface AuthFormState {
   error?: string;
   fieldErrors?: Record<string, string[]>;
   requiresNewPasswordLink?: boolean;
+  requiresPasswordVerification?: boolean;
 }
 
 const loginSchema = z.object({
@@ -126,10 +127,14 @@ export async function updatePasswordAction(
   _previous: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  const verificationState = _previous.requiresPasswordVerification
+    ? { requiresPasswordVerification: true }
+    : {};
   const parsed = z
     .object({
       password: z.string().min(MIN_PASSWORD_LENGTH, "Use at least 6 characters."),
       confirmation: z.string(),
+      verificationCode: z.string().trim().max(128, "Enter the verification code from your email."),
     })
     .refine((values) => values.password === values.confirmation, {
       path: ["confirmation"],
@@ -138,8 +143,10 @@ export async function updatePasswordAction(
     .safeParse({
       password: formData.get("password"),
       confirmation: formData.get("confirmation"),
+      verificationCode: formData.get("verificationCode") ?? "",
     });
-  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+  if (!parsed.success)
+    return { ...verificationState, fieldErrors: parsed.error.flatten().fieldErrors };
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -148,6 +155,7 @@ export async function updatePasswordAction(
   } = await supabase.auth.getUser();
   if (userError && (userError.status === undefined || userError.status >= 500)) {
     return {
+      ...verificationState,
       error:
         "We could not verify your session because the password service is unavailable. Retry on this form in a few minutes. Keep this page open; do not reopen the original link.",
     };
@@ -167,13 +175,67 @@ export async function updatePasswordAction(
       requiresNewPasswordLink: true,
     };
   }
+
+  async function sendVerificationCode(): Promise<AuthFormState> {
+    try {
+      const { error } = await supabase.auth.reauthenticate();
+      if (error) {
+        console.error("Password verification request failed", {
+          code: error.code,
+          status: error.status,
+        });
+        return {
+          requiresPasswordVerification: true,
+          error:
+            error.status === 429
+              ? "Verification emails are temporarily limited. Wait a few minutes, then select Resend verification code. If this continues, ask the portal admin for a fresh reset link."
+              : "We could not send a verification code. Try Resend verification code later, or ask the portal admin for a fresh reset link. Your password has not been changed.",
+        };
+      }
+      return {
+        requiresPasswordVerification: true,
+        message:
+          "Your sign-in is more than 24 hours old. We sent a verification code to your account email. Enter the latest code below and update your password on this form.",
+      };
+    } catch {
+      console.error("Password verification request failed", { code: "request_failed" });
+      return {
+        requiresPasswordVerification: true,
+        error:
+          "We could not reach the verification service. Check your connection, then select Resend verification code. Your password has not been changed.",
+      };
+    }
+  }
+
+  if (formData.get("intent") === "resend-verification-code") return sendVerificationCode();
+  if (_previous.requiresPasswordVerification && !parsed.data.verificationCode) {
+    return {
+      requiresPasswordVerification: true,
+      fieldErrors: { verificationCode: ["Enter the verification code from your account email."] },
+    };
+  }
   try {
-    const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+    const { error } = await supabase.auth.updateUser({
+      password: parsed.data.password,
+      ...(parsed.data.verificationCode ? { nonce: parsed.data.verificationCode } : {}),
+    });
     if (error) {
       // Never log provider messages, passwords, email addresses, or reset tokens.
       console.error("Password update failed", { code: error.code, status: error.status });
+      if (error.code === "reauthentication_needed") return sendVerificationCode();
+      if (error.code === "reauthentication_not_valid") {
+        return {
+          requiresPasswordVerification: true,
+          fieldErrors: {
+            verificationCode: [
+              "This verification code is invalid or expired. Enter the latest code, or select Resend verification code.",
+            ],
+          },
+        };
+      }
       if (error.code === "same_password") {
         return {
+          ...verificationState,
           fieldErrors: {
             password: [
               "Choose a different password from your current one, or sign in with your existing password.",
@@ -183,6 +245,7 @@ export async function updatePasswordAction(
       }
       if (error.code === "weak_password") {
         return {
+          ...verificationState,
           fieldErrors: {
             password: [
               "This password was rejected by the account's password policy. Choose a different password and retry here. If a password of at least 6 characters is still rejected, contact the portal admin.",
@@ -195,8 +258,6 @@ export async function updatePasswordAction(
           "session_not_found",
           "session_expired",
           "refresh_token_not_found",
-          "reauthentication_needed",
-          "reauthentication_not_valid",
           "bad_jwt",
           "no_authorization",
         ].includes(error.code ?? "")
@@ -208,15 +269,20 @@ export async function updatePasswordAction(
         };
       }
       if (error.code === "user_banned" || error.code === "user_not_found") {
-        return { error: "This account is unavailable. Contact the portal admin for help." };
+        return {
+          ...verificationState,
+          error: "This account is unavailable. Contact the portal admin for help.",
+        };
       }
       if (error.status === 429) {
         return {
+          ...verificationState,
           error:
             "Too many attempts. Wait a few minutes, then retry on this form. Keep this page open; do not reopen the original link.",
         };
       }
       return {
+        ...verificationState,
         error:
           "The password service is temporarily unavailable. Retry on this form. Keep this page open; do not reopen the original link.",
       };
@@ -224,6 +290,7 @@ export async function updatePasswordAction(
   } catch {
     console.error("Password update failed", { code: "request_failed" });
     return {
+      ...verificationState,
       error:
         "We could not reach the password service. Check your connection and retry on this form. Keep this page open; do not reopen the original link.",
     };

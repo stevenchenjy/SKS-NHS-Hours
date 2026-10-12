@@ -15,6 +15,34 @@ afterEach(() => {
 });
 
 describe("password form recovery", () => {
+  it("keeps passwords while showing, correcting, and resending the verification code", async () => {
+    updatePassword
+      .mockResolvedValueOnce({ requiresPasswordVerification: true, message: "Code sent." })
+      .mockResolvedValueOnce({
+        requiresPasswordVerification: true,
+        fieldErrors: { verificationCode: ["Invalid code. Try again."] },
+      })
+      .mockResolvedValueOnce({ requiresPasswordVerification: true, message: "New code sent." });
+    render(<UpdatePasswordForm />);
+    fireEvent.change(screen.getByLabelText("New password"), { target: { value: "abcdef" } });
+    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "abcdef" } });
+    fireEvent.click(screen.getByRole("button", { name: "Update password" }));
+    const code = await screen.findByLabelText("Verification code");
+    expect(screen.getByLabelText("New password")).toHaveValue("abcdef");
+    expect(screen.getByLabelText("Confirm password")).toHaveValue("abcdef");
+    fireEvent.change(code, { target: { value: "654321" } });
+    fireEvent.click(screen.getByRole("button", { name: "Update password" }));
+    await screen.findByText("Invalid code. Try again.");
+    expect(code).toHaveValue("654321");
+    expect((updatePassword.mock.calls[1]?.[1] as FormData).get("verificationCode")).toBe("654321");
+    fireEvent.click(screen.getByRole("button", { name: "Resend verification code" }));
+    await screen.findByText("New code sent.");
+    expect(code).toHaveValue("");
+    expect((updatePassword.mock.calls[2]?.[1] as FormData).get("intent")).toBe(
+      "resend-verification-code",
+    );
+    expect(screen.getByLabelText("New password")).toHaveValue("abcdef");
+  });
   it("keeps entered values after rejection and lets the user correct and resubmit", async () => {
     updatePassword
       .mockResolvedValueOnce({

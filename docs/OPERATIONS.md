@@ -43,7 +43,7 @@ Create `.env.local` from `.env.example`. `.env.local` is ignored by Git.
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser and server   | Yes                                        | Browser-safe Supabase publishable key; use the local CLI's legacy anon value for local development       |
 | `NEXT_PUBLIC_APP_URL`                  | Browser and server   | Yes                                        | Exact public origin for this deployment, with no path or trailing slash                                  |
 | `SUPABASE_SECRET_KEY`                  | Server only          | Required for privileged account operations | Elevated Supabase secret key; use the local CLI's legacy service-role value only for local development   |
-| `PASSWORD_UPDATE_CONTEXT_SECRET`       | Server only          | Required for password-update proof         | At least 32 random bytes for signing the 12-hour invite/recovery context; use a dedicated hosted value   |
+| `PASSWORD_UPDATE_CONTEXT_SECRET`       | Server only          | Required for password-update proof         | At least 32 random bytes for signing the 48-hour invite/recovery context; use a dedicated hosted value   |
 | `ALLOWED_EMAIL_DOMAINS`                | Server only          | Recommended                                | Comma-separated lowercase school domains; this supplements invitations and never grants access by itself |
 | `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED`      | Browser and server   | Yes                                        | `true` only after Google and Supabase OAuth are configured; otherwise `false`                            |
 | `SERVER_ACTION_ALLOWED_ORIGINS`        | Server configuration | Optional                                   | Comma-separated additional trusted origins, without paths; normally empty on a single-origin deployment  |
@@ -56,7 +56,7 @@ The environment parser in `src/lib/env.ts` fails closed when required values are
 - Store hosted values in the Vercel environment-variable UI or an approved secret manager, never in Git, issue text, screenshots, or support logs.
 - Scope values separately to Development, Preview, and Production.
 - Limit access to the Supabase dashboard and Vercel project to current maintainers, require MFA, and review access at staff turnover.
-- Rotate the elevated Supabase credential and password-context signing secret after suspected disclosure or administrator turnover. Redeploy every server environment that used an old value and revoke it only after the replacement is live. Rotating the context secret intentionally invalidates outstanding 12-hour password forms.
+- Rotate the elevated Supabase credential and password-context signing secret after suspected disclosure or administrator turnover. Redeploy every server environment that used an old value and revoke it only after the replacement is live. Rotating the context secret intentionally invalidates outstanding 48-hour password forms.
 - Treat local `supabase status` output as sensitive because it includes privileged development keys.
 
 ## Local setup
@@ -129,7 +129,7 @@ In Supabase Dashboard → Authentication:
 5. Add exact redirect URLs `https://HOST/auth/callback`, `https://HOST/auth/recovery-callback`, and `https://HOST/update-password` for production and the protected preview environment. Keep localhost URLs only in local development; do not use wildcards.
 6. Replace the hosted **Invite User** template with the reviewed equivalent of `supabase/templates/invite.html`. Its action URL must be `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite`.
 7. Replace the hosted **Reset Password** template with the reviewed equivalent of `supabase/templates/recovery.html`. Its action URL must be `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`. `/auth/recovery-callback` remains a PKCE fallback for a stock recovery template; both paths require fresh Auth proof before password update.
-8. Set the hosted email OTP expiration to `604800` seconds so the Auth invite token and the application's seven-day invitation metadata expire together. This shared Auth value also governs recovery and other email links; after a token is verified, the portal's separate password-update context lasts only 12 hours.
+8. Set the hosted email OTP expiration to `604800` seconds so the Auth invite token and the application's seven-day invitation metadata expire together. This shared Auth value also governs recovery and other email links; after a token is verified, the portal's separate password-update context lasts only 48 hours.
 9. Configure a school-controlled SMTP provider before inviting real users. Confirm the From name/address, bounce handling, rate limits, and invitation/password-reset delivery. Disable link tracking that rewrites Auth links and assess the school's email-link prefetching behavior.
 10. Set sensible Auth rate limits and review failed-login/email-delivery telemetry.
 11. Test first invite, Resend (a fresh Invite User email), provider rejection, provider-accepted/receipt-failed messaging, expired/used/revoked invite behavior, token-hash and PKCE recovery, ordinary/stale-session password-change denial, context expiry, sign-out, and an expired membership before release.

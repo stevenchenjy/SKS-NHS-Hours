@@ -15,6 +15,7 @@ export function UpdatePasswordForm() {
   const [state, action, pending] = useActionState(updatePasswordAction, initialState);
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   return (
     <form action={action} className="space-y-5" noValidate>
       <FieldGroup>
@@ -50,6 +51,27 @@ export function UpdatePasswordForm() {
           />
           <FieldError>{state.fieldErrors?.confirmation?.[0]}</FieldError>
         </Field>
+        {state.requiresPasswordVerification && !state.requiresNewPasswordLink ? (
+          <Field data-invalid={Boolean(state.fieldErrors?.verificationCode)}>
+            <FieldLabel htmlFor="verification-code">Verification code</FieldLabel>
+            <Input
+              id="verification-code"
+              name="verificationCode"
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              maxLength={128}
+              value={verificationCode}
+              onChange={(event) => setVerificationCode(event.target.value)}
+              aria-invalid={Boolean(state.fieldErrors?.verificationCode)}
+              required
+              className="h-11"
+            />
+            <FieldDescription>
+              Use the latest code sent to your account email. Keep this password form open.
+            </FieldDescription>
+            <FieldError>{state.fieldErrors?.verificationCode?.[0]}</FieldError>
+          </Field>
+        ) : null}
       </FieldGroup>
       {state.error ? (
         <p role="alert" className="text-sm text-destructive">
@@ -74,6 +96,19 @@ export function UpdatePasswordForm() {
       >
         {pending ? "Updating…" : "Update password"}
       </Button>
+      {state.requiresPasswordVerification && !state.requiresNewPasswordLink ? (
+        <Button
+          type="submit"
+          name="intent"
+          value="resend-verification-code"
+          variant="outline"
+          className="w-full"
+          disabled={pending}
+          onClick={() => setVerificationCode("")}
+        >
+          Resend verification code
+        </Button>
+      ) : null}
       <p className="text-sm leading-6 text-muted-foreground">
         If a password is rejected, correct it and retry on this form. Your link was already used to
         open this page; reopening it will not restart password setup.

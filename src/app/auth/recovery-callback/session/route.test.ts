@@ -48,7 +48,7 @@ describe("email recovery callback", () => {
     const response = await POST(request());
     expect(response.status).toBe(200);
     expect(response.cookies.get("nhs-password-update-context")?.value).toBe("signed-context");
-    expect(response.cookies.get("nhs-password-update-context")?.maxAge).toBe(43_200);
+    expect(response.cookies.get("nhs-password-update-context")?.maxAge).toBe(172_800);
     expect(exchangeCodeForSession).toHaveBeenCalledExactlyOnceWith("synthetic-code");
   });
 

@@ -1,6 +1,6 @@
 const TOKEN_VERSION = 1;
 export const PASSWORD_UPDATE_CONTEXT_COOKIE = "nhs-password-update-context";
-export const PASSWORD_UPDATE_CONTEXT_MAX_AGE_SECONDS = 12 * 60 * 60;
+export const PASSWORD_UPDATE_CONTEXT_MAX_AGE_SECONDS = 48 * 60 * 60;
 
 export type PasswordUpdatePurpose = "invite" | "recovery";
 

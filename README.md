@@ -19,7 +19,7 @@ New entries, edits, and corrections use **whole hours from 1 to 24** for a singl
 
 ## Capabilities
 
-- Invite-only email/password access through server-verified invite/recovery token hashes, a 12-hour user-bound password-update context, and optional school Google OAuth
+- Invite-only email/password access through server-verified invite/recovery token hashes, a 48-hour user-bound password-update context, and optional school Google OAuth
 - Annual member access with `member`, `committee_head`, and combined `president_vice_president` roles; global `teacher_admin` and single `platform_owner` access are separate
 - Draft, submit, withdraw, changes-requested, resubmit, approve, reject, and reassign workflow
 - Committee-head self-approval with required final teacher approval, concurrent-decision protection, immutable review history, and traceable corrections

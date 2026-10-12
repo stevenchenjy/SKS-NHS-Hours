@@ -43,17 +43,17 @@ describe("password update context", () => {
   });
 
   it.each(["invite", "recovery"] as const)(
-    "keeps a new %s context valid for 12 hours and expires it at the boundary",
+    "keeps a new %s context valid for 48 hours and expires it at the boundary",
     async (purpose) => {
       vi.setSystemTime(new Date("2026-10-11T12:00:00Z"));
       const issuedAt = Math.floor(Date.now() / 1_000);
       const token = await createPasswordUpdateContext({ subject: USER_ID, purpose }, SECRET);
 
       await expect(
-        verifyPasswordUpdateContext(token, { subject: USER_ID, now: issuedAt + 43_199 }, SECRET),
-      ).resolves.toMatchObject({ subject: USER_ID, purpose, expiresAt: issuedAt + 43_200 });
+        verifyPasswordUpdateContext(token, { subject: USER_ID, now: issuedAt + 172_799 }, SECRET),
+      ).resolves.toMatchObject({ subject: USER_ID, purpose, expiresAt: issuedAt + 172_800 });
       await expect(
-        verifyPasswordUpdateContext(token, { subject: USER_ID, now: issuedAt + 43_200 }, SECRET),
+        verifyPasswordUpdateContext(token, { subject: USER_ID, now: issuedAt + 172_800 }, SECRET),
       ).resolves.toBeNull();
     },
   );

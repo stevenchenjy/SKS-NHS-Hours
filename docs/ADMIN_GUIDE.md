@@ -41,7 +41,7 @@ Committee head and President / Vice President automatically include member acces
 
 Use **Resend** for an existing pending invitation instead of creating a duplicate. After provider acceptance it issues a new invite message, extends the portal invitation to seven days, and increments the send count. Provider failure leaves the count unchanged. If provider acceptance succeeds but the database receipt fails, inspect Invitations and Audit trail before retrying because the two systems cannot share one transaction. Use **Revoke** when the invitation must no longer be claimed. Only the platform owner can resend or revoke a teacher-administrator invitation; ordinary teacher administrators manage the lifecycle of member and student-leadership invitations.
 
-Invite and recovery links are one-time credentials. The hosted templates send token hashes to `/auth/confirm`; successful verification creates a user-bound password-update context lasting 12 hours. If a link expires, create/resend an approved invitation or ask the user to request another reset. Never forward an invite or reset URL through an unapproved channel.
+Invite and recovery links are one-time credentials. The hosted templates send token hashes to `/auth/confirm`; successful verification creates a user-bound password-update context lasting 48 hours. If a link expires, create/resend an approved invitation or ask the user to request another reset. Never forward an invite or reset URL through an unapproved channel.
 
 ## Import a roster
 
