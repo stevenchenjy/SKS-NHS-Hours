@@ -10,6 +10,7 @@ import {
 import { getPasswordUpdateContextSecret, getServerEnvironment } from "@/lib/env";
 import { isSameOriginRequest } from "@/lib/http/same-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { passwordLinkErrorReason } from "@/lib/auth/password-link-error";
 
 /**
  * Email scanners may follow GET/HEAD links. Only an explicit form POST consumes
@@ -59,12 +60,15 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.verifyOtp({
-    token_hash: tokenHash,
-    type,
-  });
+  let result;
+  try {
+    result = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+  } catch {
+    return redirect("/login?error=password-verification-failed");
+  }
+  const { data, error } = result;
   if (error || !data.user) {
-    const reason = type === "recovery" ? "password-link-expired" : "invitation-link-expired";
+    const reason = passwordLinkErrorReason(error, type);
     return redirect(`/login?error=${reason}`);
   }
 

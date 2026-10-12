@@ -32,8 +32,8 @@ export default async function UpdatePasswordPage() {
           Choose a new password
         </CardTitle>
         <CardDescription className="text-base">
-          This one-time form is available for 30 minutes after you verify an invitation or reset
-          link.
+          Your link has been verified. Keep this page open and save your password within 30 minutes
+          of verification, using this browser.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-6 py-7">

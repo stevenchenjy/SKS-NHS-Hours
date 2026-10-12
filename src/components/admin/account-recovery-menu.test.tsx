@@ -49,6 +49,12 @@ describe("admin recovery menu", () => {
     fireEvent.click(generate);
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible());
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "generating another replaces the previous one",
+    );
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "retry on that form instead of reopening the link",
+    );
     expect(generateLink).toHaveBeenCalledOnce();
     expect((generateLink.mock.calls[0]?.[1] as FormData).get("profile_id")).toBe(profileId);
     expect((generateLink.mock.calls[0]?.[1] as FormData).get("expected_email")).toBe(

@@ -2,6 +2,12 @@
 
 There is no shared or default portal password. Each member chooses a password after proving ownership of the email on their invitation.
 
+The password policy is **at least 6 characters, with no required character types**. The hosted Supabase Auth settings must match `minimum_password_length = 6` and `password_requirements = ""` in `supabase/config.toml`. Changing the form or local configuration alone does not change hosted Auth. Keep secure password change enabled.
+
+After selecting **Continue to set password**, keep the password form open in the same browser and finish within 30 minutes. The original link has already been consumed at this point. A rejected password does not consume the form's password-update context: correct the password and retry on that page. Password policy failures, reuse of the current password, and temporary provider/network failures must not instruct the user to get another link. A missing/expired context or invalid authentication session does require fresh verification.
+
+If a recipient sees an expired/invalid-link error, first check whether their password form is still open in the same browser or whether they already saved a password and can sign in. Otherwise generate one fresh link, deliver the complete latest URL privately, and have them complete the form without reopening the original link. Do not generate more links while the recipient is using one. Admin-generated links do not rely on reset-email delivery quotas.
+
 ## Missing reset emails
 
 The reset action must inspect the Auth provider response. An HTTP 429 (`over_email_send_rate_limit`) means the provider rejected the request; it does not mean an email was sent. The form displays a retry/contact-adviser message. Other provider or network failures also display an error. Logs contain only the error code and status, never the address, provider message, or reset token. Unknown accounts retain the same generic response as disallowed domains.
@@ -14,7 +20,7 @@ References: [Supabase SMTP](https://supabase.com/docs/guides/auth/auth-smtp), [A
 
 For an existing, confirmed member with active school-year access, a global Admin can open **Accounts → Account actions → Generate reset link**. The dialog shows the member's school email and requires the Admin to confirm that they verified the requester and will use a school-approved private delivery channel. The link is displayed only in that dialog; closing it clears the portal's copy. Send it to the verified school address, and have the member open it and choose their own password. Do not open the link on the member's behalf.
 
-This action is unavailable for teachers, administrators as recipients, inactive or expired members, and pending invitations. Use **Resend** for pending invitations. The database permits one request per member every 15 minutes and at most ten requests per Admin per hour. It records the Admin, target, time, and generation outcome without storing the link or token. Generating a new recovery proof invalidates an earlier one, so ask the member to use the most recent link.
+This action supports confirmed active members and teachers. It is unavailable for administrators as recipients, inactive or expired members, and pending invitations. Use **Resend** for pending invitations. The database permits one request per account every 15 minutes and at most ten requests per Admin per hour. It records the Admin, target, time, and generation outcome without storing the link or token. Generating a new recovery proof invalidates an earlier one, so ask the recipient to use the most recent link.
 
 The link uses `/auth/confirm?type=recovery&token_hash=...`, which first shows the non-consuming confirmation page. Its actual lifetime is controlled by the hosted Supabase Email OTP Expiration setting. The browser clipboard can retain a copied link after the dialog closes, so handle it as a password credential.
 
@@ -46,6 +52,8 @@ The portal now handles token-hash links in two steps:
 Use the checked-in `supabase/templates/invite.html` and `supabase/templates/recovery.html` in the hosted Auth settings. Stock `{{ .ConfirmationURL }}` templates send readers to Supabase verification first and therefore do not gain the portal's protection against GET prefetching. Changing templates only affects future messages; existing consumed links require fresh recovery proof.
 
 Supabase currently rejects template edits for free-tier projects using its default email provider. Configure custom SMTP or an eligible plan before applying these templates. Until then, operator-generated links can target the portal confirmation route directly without an email-template change.
+
+On October 11, 2026, hosted Auth was verified at a 6-character minimum with no required character types and secure password change enabled. The hosted invite/recovery templates still used `{{ .ConfirmationURL }}`. An attempt to apply the checked-in portal confirmation templates was rejected by Supabase because the free-tier project uses the default email provider. The source template improvements therefore remain unapplied to hosted email. Existing delivered email links are not repaired by an application deployment; use a fresh admin-generated portal link for affected confirmed accounts.
 
 The confirmation page strips token-bearing paths from referrers while retaining the origin needed for form submission checks. Redirects use the configured canonical application origin.
 

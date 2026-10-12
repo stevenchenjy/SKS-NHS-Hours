@@ -10,6 +10,7 @@ import {
 import { getPasswordUpdateContextSecret } from "@/lib/env";
 import { isSameOriginRequest } from "@/lib/http/same-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { passwordLinkErrorReason } from "@/lib/auth/password-link-error";
 
 const recoveryProofSchema = z.union([
   z.object({ code: z.string().min(1) }).strict(),
@@ -41,16 +42,21 @@ export async function POST(request: Request) {
   if (!proof.success) return errorResponse("invalid-password-link");
 
   const supabase = await createSupabaseServerClient();
-  const result =
-    "code" in proof.data
-      ? await supabase.auth.exchangeCodeForSession(proof.data.code)
-      : await supabase.auth.setSession({
-          access_token: proof.data.accessToken,
-          refresh_token: proof.data.refreshToken,
-        });
+  let result;
+  try {
+    result =
+      "code" in proof.data
+        ? await supabase.auth.exchangeCodeForSession(proof.data.code)
+        : await supabase.auth.setSession({
+            access_token: proof.data.accessToken,
+            refresh_token: proof.data.refreshToken,
+          });
+  } catch {
+    return errorResponse("password-verification-failed", 503);
+  }
 
   if (result.error || !result.data.user) {
-    return errorResponse("password-link-expired");
+    return errorResponse(passwordLinkErrorReason(result.error, "recovery"));
   }
 
   if (!(await claimInvitationOrConfirmExistingProfile(supabase, result.data.user))) {

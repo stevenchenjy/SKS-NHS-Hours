@@ -103,6 +103,24 @@ describe("explicit email link confirmation", () => {
     expect(createContext).not.toHaveBeenCalled();
   });
 
+  it("does not label a provider outage as an expired link", async () => {
+    verifyOtp.mockResolvedValue({
+      data: { user: null },
+      error: { code: "unexpected_failure", status: 503 },
+    });
+    const response = await POST(request("recovery"));
+    expect(response.headers.get("location")).toContain("password-verification-failed");
+    expect(claim).not.toHaveBeenCalled();
+    expect(createContext).not.toHaveBeenCalled();
+  });
+
+  it("handles network failures during verification", async () => {
+    verifyOtp.mockRejectedValue(new Error("Connection lost"));
+    const response = await POST(request("recovery"));
+    expect(response.headers.get("location")).toContain("password-verification-failed");
+    expect(createContext).not.toHaveBeenCalled();
+  });
+
   it("signs out if a password context cannot be secured", async () => {
     createContext.mockRejectedValue(new Error("Missing secret"));
     const response = await POST(request());

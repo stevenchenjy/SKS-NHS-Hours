@@ -20,15 +20,19 @@ const authenticationErrors: Record<string, string> = {
   "invalid-invitation-link":
     "This invitation link is malformed. Ask the portal admin to resend it.",
   "invitation-link-expired":
-    "This invitation link has expired or has already been used. If you have not set a password, use Forgot your password below. If no email arrives, contact the portal admin.",
+    "This invitation link has expired or was already used. If the password form is still open in this browser, return there and finish. If you already saved your password, sign in below. Otherwise, ask the portal admin for a fresh link.",
   "invitation-claim-failed":
     "The invitation could not be matched to an active portal account. Contact the portal admin.",
   "password-context-required":
-    "Open a fresh invitation or password-reset email before choosing a new password.",
+    "Password setup requires a verified link in this browser and must be completed within 30 minutes. Ask the portal admin for a fresh link or use Forgot your password below.",
   "password-context-failed":
     "The password link could not be secured. Contact the portal admin or request a new reset link.",
-  "password-link-expired": "This password-reset link is invalid or expired. Request a new one.",
-  "invalid-password-link": "This password-reset link is malformed. Request a new one.",
+  "password-link-expired":
+    "This reset link has expired, was already used, or was replaced by a newer link. If the password form is still open in this browser, return there and retry. If you already saved your password, sign in below. Otherwise, ask the portal admin for one fresh link and use only the latest one.",
+  "invalid-password-link":
+    "This reset link is incomplete or invalid. Copy the entire latest link sent to you. If it still fails, ask the portal admin for a fresh link.",
+  "password-verification-failed":
+    "We could not verify your link because the authentication service is unavailable. Try opening the same link again in a few minutes. If this continues, contact the portal admin.",
 };
 
 const authenticationNotices: Record<string, string> = {

@@ -11,12 +11,14 @@ import {
   verifyPasswordUpdateContext,
 } from "@/lib/auth/password-update-context";
 import { safeInternalPath } from "@/lib/safe-navigation";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface AuthFormState {
   message?: string;
   error?: string;
   fieldErrors?: Record<string, string[]>;
+  requiresNewPasswordLink?: boolean;
 }
 
 const loginSchema = z.object({
@@ -126,7 +128,7 @@ export async function updatePasswordAction(
 ): Promise<AuthFormState> {
   const parsed = z
     .object({
-      password: z.string().min(6, "Use at least 6 characters."),
+      password: z.string().min(MIN_PASSWORD_LENGTH, "Use at least 6 characters."),
       confirmation: z.string(),
     })
     .refine((values) => values.password === values.confirmation, {
@@ -142,7 +144,14 @@ export async function updatePasswordAction(
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
+  if (userError && (userError.status === undefined || userError.status >= 500)) {
+    return {
+      error:
+        "We could not verify your session because the password service is unavailable. Retry on this form in a few minutes. Keep this page open; do not reopen the original link.",
+    };
+  }
   const cookieStore = await cookies();
   const context = user
     ? await verifyPasswordUpdateContext(
@@ -153,11 +162,72 @@ export async function updatePasswordAction(
     : null;
   if (!user || !context) {
     return {
-      error: "This password link is missing, expired, or was already used. Request a new one.",
+      error:
+        "Your password setup session is missing or has expired. Request a fresh reset link from the portal admin or use Forgot your password.",
+      requiresNewPasswordLink: true,
     };
   }
-  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
-  if (error) return { error: "The password could not be updated. Request a new reset link." };
+  try {
+    const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+    if (error) {
+      // Never log provider messages, passwords, email addresses, or reset tokens.
+      console.error("Password update failed", { code: error.code, status: error.status });
+      if (error.code === "same_password") {
+        return {
+          fieldErrors: {
+            password: [
+              "Choose a different password from your current one, or sign in with your existing password.",
+            ],
+          },
+        };
+      }
+      if (error.code === "weak_password") {
+        return {
+          fieldErrors: {
+            password: [
+              "This password was rejected by the account's password policy. Choose a different password and retry here. If a password of at least 6 characters is still rejected, contact the portal admin.",
+            ],
+          },
+        };
+      }
+      if (
+        [
+          "session_not_found",
+          "session_expired",
+          "refresh_token_not_found",
+          "reauthentication_needed",
+          "reauthentication_not_valid",
+          "bad_jwt",
+          "no_authorization",
+        ].includes(error.code ?? "")
+      ) {
+        return {
+          error:
+            "Your sign-in session is no longer valid for changing a password. Request a fresh reset link from the portal admin or use Forgot your password.",
+          requiresNewPasswordLink: true,
+        };
+      }
+      if (error.code === "user_banned" || error.code === "user_not_found") {
+        return { error: "This account is unavailable. Contact the portal admin for help." };
+      }
+      if (error.status === 429) {
+        return {
+          error:
+            "Too many attempts. Wait a few minutes, then retry on this form. Keep this page open; do not reopen the original link.",
+        };
+      }
+      return {
+        error:
+          "The password service is temporarily unavailable. Retry on this form. Keep this page open; do not reopen the original link.",
+      };
+    }
+  } catch {
+    console.error("Password update failed", { code: "request_failed" });
+    return {
+      error:
+        "We could not reach the password service. Check your connection and retry on this form. Keep this page open; do not reopen the original link.",
+    };
+  }
   cookieStore.delete({ name: PASSWORD_UPDATE_CONTEXT_COOKIE, path: "/update-password" });
   await supabase.auth.signOut();
   redirect("/login?notice=password-updated");
