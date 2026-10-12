@@ -51,8 +51,11 @@ export default async function UpdatePasswordPage() {
           Choose a new password
         </CardTitle>
         <CardDescription className="text-base">
-          Your link has been verified. Keep this page open and save your password within 48 hours of
-          verification, using this browser. You can return to this page if you close it.
+          {context.purpose === "google"
+            ? "Your school Google account is verified. You can choose an optional NHS portal password of at least 6 characters without another email."
+            : "Your link has been verified."}{" "}
+          Save your password within 48 hours of verification, using this browser. You can return to
+          this page if you close it.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5 px-6 py-7">

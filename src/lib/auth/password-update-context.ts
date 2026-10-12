@@ -2,7 +2,7 @@ const TOKEN_VERSION = 1;
 export const PASSWORD_UPDATE_CONTEXT_COOKIE = "nhs-password-update-context";
 export const PASSWORD_UPDATE_CONTEXT_MAX_AGE_SECONDS = 48 * 60 * 60;
 
-export type PasswordUpdatePurpose = "invite" | "recovery";
+export type PasswordUpdatePurpose = "invite" | "recovery" | "google";
 
 interface PasswordUpdateContextPayload {
   version: typeof TOKEN_VERSION;
@@ -37,7 +37,9 @@ function isPayload(value: unknown): value is PasswordUpdateContextPayload {
     payload.version === TOKEN_VERSION &&
     typeof payload.subject === "string" &&
     payload.subject.length > 0 &&
-    (payload.purpose === "invite" || payload.purpose === "recovery") &&
+    (payload.purpose === "invite" ||
+      payload.purpose === "recovery" ||
+      payload.purpose === "google") &&
     typeof payload.expiresAt === "number" &&
     Number.isSafeInteger(payload.expiresAt) &&
     typeof payload.nonce === "string" &&

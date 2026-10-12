@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requirePortalViewer } from "@/lib/dal/access";
 import { formatRoleLabel } from "@/lib/domain/roles";
+import { googleLoginAction } from "@/app/actions/auth-actions";
+import { getServerEnvironment } from "@/lib/env";
+import { isSchoolGoogleEmail } from "@/lib/auth/sign-in-policy";
 
 export const metadata: Metadata = { title: "My profile" };
 
@@ -62,6 +65,28 @@ export default async function ProfilePage() {
             </dd>
           </div>
         </dl>
+        {isSchoolGoogleEmail(viewer.email, getServerEnvironment()) ? (
+          <div className="mt-5 flex flex-col items-start gap-3">
+            <p className="text-sm text-muted-foreground">
+              School Google sign-in works without a portal password. You can also choose a password
+              of at least 6 characters as a fallback.
+            </p>
+            <form action={googleLoginAction}>
+              <input type="hidden" name="email" value={viewer.email} />
+              <input type="hidden" name="next" value="/update-password" />
+              <Button type="submit" variant="outline">
+                Set or change portal password
+              </Button>
+            </form>
+          </div>
+        ) : (
+          <Link
+            href="/forgot-password"
+            className="mt-5 block text-sm font-medium text-primary underline"
+          >
+            Change your portal password
+          </Link>
+        )}
       </section>
     </div>
   );

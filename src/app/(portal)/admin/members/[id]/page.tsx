@@ -58,7 +58,11 @@ export default async function MemberProfilePage({
     notFound();
   }
   const selectedMembership =
-    memberships.find((membership) => membership.school_year_id === requestedYear) ?? memberships[0];
+    memberships.find((membership) => membership.school_year_id === requestedYear) ??
+    memberships.find(
+      (membership) => membership.school_year_id === viewer.activeMembership.school_year_id,
+    ) ??
+    memberships[0];
   if (!selectedMembership) notFound();
   const today = new Date().toISOString().slice(0, 10);
   const annualStatus = (membership: (typeof memberships)[number]) =>

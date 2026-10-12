@@ -13,7 +13,10 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/env", () => ({ getServerEnvironment: () => mocks.environment }));
+vi.mock("@/lib/env", () => ({
+  getServerEnvironment: () => mocks.environment,
+  getPasswordUpdateContextSecret: () => "google-test-context-secret-0000000000000000",
+}));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
     auth: {
@@ -27,6 +30,7 @@ vi.mock("@/lib/auth/claim-invitation", () => ({
   claimInvitationOrConfirmExistingProfile: mocks.claim,
 }));
 import { GET } from "./route";
+import { verifyPasswordUpdateContext } from "@/lib/auth/password-update-context";
 const user = {
   id: "tester",
   email: "junyuc2027@sks.org",
@@ -48,11 +52,27 @@ function request(query = "code=proof&next=/events") {
   return new Request(`https://beta.example.edu/auth/callback?${query}`);
 }
 describe("school Google beta callback", () => {
+  it("authorizes an optional portal password with fresh Google proof and no reset email", async () => {
+    const response = await GET(request("code=proof&next=/update-password"));
+    expect(response.headers.get("location")).toBe("https://beta.example.edu/update-password");
+    const cookie = response.cookies.get("nhs-password-update-context");
+    expect(cookie?.maxAge).toBe(172800);
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+    expect(
+      await verifyPasswordUpdateContext(
+        cookie?.value,
+        { subject: "tester" },
+        "google-test-context-secret-0000000000000000",
+      ),
+    ).toMatchObject({ purpose: "google", subject: "tester" });
+    expect(mocks.signOut).not.toHaveBeenCalled();
+  });
   it("allows the verified tester and returns to the original destination", async () => {
     const response = await GET(request());
     expect(response.headers.get("location")).toBe("https://beta.example.edu/events");
     expect(mocks.claim).toHaveBeenCalledWith(expect.anything(), user);
     expect(mocks.signOut).not.toHaveBeenCalled();
+    expect(response.cookies.get("nhs-password-update-context")).toBeUndefined();
   });
   it("does not exchange an OAuth proof when Google is disabled", async () => {
     mocks.environment.googleAuthEnabled = false;

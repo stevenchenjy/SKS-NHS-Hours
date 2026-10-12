@@ -75,9 +75,9 @@ async function main() {
       "PASS: hosted Auth policy, email templates, delivery configuration, and redirect settings match the release requirements. Real inbox/Google tests are still required.",
     );
 }
-main().catch((error: unknown) => {
+main().catch(() => {
   console.error(
-    `Auth preflight could not run: ${error instanceof Error ? error.message : "unknown error"}. No hosted settings were changed.`,
+    "Auth preflight could not run. Check the target environment and Management API access. No hosted settings were changed.",
   );
   process.exitCode = 1;
 });

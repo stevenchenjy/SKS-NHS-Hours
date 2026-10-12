@@ -42,7 +42,7 @@ describe("password update context", () => {
     ).resolves.toBeNull();
   });
 
-  it.each(["invite", "recovery"] as const)(
+  it.each(["invite", "recovery", "google"] as const)(
     "keeps a new %s context valid for 48 hours and expires it at the boundary",
     async (purpose) => {
       vi.setSystemTime(new Date("2026-10-11T12:00:00Z"));

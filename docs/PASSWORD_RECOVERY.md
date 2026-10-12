@@ -70,3 +70,5 @@ The forgot-password page renders per request so its scripts receive the CSP nonc
 - Browser checks should exercise the complete invitation/recovery → confirmation button → password update → authenticated portal flow, plus a provider quota response. Use local synthetic accounts or a local Auth mock so validation does not send real emails or change a student's password.
 
 The beta targets a **48-hour unopened email link** and a separate **48-hour form after verification**. Do not claim those hosted settings changed merely because the local config or template changed. A successful password save clears setup cookies and preserves the authenticated session. Sign-out affects only the current device. See [AUTH_BETA.md](AUTH_BETA.md) for rollout and human tests.
+
+When school Google is enabled, My profile provides **Set or change portal password**. Fresh verified school Google ownership and roster access issue a separate 48-hour `google` password context only for this optional setup route. Ordinary Google login enters the portal directly, without setting a password or relying on email delivery.
