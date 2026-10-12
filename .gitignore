@@ -30,4 +30,5 @@ output/playwright/
 *.pem
 *.log
 .vercel/
+.beta-setup/
 tsconfig.tsbuildinfo
