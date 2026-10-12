@@ -361,7 +361,7 @@ test("a committee head can approve their own hours before a teacher gives final 
   await expect(page.getByRole("button", { name: "Reject request", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Request changes", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Approve and send to teachers", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("The committee-head approval was recorded.");
+  await expect(page.getByRole("status")).toContainText("Your committee-head approval was saved.");
   await expect(page.getByText("Pending teacher approval", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Give final approval", exact: true })).toHaveCount(
     0,
