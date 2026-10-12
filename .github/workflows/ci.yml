@@ -92,6 +92,18 @@ jobs:
           echo "SUPABASE_SECRET_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
       - run: pnpm test:e2e:prepare
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify authentication independently
+        run: pnpm exec playwright test tests/e2e/auth.spec.ts
+      - name: Reset local fixtures for rollover verification
+        run: |
+          supabase db reset --local
+          pnpm test:e2e:prepare
+      - name: Verify returning accounts and school-year setup independently
+        run: pnpm exec playwright test tests/e2e/portal.spec.ts --grep "platform owner creates a year|expired member receives"
+      - name: Reset local fixtures for full browser suite
+        run: |
+          supabase db reset --local
+          pnpm test:e2e:prepare
       - run: pnpm test:e2e
       - name: Upload Playwright failure artifacts
         if: failure()
