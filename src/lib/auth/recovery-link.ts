@@ -4,7 +4,7 @@ export type RecoveryLinkResult =
   | { ok: true; proof: RecoveryProof }
   | {
       ok: false;
-      reason: "invalid-password-link" | "password-link-expired";
+      reason: "invalid-password-link" | "password-link-expired" | "password-verification-failed";
     };
 
 export function parseRecoveryLink(code: string | undefined, hash: string): RecoveryLinkResult {
@@ -13,7 +13,14 @@ export function parseRecoveryLink(code: string | undefined, hash: string): Recov
 
   const params = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
   if (params.has("error") || params.has("error_code")) {
-    return { ok: false, reason: "password-link-expired" };
+    const reason = passwordLinkErrorReason(
+      { code: params.get("error_code") ?? params.get("error") ?? undefined },
+      "recovery",
+    );
+    return {
+      ok: false,
+      reason: reason === "password-link-expired" ? reason : "password-verification-failed",
+    };
   }
 
   const accessToken = params.get("access_token")?.trim();
@@ -24,3 +31,4 @@ export function parseRecoveryLink(code: string | undefined, hash: string): Recov
 
   return { ok: true, proof: { accessToken, refreshToken } };
 }
+import { passwordLinkErrorReason } from "@/lib/auth/password-link-error";

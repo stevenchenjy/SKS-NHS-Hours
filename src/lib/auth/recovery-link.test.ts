@@ -28,12 +28,22 @@ describe("parseRecoveryLink", () => {
     ).toEqual({ ok: false, reason: "invalid-password-link" });
   });
 
-  it("reports Supabase callback errors as expired links", () => {
+  it("reports an expired Supabase token as an expired link", () => {
     expect(parseRecoveryLink(undefined, "#error=access_denied&error_code=otp_expired")).toEqual({
       ok: false,
       reason: "password-link-expired",
     });
   });
+
+  it.each(["#error=server_error", "#error=access_denied&error_code=unexpected_failure"])(
+    "does not label provider errors as expired links: %s",
+    (fragment) => {
+      expect(parseRecoveryLink(undefined, fragment)).toEqual({
+        ok: false,
+        reason: "password-verification-failed",
+      });
+    },
+  );
 
   it("rejects incomplete proof", () => {
     expect(parseRecoveryLink(undefined, "#type=recovery&access_token=access")).toEqual({

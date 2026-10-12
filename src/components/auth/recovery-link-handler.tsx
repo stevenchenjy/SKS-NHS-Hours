@@ -6,7 +6,7 @@ import { LoaderCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { parseRecoveryLink } from "@/lib/auth/recovery-link";
 
-const fallbackError = "invalid-password-link";
+const fallbackError = "password-verification-failed";
 
 export function RecoveryLinkHandler({ code }: { code?: string }) {
   const started = useRef(false);
