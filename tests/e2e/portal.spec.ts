@@ -786,7 +786,10 @@ test("expired member receives the limited expired-account experience", async ({ 
   await login(page, syntheticAccounts.expiredMember.email);
   await expect(page).toHaveURL(/\/account-expired/);
   await expect(page.getByRole("heading", { name: /membership is not active/i })).toBeVisible();
-  await expect(page.getByText(rolloverLabel)).toBeVisible();
+  await expect(page.getByText(rolloverLabel, { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(/membership is ready, but that school year has not been activated/),
+  ).toBeVisible();
 });
 
 test("ordinary member cannot open leader or teacher-admin routes", async ({ page }) => {
