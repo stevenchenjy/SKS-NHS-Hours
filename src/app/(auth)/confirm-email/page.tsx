@@ -44,7 +44,7 @@ export default async function ConfirmEmailPage({
         </form>
         <p className="text-sm leading-6 text-muted-foreground">
           Selecting Continue uses this link once. Keep the next page open in this browser and finish
-          within 30 minutes. If a password is rejected, retry on that page instead of reopening this
+          within 12 hours. If a password is rejected, retry on that page instead of reopening this
           link. Use only the most recent link sent to you.
         </p>
         <Link href="/login" className="text-sm text-primary hover:underline">

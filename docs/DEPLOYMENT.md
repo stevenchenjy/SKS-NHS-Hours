@@ -89,12 +89,12 @@ For each hosted project:
 
 1. Disable public email signup and anonymous sign-in.
 2. Match the configured password policy: minimum 6 characters with no required character types.
-3. Enable secure password change/recent reauthentication. The application also requires a signed, user-bound, 30-minute context produced only after verified invite/recovery proof; reproduce and test the hosted setting.
+3. Enable secure password change/recent reauthentication. The application also requires a signed, user-bound, 12-hour context produced only after verified invite/recovery proof; reproduce and test the hosted setting.
 4. Set the Site URL to that environment's exact `NEXT_PUBLIC_APP_URL`.
 5. Allow only the exact redirect URLs the environment needs: `https://HOST/auth/callback`, `https://HOST/auth/recovery-callback`, and `https://HOST/update-password`; do not add wildcards to compensate for configuration errors.
 6. Replace the hosted **Invite User** template with the reviewed equivalent of `supabase/templates/invite.html`. Its link must use `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite`, which `src/app/auth/confirm/route.ts` verifies before the application claim.
 7. Replace the hosted **Reset Password** template with `supabase/templates/recovery.html`. Its link must use `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`; keep `/auth/recovery-callback` allowlisted as the verified PKCE fallback for a stock recovery template.
-8. Set the hosted email OTP expiry to `604800` seconds. The application invitation and Auth invite token are intentionally aligned to seven days; this shared setting also governs recovery and other email links, while the post-verification password form lasts 30 minutes.
+8. Set the hosted email OTP expiry to `604800` seconds. The application invitation and Auth invite token are intentionally aligned to seven days; this shared setting also governs recovery and other email links, while the post-verification password form lasts 12 hours.
 9. Configure school-approved SMTP and sender identity; verify initial Invite User, fresh Invite User resend, and password-reset delivery with safe accounts. Disable link tracking that rewrites Auth URLs and assess email-security prefetch behavior.
 10. Set Auth rate limits appropriate to the environment and review abuse monitoring.
 11. Confirm expired, used, revoked, malformed, and ambiguous invitations fail safely; provider rejection does not advance application send facts; ordinary/stale sessions cannot change a password without verified context; and an unprovisioned Auth identity receives no portal data.
@@ -182,7 +182,7 @@ The repository's `.github/workflows/ci.yml` runs formatting, lint, typecheck, un
 Use safe test accounts and non-sensitive records:
 
 1. public signup and anonymous application access are unavailable;
-2. the hosted Invite User template targets `/auth/confirm`, verifies an invite token hash, expires at seven days, claims the exact invitation ID, and creates a 30-minute user-bound password context; Resend issues a fresh Invite User message and only provider acceptance advances `sent_at`/`send_count`;
+2. the hosted Invite User template targets `/auth/confirm`, verifies an invite token hash, expires at seven days, claims the exact invitation ID, and creates a 12-hour user-bound password context; Resend issues a fresh Invite User message and only provider acceptance advances `sent_at`/`send_count`;
 3. the hosted Reset Password template verifies a recovery token hash (and the allowlisted PKCE fallback works), while an ordinary or expired-context session cannot open/submit the password form;
 4. OAuth/recovery callbacks return only to exact allowlisted hosts;
 5. unprovisioned, inactive, and expired identities receive no protected data;

@@ -24,7 +24,7 @@ const authenticationErrors: Record<string, string> = {
   "invitation-claim-failed":
     "The invitation could not be matched to an active portal account. Contact the portal admin.",
   "password-context-required":
-    "Password setup requires a verified link in this browser and must be completed within 30 minutes. Ask the portal admin for a fresh link or use Forgot your password below.",
+    "Password setup requires a verified link in this browser and must be completed within 12 hours. Ask the portal admin for a fresh link or use Forgot your password below.",
   "password-context-failed":
     "The password link could not be secured. Contact the portal admin or request a new reset link.",
   "password-link-expired":

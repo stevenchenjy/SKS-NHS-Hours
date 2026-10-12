@@ -188,7 +188,7 @@ Require the relevant checks through branch protection. A workflow definition in 
 
 Automated checks do not replace these manual groups in `docs/QA.md`:
 
-- invite/recovery token-hash confirmation, exact invitation claim, seven-day expiry, 30-minute user-bound password context, provider-accepted send receipt, fresh Invite User resend, PKCE recovery fallback, invalid/expired/used/revoked invite, ordinary-session password denial, Google disabled/enabled, and sign-out lifecycle;
+- invite/recovery token-hash confirmation, exact invitation claim, seven-day expiry, 12-hour user-bound password context, provider-accepted send receipt, fresh Invite User resend, PKCE recovery fallback, invalid/expired/used/revoked invite, ordinary-session password denial, Google disabled/enabled, and sign-out lifecycle;
 - every role and direct URL/ID substitution, including expired former leaders;
 - draft/submit/withdraw/change/resubmit/review/reassign/correct flows;
 - queue filters, pagination, empty/loading/network/stale/double-submit states;

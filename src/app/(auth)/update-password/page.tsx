@@ -32,8 +32,8 @@ export default async function UpdatePasswordPage() {
           Choose a new password
         </CardTitle>
         <CardDescription className="text-base">
-          Your link has been verified. Keep this page open and save your password within 30 minutes
-          of verification, using this browser.
+          Your link has been verified. Keep this page open and save your password within 12 hours of
+          verification, using this browser.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-6 py-7">

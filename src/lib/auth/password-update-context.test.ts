@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createPasswordUpdateContext,
@@ -8,6 +8,8 @@ import {
 
 const SECRET = "test-only-password-update-context-secret-000000000000";
 const USER_ID = "10000000-0000-4000-8000-000000000001";
+
+afterEach(() => vi.useRealTimers());
 
 describe("password update context", () => {
   it("round-trips a signed, user-bound recovery context", async () => {
@@ -24,7 +26,6 @@ describe("password update context", () => {
       purpose: "recovery",
       expiresAt: Math.floor(Date.now() / 1_000) + PASSWORD_UPDATE_CONTEXT_MAX_AGE_SECONDS,
     });
-    vi.useRealTimers();
   });
 
   it("rejects a context for a different user", async () => {
@@ -40,6 +41,22 @@ describe("password update context", () => {
       ),
     ).resolves.toBeNull();
   });
+
+  it.each(["invite", "recovery"] as const)(
+    "keeps a new %s context valid for 12 hours and expires it at the boundary",
+    async (purpose) => {
+      vi.setSystemTime(new Date("2026-10-11T12:00:00Z"));
+      const issuedAt = Math.floor(Date.now() / 1_000);
+      const token = await createPasswordUpdateContext({ subject: USER_ID, purpose }, SECRET);
+
+      await expect(
+        verifyPasswordUpdateContext(token, { subject: USER_ID, now: issuedAt + 43_199 }, SECRET),
+      ).resolves.toMatchObject({ subject: USER_ID, purpose, expiresAt: issuedAt + 43_200 });
+      await expect(
+        verifyPasswordUpdateContext(token, { subject: USER_ID, now: issuedAt + 43_200 }, SECRET),
+      ).resolves.toBeNull();
+    },
+  );
 
   it("rejects expired, malformed, and tampered contexts", async () => {
     const token = await createPasswordUpdateContext(

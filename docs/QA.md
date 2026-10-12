@@ -147,7 +147,7 @@ Tests should assert outcomes and persisted records, not only visible button stat
 - Invite and reset callbacks reject off-origin redirect targets.
 - Used, revoked, malformed, and expired invitation links fail safely.
 - Resending does not duplicate profiles/memberships/roles; provider rejection leaves accepted-send facts unchanged, while a provider-accepted/receipt-failed case is explicit and reconciled before retry.
-- `/update-password` requires a fresh invite/recovery proof, a matching signed user-bound context, and its 30-minute lifetime; an ordinary or stale session is denied.
+- `/update-password` requires a fresh invite/recovery proof, a matching signed user-bound context, and its 12-hour lifetime; an ordinary or stale session is denied.
 - Deactivation takes effect on the next protected request; adding destination-year access creates a separate membership without changing prior history.
 - Signing out clears the session; browser Back does not reveal cached private content.
 - Google login is absent when disabled and works only for provisioned identities when enabled.

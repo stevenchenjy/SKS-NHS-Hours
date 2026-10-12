@@ -82,7 +82,7 @@ function RecoveryLinkForm({
         <p className="text-sm leading-6 text-muted-foreground">
           Send only this latest link; generating another replaces the previous one. Do not verify it
           for the recipient. Ask them to select Continue, then keep the password form open in the
-          same browser and finish within 30 minutes. If a password is rejected, they should retry on
+          same browser and finish within 12 hours. If a password is rejected, they should retry on
           that form instead of reopening the link.
         </p>
         <div className="space-y-2">

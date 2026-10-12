@@ -68,6 +68,7 @@ describe("explicit email link confirmation", () => {
       expect(response.cookies.get("nhs-password-update-context")?.value).toBe("signed-context");
       expect(response.headers.get("set-cookie")).toContain("HttpOnly");
       expect(response.headers.get("set-cookie")).toContain("Path=/update-password");
+      expect(response.cookies.get("nhs-password-update-context")?.maxAge).toBe(43_200);
     },
   );
 
