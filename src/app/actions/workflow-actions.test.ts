@@ -73,12 +73,10 @@ beforeEach(() => {
   rpc.mockReset();
   sendEmail.mockReset();
   provisionGoogle.mockReset().mockResolvedValue(undefined);
-  readInvitation
-    .mockReset()
-    .mockResolvedValue({
-      data: { status: "pending", expires_at: new Date(Date.now() + 86400000).toISOString() },
-      error: null,
-    });
+  readInvitation.mockReset().mockResolvedValue({
+    data: { status: "pending", expires_at: new Date(Date.now() + 86400000).toISOString() },
+    error: null,
+  });
   environment.googleAuthMode = "disabled";
   environment.googleAllowedDomains = [];
   environment.betaAllowedEmails = [];

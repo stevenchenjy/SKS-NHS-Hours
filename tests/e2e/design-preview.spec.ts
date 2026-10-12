@@ -39,9 +39,11 @@ test("local design previews have no serious accessibility violations or horizont
   const progress = page.getByRole("progressbar", { name: "Approved service-hour progress" });
   await expect(progress).toHaveAttribute(
     "aria-valuetext",
-    "14.5 of 35 approved · 3.25 pending · 20.5 approved hours remaining",
+    "14.5 of 35 approved · 3.25 pending · 1.5 changes requested · 20.5 approved hours remaining",
   );
-  await expect(page.getByText("41.43% approved · 9.29% pending", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("41.43% approved · 9.29% pending · 4.29% changes requested", { exact: true }),
+  ).toBeVisible();
   await expect(progress.locator('[data-progress-segment="approved"]')).toHaveAttribute(
     "style",
     /width:\s*41\.43%/,

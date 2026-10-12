@@ -49,10 +49,22 @@ export async function proxy(request: NextRequest) {
         },
       },
     });
-    const { data } = await supabase.auth.getClaims();
+    let signedIn = false;
+    let serviceUnavailable = false;
+    try {
+      const { data, error } = await supabase.auth.getClaims();
+      signedIn = Boolean(data?.claims);
+      serviceUnavailable = Boolean(
+        error && (error.status === undefined || error.status === 429 || error.status >= 500),
+      );
+    } catch {
+      serviceUnavailable = true;
+    }
     // Preserve emailed event links before the portal layout redirects to sign-in.
     // The data-access layer still enforces membership and event permissions.
-    if (!data?.claims && /^\/events(?:\/|$)/.test(request.nextUrl.pathname)) {
+    // On an outage, let the protected page render its retry state. Missing
+    // authentication still redirects; the DAL always checks access separately.
+    if (!signedIn && !serviceUnavailable && /^\/events(?:\/|$)/.test(request.nextUrl.pathname)) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set(
         "next",

@@ -36,7 +36,10 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError && (userError.status === undefined || userError.status >= 500))
+  if (
+    userError &&
+    (userError.status === undefined || userError.status === 429 || userError.status >= 500)
+  )
     throw new Error("The sign-in service is temporarily unavailable. Please retry.");
   if (userError || !user) return null;
   if (!isBetaTester(user.email, getServerEnvironment())) redirect("/login?error=beta-not-invited");

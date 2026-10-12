@@ -22,7 +22,7 @@ export const metadata: Metadata = { title: "Choose a password" };
 export default async function UpdatePasswordPage() {
   const supabase = await createSupabaseServerClient();
   const [{ data, error }, cookieStore] = await Promise.all([supabase.auth.getUser(), cookies()]);
-  if (error && (error.status === undefined || error.status >= 500))
+  if (error && (error.status === undefined || error.status === 429 || error.status >= 500))
     throw new Error(
       "The password service is temporarily unavailable. Your setup session has not been discarded.",
     );

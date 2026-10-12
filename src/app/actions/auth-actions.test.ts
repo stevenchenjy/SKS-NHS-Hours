@@ -326,16 +326,19 @@ describe("password setup and retry", () => {
     expect(cookieStore.delete).not.toHaveBeenCalled();
   });
 
-  it("does not request a new link for a temporary session-verification outage", async () => {
-    getUser.mockResolvedValue({
-      data: { user: null },
-      error: { code: "unexpected_failure", status: 503 },
-    });
-    const result = await updatePasswordAction({}, passwordForm("abcdef"));
-    expect(result.error).toContain("Retry on this form");
-    expect(result.requiresNewPasswordLink).toBeUndefined();
-    expect(updateUser).not.toHaveBeenCalled();
-  });
+  it.each([429, 503])(
+    "does not request a new link for a temporary session-verification failure %s",
+    async (status) => {
+      getUser.mockResolvedValue({
+        data: { user: null },
+        error: { code: "unexpected_failure", status },
+      });
+      const result = await updatePasswordAction({}, passwordForm("abcdef"));
+      expect(result.error).toContain("Retry on this form");
+      expect(result.requiresNewPasswordLink).toBeUndefined();
+      expect(updateUser).not.toHaveBeenCalled();
+    },
+  );
 });
 
 afterEach(() => {

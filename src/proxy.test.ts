@@ -56,6 +56,18 @@ describe("emailed event links", () => {
     expect(response.headers.get("location")).toBeNull();
     expect(response.headers.get("x-middleware-next")).toBe("1");
   });
+  it.each([429, 503])("keeps event access retryable after Auth status %s", async (status) => {
+    getClaims.mockResolvedValue({ data: null, error: { status } });
+    const response = await proxy(new NextRequest("https://portal.example.edu/events/event-id"));
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+  });
+  it("lets the protected page handle an Auth transport failure", async () => {
+    getClaims.mockRejectedValue(new Error("network unavailable"));
+    const response = await proxy(new NextRequest("https://portal.example.edu/events/event-id"));
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("Content-Security-Policy")).toContain("frame-ancestors 'none'");
+  });
 
   it.each(["/login", "/auth/callback", "/events-unrelated"])(
     "does not intercept %s",

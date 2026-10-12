@@ -68,6 +68,11 @@ export async function loginAction(
           error:
             "Too many sign-in attempts. Please wait before trying again. Your email and password are still in this form.",
         };
+      if (error.code === "user_banned")
+        return {
+          error:
+            "This account is currently unavailable. Contact NHS support to check account access; resetting the password will not reactivate it.",
+        };
       return {
         error:
           error.code === "invalid_credentials" || error.status === 400
@@ -232,7 +237,10 @@ export async function updatePasswordAction(
     data: { user },
     error: userError,
   } = userResult;
-  if (userError && (userError.status === undefined || userError.status >= 500)) {
+  if (
+    userError &&
+    (userError.status === undefined || userError.status === 429 || userError.status >= 500)
+  ) {
     return {
       ...verificationState,
       error:
@@ -420,7 +428,7 @@ export async function retryPortalAccessAction(): Promise<AuthFormState> {
       data: { user },
       error,
     } = await supabase.auth.getUser();
-    if (error && (error.status === undefined || error.status >= 500))
+    if (error && (error.status === undefined || error.status === 429 || error.status >= 500))
       return { error: "The sign-in service is temporarily unavailable. Please retry later." };
     if (!user)
       return {

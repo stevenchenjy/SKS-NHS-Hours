@@ -70,9 +70,12 @@ async function expectProgressSummary(
 ) {
   const progress = page.getByRole("progressbar", { name: "Approved service-hour progress" });
   await expect(progress).toHaveAttribute("aria-valuetext", summary);
+  const changesRequested = Number(summary.match(/· ([\d.]+) changes requested/)?.[1] ?? 0);
+  const requirement = Number(summary.match(/of ([\d.]+) approved/)?.[1] ?? 35);
+  const changesRequestedText = ` · ${Number(((changesRequested / requirement) * 100).toFixed(2))}% changes requested`;
   await expect(
     page.getByText(
-      `${Number(approvedPercentage.toFixed(2))}% approved · ${Number(pendingPercentage.toFixed(2))}% pending`,
+      `${Number(approvedPercentage.toFixed(2))}% approved · ${Number(pendingPercentage.toFixed(2))}% pending${changesRequestedText}`,
       {
         exact: true,
       },
@@ -172,7 +175,7 @@ test("member login, dashboard, submission, approver selection, and pending total
   await expect(page.getByRole("heading", { name: "Your service progress" })).toBeVisible();
   await expectProgressSummary(
     page,
-    "12.5 of 35 approved · 3.25 pending · 22.5 approved hours remaining",
+    "12.5 of 35 approved · 3.25 pending · 1.5 changes requested · 22.5 approved hours remaining",
     35.71,
     (3.25 / 35) * 100,
   );
@@ -193,7 +196,7 @@ test("member login, dashboard, submission, approver selection, and pending total
   await page.goto("/dashboard");
   await expectProgressSummary(
     page,
-    "12.5 of 35 approved · 6.25 pending · 22.5 approved hours remaining",
+    "12.5 of 35 approved · 6.25 pending · 1.5 changes requested · 22.5 approved hours remaining",
     35.71,
     (6.25 / 35) * 100,
   );
@@ -242,7 +245,7 @@ test("selected committee head completes the first approval without approving hou
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
     page,
-    "12.5 of 35 approved · 6.25 pending · 22.5 approved hours remaining",
+    "12.5 of 35 approved · 6.25 pending · 1.5 changes requested · 22.5 approved hours remaining",
     35.71,
     (6.25 / 35) * 100,
   );
@@ -268,7 +271,7 @@ test("a teacher gives final approval from the shared teacher queue", async ({ pa
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
     page,
-    "15.5 of 35 approved · 3.25 pending · 19.5 approved hours remaining",
+    "15.5 of 35 approved · 3.25 pending · 1.5 changes requested · 19.5 approved hours remaining",
     44.29,
     (3.25 / 35) * 100,
   );
@@ -468,7 +471,7 @@ test("above-target member sees accurate totals while the stacked visual remains 
   await login(page, syntheticAccounts.leaderMember.email);
   await expectProgressSummary(
     page,
-    "36 of 35 approved · 1 pending · 1 approved hours over requirement",
+    "36 of 35 approved · 1 pending · 0 changes requested · 1 approved hours over requirement",
     100,
     0,
     102.86,
