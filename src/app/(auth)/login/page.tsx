@@ -52,6 +52,20 @@ const authenticationErrors: Record<string, string> = {
     "We could not verify your link because the authentication service is unavailable. Try opening the same link again in a few minutes. If this continues, contact the portal admin.",
 };
 
+const googlePilotLinkErrors: Record<string, string> = {
+  "invalid-invitation-link": "This invitation link is incomplete or invalid.",
+  "invitation-link-expired":
+    "This invitation link has expired, was already used, or was replaced by a newer link.",
+  "password-context-required":
+    "Password setup verification is missing or has expired in this browser.",
+  "password-context-failed": "We could not secure password setup verification in this browser.",
+  "password-link-expired":
+    "This reset link has expired, was already used, or was replaced by a newer link.",
+  "invalid-password-link": "This reset link is incomplete or invalid.",
+  "password-verification-failed":
+    "We could not verify your link because the authentication service is unavailable. Try again in a few minutes.",
+};
+
 const authenticationNotices: Record<string, string> = {
   "password-updated": "Your password was updated. Sign in with the new password.",
 };
@@ -68,6 +82,7 @@ export default async function LoginPage({
   const emailEnabled = environment.emailDeliveryEnabled;
   const error = Array.isArray(params.error) ? params.error[0] : params.error;
   const notice = Array.isArray(params.notice) ? params.notice[0] : params.notice;
+  const googlePilotLinkError = !emailEnabled && error ? googlePilotLinkErrors[error] : undefined;
 
   return (
     <Card className="border-border/80 py-0 shadow-sm">
@@ -85,17 +100,8 @@ export default async function LoginPage({
             role="alert"
             className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
           >
-            {!emailEnabled &&
-            [
-              "invalid-invitation-link",
-              "invitation-link-expired",
-              "password-context-required",
-              "password-context-failed",
-              "password-link-expired",
-              "invalid-password-link",
-              "password-verification-failed",
-            ].includes(error)
-              ? GOOGLE_PILOT_RECOVERY_MESSAGE
+            {googlePilotLinkError
+              ? `${googlePilotLinkError} ${GOOGLE_PILOT_RECOVERY_MESSAGE}`
               : (authenticationErrors[error] ??
                 "Authentication could not be completed. Try again or contact the portal admin.")}
           </p>
@@ -166,9 +172,9 @@ export default async function LoginPage({
             >
               Forgot your password?
             </Link>
-          ) : (
+          ) : !googlePilotLinkError ? (
             <p className="text-sm text-muted-foreground">{GOOGLE_PILOT_RECOVERY_MESSAGE}</p>
-          )}
+          ) : null}
           <SupportContact />
         </div>
       </CardContent>
