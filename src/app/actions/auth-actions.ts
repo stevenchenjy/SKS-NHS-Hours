@@ -14,7 +14,11 @@ import { safeInternalPath } from "@/lib/safe-navigation";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { claimInvitationOrConfirmExistingProfile } from "@/lib/auth/claim-invitation";
-import { isBetaTester, isSchoolGoogleEmail } from "@/lib/auth/sign-in-policy";
+import {
+  GOOGLE_PILOT_RECOVERY_MESSAGE,
+  isBetaTester,
+  isSchoolGoogleEmail,
+} from "@/lib/auth/sign-in-policy";
 import { PASSWORD_VERIFICATION_COOKIE } from "@/lib/auth/password-verification";
 
 export interface AuthFormState {
@@ -60,8 +64,9 @@ export async function loginAction(
     if (error) {
       if (error.code === "email_not_confirmed")
         return {
-          error:
-            "Your email has not been verified yet. Open your invitation and select Continue, or request reset instructions.",
+          error: environment.emailDeliveryEnabled
+            ? "Your email has not been verified yet. Open your invitation and select Continue, or request reset instructions."
+            : "Your email has not been verified yet. Sign in with your school Google account to verify it and open this beta portal.",
         };
       if (error.status === 429)
         return {
@@ -76,7 +81,9 @@ export async function loginAction(
       return {
         error:
           error.code === "invalid_credentials" || error.status === 400
-            ? "The email or password is incorrect. Check your school email and password, or use Forgot your password."
+            ? environment.emailDeliveryEnabled
+              ? "The email or password is incorrect. Check your school email and password, or use Forgot your password."
+              : "The email or password is incorrect. Check your school email and password, or sign in with your school Google account."
             : "The sign-in service is temporarily unavailable. Please retry here; you do not need a new invitation.",
       };
     }
@@ -164,6 +171,7 @@ export async function forgotPasswordAction(
       error:
         "This test portal is only open to invited beta testers. Request help through the current NHS portal.",
     };
+  if (!environment.emailDeliveryEnabled) return { error: GOOGLE_PILOT_RECOVERY_MESSAGE };
   try {
     assertAllowedEmail(parsed.data.email, environment.allowedEmailDomains);
   } catch {
@@ -200,6 +208,7 @@ export async function updatePasswordAction(
   _previous: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  const environment = getServerEnvironment();
   const verificationState = _previous.requiresPasswordVerification
     ? { requiresPasswordVerification: true }
     : {};
@@ -257,12 +266,13 @@ export async function updatePasswordAction(
     : null;
   if (!user || !context) {
     return {
-      error:
-        "Your password setup session is missing or has expired. Request a fresh reset link from the portal admin or use Forgot your password.",
+      error: environment.emailDeliveryEnabled
+        ? "Your password setup session is missing or has expired. Request a fresh reset link from the portal admin or use Forgot your password."
+        : "Your password setup session is missing or has expired. Verify again with your school Google account to continue without an email.",
       requiresNewPasswordLink: true,
     };
   }
-  if (!isBetaTester(user.email, getServerEnvironment()))
+  if (!isBetaTester(user.email, environment))
     return { error: "This test portal is only open to invited beta testers." };
   try {
     if (!(await claimInvitationOrConfirmExistingProfile(supabase, user)))
@@ -279,6 +289,12 @@ export async function updatePasswordAction(
   }
 
   async function sendVerificationCode(): Promise<AuthFormState> {
+    if (!environment.emailDeliveryEnabled)
+      return {
+        error:
+          "Password setup needs fresh school Google verification. Verify again with Google to continue; email verification is not enabled in this beta.",
+        requiresNewPasswordLink: true,
+      };
     cookieStore.set(PASSWORD_VERIFICATION_COOKIE, context!.nonce, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -322,6 +338,7 @@ export async function updatePasswordAction(
   const needsCode =
     _previous.requiresPasswordVerification ||
     cookieStore.get(PASSWORD_VERIFICATION_COOKIE)?.value === context.nonce;
+  if (needsCode && !environment.emailDeliveryEnabled) return sendVerificationCode();
   if (needsCode && !parsed.data.verificationCode) {
     return {
       requiresPasswordVerification: true,
@@ -338,6 +355,7 @@ export async function updatePasswordAction(
       console.error("Password update failed", { code: error.code, status: error.status });
       if (error.code === "reauthentication_needed") return sendVerificationCode();
       if (error.code === "reauthentication_not_valid") {
+        if (!environment.emailDeliveryEnabled) return sendVerificationCode();
         return {
           requiresPasswordVerification: true,
           fieldErrors: {
@@ -377,8 +395,9 @@ export async function updatePasswordAction(
         ].includes(error.code ?? "")
       ) {
         return {
-          error:
-            "Your sign-in session is no longer valid for changing a password. Request a fresh reset link from the portal admin or use Forgot your password.",
+          error: environment.emailDeliveryEnabled
+            ? "Your sign-in session is no longer valid for changing a password. Request a fresh reset link from the portal admin or use Forgot your password."
+            : "Your sign-in session is no longer valid for changing a password. Verify again with your school Google account to continue without an email.",
           requiresNewPasswordLink: true,
         };
       }

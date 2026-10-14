@@ -1,7 +1,11 @@
 import "server-only";
 
 import { z } from "zod";
-import { parseSignInPolicy, type SignInPolicy } from "@/lib/auth/sign-in-policy";
+import {
+  isEmailDeliveryEnabled,
+  parseSignInPolicy,
+  type SignInPolicy,
+} from "@/lib/auth/sign-in-policy";
 
 const serverEnvironmentSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
@@ -14,6 +18,7 @@ const serverEnvironmentSchema = z.object({
   AUTH_GOOGLE_BETA_APPROVED: z.enum(["true", "false"]).default("false"),
   GOOGLE_AUTH_ALLOWED_DOMAINS: z.string().default(""),
   AUTH_BETA_ALLOWED_EMAILS: z.string().default(""),
+  AUTH_BETA_EMAIL_ENABLED: z.enum(["true", "false"]).default("true"),
   AUTH_PRODUCTION_SUPABASE_URL: z.url().optional(),
   NHS_SUPPORT_EMAIL: z.email().optional(),
   VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
@@ -24,6 +29,7 @@ export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema> &
   SignInPolicy & {
     allowedEmailDomains: string[];
     googleAuthEnabled: boolean;
+    emailDeliveryEnabled: boolean;
     designPreviewEnabled: boolean;
   };
 
@@ -57,6 +63,10 @@ export function getServerEnvironment(): ServerEnvironment {
       .map((domain) => domain.trim().toLowerCase())
       .filter(Boolean),
     googleAuthEnabled: parsed.data.AUTH_GOOGLE_MODE !== "disabled",
+    emailDeliveryEnabled: isEmailDeliveryEnabled(
+      parsed.data.AUTH_GOOGLE_MODE,
+      parsed.data.AUTH_BETA_EMAIL_ENABLED === "true",
+    ),
     designPreviewEnabled: parsed.data.NHS_DESIGN_PREVIEW === "true",
   };
 

@@ -61,6 +61,7 @@ export default async function UpdatePasswordPage() {
       <CardContent className="flex flex-col gap-5 px-6 py-7">
         {accessReady ? (
           <UpdatePasswordForm
+            emailRecoveryEnabled={getServerEnvironment().emailDeliveryEnabled}
             requiresVerification={
               cookieStore.get(PASSWORD_VERIFICATION_COOKIE)?.value === context.nonce
             }

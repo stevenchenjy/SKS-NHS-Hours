@@ -15,6 +15,26 @@ afterEach(() => {
 });
 
 describe("password form recovery", () => {
+  it("offers fresh Google verification instead of an email/code loop in the pilot", async () => {
+    updatePassword.mockResolvedValue({
+      error: "Verify again with school Google.",
+      requiresNewPasswordLink: true,
+    });
+    render(<UpdatePasswordForm emailRecoveryEnabled={false} requiresVerification />);
+    expect(screen.queryByLabelText("Verification code")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Resend verification code" }),
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("New password"), { target: { value: "abcdef" } });
+    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "abcdef" } });
+    fireEvent.click(screen.getByRole("button", { name: "Update password" }));
+    expect(
+      await screen.findByRole("link", { name: "Verify again with school Google" }),
+    ).toHaveAttribute("href", "/login?next=/update-password");
+    expect(
+      screen.queryByRole("link", { name: "Request a new reset link" }),
+    ).not.toBeInTheDocument();
+  });
   it("shows a pending code challenge immediately after reloading", () => {
     render(<UpdatePasswordForm requiresVerification />);
     expect(screen.getByLabelText("Verification code")).toBeVisible();

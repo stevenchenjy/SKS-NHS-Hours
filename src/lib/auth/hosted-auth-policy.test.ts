@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkHostedAuthConfig } from "./hosted-auth-policy";
+import { checkHostedAuthConfig, parseAuthPreflightOptions } from "./hosted-auth-policy";
 
 const config = {
   password_min_length: 6,
@@ -22,6 +22,15 @@ const config = {
     "{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=recovery",
 };
 const target = { appUrl: "https://beta.example.edu", googleEnabled: true };
+const beta = {
+  mode: "beta",
+  googleDomains: "sks.org",
+  betaEmails: "junyuc2027@sks.org",
+  appUrl: target.appUrl,
+  supabaseUrl: "https://beta.supabase.co",
+  productionSupabaseUrl: "https://production.supabase.co",
+  vercelEnvironment: "preview",
+};
 
 describe("hosted Auth release preflight", () => {
   it("accepts the intended beta policy", () =>
@@ -54,4 +63,60 @@ describe("hosted Auth release preflight", () => {
   ])("rejects unsafe settings %j", (override) =>
     expect(checkHostedAuthConfig({ ...config, ...override }, target).length).toBeGreaterThan(0),
   );
+});
+
+describe("Google-only pilot preflight", () => {
+  const noMailConfig = {
+    ...config,
+    smtp_host: "",
+    rate_limit_email_sent: 2,
+    mailer_templates_invite_content: "{{ .ConfirmationURL }}",
+    mailer_templates_recovery_content: "{{ .ConfirmationURL }}",
+  };
+
+  it("omits only email requirements for an explicitly isolated Google pilot", () => {
+    const { googlePilot } = parseAuthPreflightOptions(["--google-pilot"], beta, false);
+    expect(checkHostedAuthConfig(noMailConfig, { ...target, googlePilot })).toEqual([]);
+    expect(checkHostedAuthConfig(noMailConfig, target)).toHaveLength(4);
+    expect(parseAuthPreflightOptions([], beta, false).googlePilot).toBe(false);
+  });
+
+  it.each([
+    { password_min_length: 12 },
+    { password_required_characters: "letters_digits" },
+    { security_update_password_require_reauthentication: true },
+    { mailer_otp_exp: 86400 },
+    { disable_signup: false },
+    { external_anonymous_users_enabled: true },
+    { external_google_enabled: false },
+    { mailer_autoconfirm: true },
+    { uri_allow_list: "https://*.example.edu/**" },
+    { site_url: "https://production.example.edu" },
+  ])("preserves non-email checks in pilot mode: %j", (override) => {
+    expect(
+      checkHostedAuthConfig({ ...noMailConfig, ...override }, { ...target, googlePilot: true }),
+    ).not.toEqual([]);
+  });
+
+  it.each([
+    { mode: "disabled" },
+    { mode: "enabled", humanBetaApproved: true },
+    { vercelEnvironment: "production" },
+    { productionSupabaseUrl: undefined },
+    { supabaseUrl: beta.productionSupabaseUrl },
+    { betaEmails: "" },
+  ])("rejects unsafe pilot use before hosted requests: %j", (override) => {
+    expect(() =>
+      parseAuthPreflightOptions(["--google-pilot"], { ...beta, ...override }, false),
+    ).toThrow();
+  });
+
+  it("requires email delivery to be explicitly disabled and rejects unknown options", () => {
+    expect(() => parseAuthPreflightOptions(["--google-pilot"], beta)).toThrow(
+      "AUTH_BETA_EMAIL_ENABLED=false",
+    );
+    expect(() => parseAuthPreflightOptions(["--ignore-mail"], beta, false)).toThrow(
+      "Unknown Auth preflight option",
+    );
+  });
 });

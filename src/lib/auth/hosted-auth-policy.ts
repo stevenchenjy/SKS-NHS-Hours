@@ -1,3 +1,22 @@
+import { parseSignInPolicy } from "./sign-in-policy.ts";
+
+export function parseAuthPreflightOptions(
+  args: readonly string[],
+  policyInput: Parameters<typeof parseSignInPolicy>[0],
+  betaEmailEnabled = true,
+) {
+  if (args.some((argument) => argument !== "--google-pilot"))
+    throw new Error("Unknown Auth preflight option.");
+  // Reuse all application isolation checks before any hosted request is made.
+  const policy = parseSignInPolicy(policyInput);
+  const googlePilot = args.includes("--google-pilot");
+  if (googlePilot && (policy.googleAuthMode !== "beta" || betaEmailEnabled))
+    throw new Error(
+      "The Google-only pilot preflight requires an isolated beta with AUTH_BETA_EMAIL_ENABLED=false.",
+    );
+  return { policy, googlePilot };
+}
+
 export interface HostedAuthConfig {
   password_min_length?: number;
   password_required_characters?: string;
@@ -17,7 +36,12 @@ export interface HostedAuthConfig {
 
 export function checkHostedAuthConfig(
   config: HostedAuthConfig,
-  input: { appUrl: string; googleEnabled: boolean; minimumEmailsPerHour?: number },
+  input: {
+    appUrl: string;
+    googleEnabled: boolean;
+    minimumEmailsPerHour?: number;
+    googlePilot?: boolean;
+  },
 ): string[] {
   const failures: string[] = [];
   const require = (condition: boolean, message: string) => {
@@ -38,12 +62,14 @@ export function checkHostedAuthConfig(
   require(config.mailer_autoconfirm === false, "Email ownership verification must remain enabled.");
   require(config.external_google_enabled ===
     input.googleEnabled, "The hosted Google provider must match this environment's Google sign-in mode.");
-  require(Boolean(
-    config.smtp_host?.trim(),
-  ), "Configure a school-owned SMTP provider before onboarding students.");
-  require((config.rate_limit_email_sent ?? 0) >=
-    (input.minimumEmailsPerHour ??
-      100), "Set email capacity to cover the onboarding roster (at least 100 messages/hour by default), within the sender's limits.");
+  if (!input.googlePilot) {
+    require(Boolean(
+      config.smtp_host?.trim(),
+    ), "Configure a school-owned SMTP provider before onboarding students.");
+    require((config.rate_limit_email_sent ?? 0) >=
+      (input.minimumEmailsPerHour ??
+        100), "Set email capacity to cover the onboarding roster (at least 100 messages/hour by default), within the sender's limits.");
+  }
   require(config.site_url?.replace(/\/$/, "") ===
     origin, "The hosted Site URL must match this environment's canonical origin.");
   const redirects = (config.uri_allow_list ?? "").split(",").map((value) => value.trim());
@@ -54,15 +80,16 @@ export function checkHostedAuthConfig(
   require(!redirects.some((url) =>
     url.includes("*"),
   ), "Use exact Auth redirect URLs, without wildcards.");
-  for (const [purpose, template] of [
-    ["invite", config.mailer_templates_invite_content],
-    ["recovery", config.mailer_templates_recovery_content],
-  ] as const) {
-    require(Boolean(
-      template?.includes("/auth/confirm?token_hash={{ .TokenHash }}") &&
-      template.includes(`type=${purpose}`) &&
-      !template.includes(".ConfirmationURL"),
-    ), `Apply the scanner-safe ${purpose} email template; it must verify only after the portal's Continue button.`);
-  }
+  if (!input.googlePilot)
+    for (const [purpose, template] of [
+      ["invite", config.mailer_templates_invite_content],
+      ["recovery", config.mailer_templates_recovery_content],
+    ] as const) {
+      require(Boolean(
+        template?.includes("/auth/confirm?token_hash={{ .TokenHash }}") &&
+        template.includes(`type=${purpose}`) &&
+        !template.includes(".ConfirmationURL"),
+      ), `Apply the scanner-safe ${purpose} email template; it must verify only after the portal's Continue button.`);
+    }
   return failures;
 }

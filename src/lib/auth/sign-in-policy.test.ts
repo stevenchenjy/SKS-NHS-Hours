@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isBetaTester, isSchoolGoogleEmail, parseSignInPolicy } from "./sign-in-policy";
+import {
+  isBetaTester,
+  isEmailDeliveryEnabled,
+  isSchoolGoogleEmail,
+  parseSignInPolicy,
+} from "./sign-in-policy";
 
 const beta = {
   mode: "beta",
@@ -12,6 +17,12 @@ const beta = {
 };
 
 describe("closed beta isolation", () => {
+  it("suppresses email only in the explicitly configured Google beta", () => {
+    expect(isEmailDeliveryEnabled("beta")).toBe(true);
+    expect(isEmailDeliveryEnabled("beta", false)).toBe(false);
+    expect(isEmailDeliveryEnabled("disabled", false)).toBe(true);
+    expect(isEmailDeliveryEnabled("enabled", false)).toBe(true);
+  });
   it("defaults Google to disabled and does not gate ordinary password users", () => {
     const policy = parseSignInPolicy({
       appUrl: "https://portal.example.edu",

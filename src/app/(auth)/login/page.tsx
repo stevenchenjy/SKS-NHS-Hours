@@ -11,6 +11,7 @@ import { getServerEnvironment } from "@/lib/env";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SupportContact } from "@/components/auth/support-contact";
+import { GOOGLE_PILOT_RECOVERY_MESSAGE } from "@/lib/auth/sign-in-policy";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -64,6 +65,7 @@ export default async function LoginPage({
   const next = safeNext(params.next);
   const environment = getServerEnvironment();
   const googleEnabled = environment.googleAuthEnabled;
+  const emailEnabled = environment.emailDeliveryEnabled;
   const error = Array.isArray(params.error) ? params.error[0] : params.error;
   const notice = Array.isArray(params.notice) ? params.notice[0] : params.notice;
 
@@ -83,8 +85,19 @@ export default async function LoginPage({
             role="alert"
             className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
           >
-            {(error && authenticationErrors[error]) ??
-              "Authentication could not be completed. Try again or contact the portal admin."}
+            {!emailEnabled &&
+            [
+              "invalid-invitation-link",
+              "invitation-link-expired",
+              "password-context-required",
+              "password-context-failed",
+              "password-link-expired",
+              "invalid-password-link",
+              "password-verification-failed",
+            ].includes(error)
+              ? GOOGLE_PILOT_RECOVERY_MESSAGE
+              : (authenticationErrors[error] ??
+                "Authentication could not be completed. Try again or contact the portal admin.")}
           </p>
         ) : null}
         {notice && authenticationNotices[notice] ? (
@@ -138,18 +151,24 @@ export default async function LoginPage({
             >
               Resume password setup in this browser
             </Link>
-            <Link href="/forgot-password" className="font-medium text-primary underline">
-              Request a fresh reset link
-            </Link>
+            {emailEnabled ? (
+              <Link href="/forgot-password" className="font-medium text-primary underline">
+                Request a fresh reset link
+              </Link>
+            ) : null}
           </div>
         ) : null}
         <div className="flex flex-col gap-2 text-sm">
-          <Link
-            href="/forgot-password"
-            className="font-medium text-primary underline-offset-4 hover:underline"
-          >
-            Forgot your password?
-          </Link>
+          {emailEnabled ? (
+            <Link
+              href="/forgot-password"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Forgot your password?
+            </Link>
+          ) : (
+            <p className="text-sm text-muted-foreground">{GOOGLE_PILOT_RECOVERY_MESSAGE}</p>
+          )}
           <SupportContact />
         </div>
       </CardContent>

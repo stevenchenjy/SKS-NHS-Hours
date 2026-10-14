@@ -36,6 +36,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requireAdmin } from "@/lib/dal/access";
+import { getServerEnvironment } from "@/lib/env";
+import { GOOGLE_PILOT_INVITATION_MESSAGE } from "@/lib/auth/sign-in-policy";
 import { listAccountSetupStatus, type AccountSetupStatus } from "@/lib/dal/account-setup";
 import { listAccountDirectory, listInvitations, listSchoolYears } from "@/lib/dal/portal";
 import {
@@ -140,6 +142,7 @@ export default async function AccountsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [viewer, params] = await Promise.all([requireAdmin(), searchParams]);
+  const emailEnabled = getServerEnvironment().emailDeliveryEnabled;
   const years = await listSchoolYears();
   const fallbackYearId =
     viewer.activeMembership?.school_year_id ??
@@ -166,6 +169,7 @@ export default async function AccountsPage({
     "platform-owner-transferred",
   ].includes(notice);
   const invitationNotices: Record<string, string> = {
+    "beta-email-unavailable": GOOGLE_PILOT_INVITATION_MESSAGE,
     "invitation-google-ready":
       "School Google sign-in is prepared for this pending roster invitation. The optional password setup email was not sent. The roster deadline and email send count are unchanged.",
     "invitation-resent":
@@ -245,6 +249,13 @@ export default async function AccountsPage({
           ) : undefined
         }
       />
+
+      {!emailEnabled ? (
+        <p role="status" className="mb-6 text-sm text-muted-foreground">
+          Email invitations and roster imports are unavailable in this beta. Testers use their
+          prepared school Google accounts.
+        </p>
+      ) : null}
 
       {notice ? (
         <p
@@ -894,7 +905,12 @@ export default async function AccountsPage({
                           {canManageInvitation ? (
                             <div className="inline-flex gap-2">
                               <form action={resend}>
-                                <Button type="submit" size="sm" variant="outline">
+                                <Button
+                                  type="submit"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!emailEnabled}
+                                >
                                   Resend
                                 </Button>
                               </form>

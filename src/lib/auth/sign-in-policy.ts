@@ -3,6 +3,19 @@ import { z } from "zod";
 export const googleAuthModeSchema = z.enum(["disabled", "beta", "enabled"]);
 export type GoogleAuthMode = z.infer<typeof googleAuthModeSchema>;
 
+export const GOOGLE_PILOT_RECOVERY_MESSAGE =
+  "Email reset is not enabled in this beta. Sign in with your school Google account, then open My profile to set or change an optional portal password of at least 6 characters.";
+
+export const GOOGLE_PILOT_INVITATION_MESSAGE =
+  "Email invitations are not enabled in this beta. Approved tester access is prepared separately. No email was sent by this request.";
+
+export function isEmailDeliveryEnabled(
+  googleAuthMode: GoogleAuthMode,
+  betaEmailEnabled = true,
+): boolean {
+  return googleAuthMode !== "beta" || betaEmailEnabled;
+}
+
 export interface SignInPolicy {
   googleAuthMode: GoogleAuthMode;
   googleAllowedDomains: string[];

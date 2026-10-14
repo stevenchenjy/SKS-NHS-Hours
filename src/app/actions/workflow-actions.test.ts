@@ -15,6 +15,7 @@ const { rpc, sendEmail, viewer, revalidate, provisionGoogle, readInvitation, env
       googleAuthMode: "disabled",
       googleAllowedDomains: [] as string[],
       betaAllowedEmails: [] as string[],
+      emailDeliveryEnabled: true,
     },
   }));
 vi.mock("server-only", () => ({}));
@@ -40,7 +41,12 @@ vi.mock("@/lib/env", () => ({
   getServerEnvironment: () => environment,
 }));
 
-import { correctApprovedRequestAction, importRosterAction } from "./admin-actions";
+import {
+  correctApprovedRequestAction,
+  importRosterAction,
+  inviteAccountAction,
+  resendInvitationAction,
+} from "./admin-actions";
 import { saveHourRequestAction } from "./hour-actions";
 import { signupForServiceEventAction } from "./event-actions";
 
@@ -80,6 +86,7 @@ beforeEach(() => {
   environment.googleAuthMode = "disabled";
   environment.googleAllowedDomains = [];
   environment.betaAllowedEmails = [];
+  environment.emailDeliveryEnabled = true;
   vi.stubGlobal("File", NodeFile);
   viewer.mockResolvedValue({
     roles: ["member"],
@@ -197,6 +204,37 @@ describe("roster delivery results", () => {
             : null,
     }));
   }
+  it("suppresses invitation, resend, and roster email in the Google-only pilot", async () => {
+    environment.googleAuthMode = "beta";
+    environment.emailDeliveryEnabled = false;
+    const invitation = await inviteAccountAction(
+      {},
+      form({ email: "member@example.edu", full_name: "Member Example", school_year_id: YEAR }),
+    );
+    expect(invitation.error).toContain("Email invitations are not enabled in this beta");
+    const imported = await importRosterAction({}, roster());
+    expect(imported.error).toContain("No roster changes were made");
+    await expect(resendInvitationAction(ID, YEAR)).rejects.toThrow("beta-email-unavailable");
+    expect(rpc).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(provisionGoogle).not.toHaveBeenCalled();
+  });
+  it("preserves invitation and resend email in normal operation", async () => {
+    prepare();
+    sendEmail.mockResolvedValue("invite");
+    const invitation = await inviteAccountAction(
+      {},
+      form({
+        email: "member@example.edu",
+        full_name: "Member Example",
+        school_year_id: YEAR,
+        access_level: "member",
+      }),
+    );
+    expect(invitation.message).toBe("Invitation sent to member@example.edu.");
+    await expect(resendInvitationAction(ID, YEAR)).rejects.toThrow("invitation-resent");
+    expect(sendEmail).toHaveBeenCalledTimes(2);
+  });
   it("counts an existing-account recovery email as successful delivery", async () => {
     prepare();
     sendEmail.mockResolvedValue("recovery");

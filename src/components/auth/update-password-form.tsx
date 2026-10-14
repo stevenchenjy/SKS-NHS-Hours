@@ -14,12 +14,14 @@ const initialState: AuthFormState = {};
 
 export function UpdatePasswordForm({
   requiresVerification = false,
+  emailRecoveryEnabled = true,
 }: {
   requiresVerification?: boolean;
+  emailRecoveryEnabled?: boolean;
 }) {
   const [state, action, pending] = useActionState(updatePasswordAction, {
     ...initialState,
-    requiresPasswordVerification: requiresVerification,
+    requiresPasswordVerification: emailRecoveryEnabled && requiresVerification,
   });
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -57,7 +59,9 @@ export function UpdatePasswordForm({
           />
           <FieldError>{state.fieldErrors?.confirmation?.[0]}</FieldError>
         </Field>
-        {state.requiresPasswordVerification && !state.requiresNewPasswordLink ? (
+        {emailRecoveryEnabled &&
+        state.requiresPasswordVerification &&
+        !state.requiresNewPasswordLink ? (
           <Field data-invalid={Boolean(state.fieldErrors?.verificationCode)}>
             <FieldLabel htmlFor="verification-code">Verification code</FieldLabel>
             <Input
@@ -85,8 +89,11 @@ export function UpdatePasswordForm({
         </p>
       ) : null}
       {state.requiresNewPasswordLink ? (
-        <Link href="/forgot-password" className="block text-sm font-medium text-primary underline">
-          Request a new reset link
+        <Link
+          href={emailRecoveryEnabled ? "/forgot-password" : "/login?next=/update-password"}
+          className="block text-sm font-medium text-primary underline"
+        >
+          {emailRecoveryEnabled ? "Request a new reset link" : "Verify again with school Google"}
         </Link>
       ) : null}
       {state.message ? (
@@ -102,7 +109,9 @@ export function UpdatePasswordForm({
       >
         {pending ? "Updating…" : "Update password"}
       </Button>
-      {state.requiresPasswordVerification && !state.requiresNewPasswordLink ? (
+      {emailRecoveryEnabled &&
+      state.requiresPasswordVerification &&
+      !state.requiresNewPasswordLink ? (
         <Button
           type="submit"
           name="intent"

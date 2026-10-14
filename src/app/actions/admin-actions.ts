@@ -13,7 +13,7 @@ import {
 } from "@/lib/auth/invitation-delivery";
 import { sendInvitationEmail } from "@/lib/auth/send-invitation-email";
 import { provisionGoogleAccount } from "@/lib/auth/provision-google-account";
-import { isSchoolGoogleEmail } from "@/lib/auth/sign-in-policy";
+import { GOOGLE_PILOT_INVITATION_MESSAGE, isSchoolGoogleEmail } from "@/lib/auth/sign-in-policy";
 import { getServerEnvironment } from "@/lib/env";
 import { requireAdmin } from "@/lib/dal/access";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -201,6 +201,7 @@ export async function inviteAccountAction(
 ): Promise<AdminFormState> {
   const viewer = await requireAdmin();
   const environment = getServerEnvironment();
+  if (!environment.emailDeliveryEnabled) return { error: GOOGLE_PILOT_INVITATION_MESSAGE };
   const expiresAt = new Date(Date.now() + INVITATION_VALIDITY_MS).toISOString();
   const access = invitationAccessSchema.safeParse(formData.get("access_level"));
   if (!access.success) {
@@ -275,6 +276,8 @@ export async function inviteAccountAction(
 
 export async function resendInvitationAction(invitationId: string, schoolYearId?: string) {
   await requireAdmin();
+  if (!getServerEnvironment().emailDeliveryEnabled)
+    redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "beta-email-unavailable" }));
   const parsedId = z.uuid().safeParse(invitationId);
   if (!parsedId.success)
     redirect(accountsUrl({ schoolYearId, view: "invitations", notice: "invalid-invitation" }));
@@ -761,6 +764,8 @@ export async function importRosterAction(
   formData: FormData,
 ): Promise<AdminFormState> {
   await requireAdmin();
+  if (!getServerEnvironment().emailDeliveryEnabled)
+    return { error: `${GOOGLE_PILOT_INVITATION_MESSAGE} No roster changes were made.` };
   const file = formData.get("roster");
   const schoolYearId = z.uuid().safeParse(formData.get("school_year_id"));
   if (

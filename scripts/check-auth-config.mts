@@ -1,7 +1,9 @@
 // Read-only hosted preflight. Node 22.18+ / 24 supports these erasable TS types.
 // Never prints API tokens, SMTP secrets, email lists, or email proof URLs.
-import { checkHostedAuthConfig } from "../src/lib/auth/hosted-auth-policy.ts";
-import { parseSignInPolicy } from "../src/lib/auth/sign-in-policy.ts";
+import {
+  checkHostedAuthConfig,
+  parseAuthPreflightOptions,
+} from "../src/lib/auth/hosted-auth-policy.ts";
 
 async function main() {
   const env = process.env;
@@ -18,16 +20,20 @@ async function main() {
     throw new Error("Invalid Supabase project reference.");
   if (new URL(env.NEXT_PUBLIC_SUPABASE_URL).hostname !== `${env.SUPABASE_PROJECT_REF}.supabase.co`)
     throw new Error("The project reference must match the target Supabase URL.");
-  const policy = parseSignInPolicy({
-    mode: env.AUTH_GOOGLE_MODE,
-    googleDomains: env.GOOGLE_AUTH_ALLOWED_DOMAINS,
-    betaEmails: env.AUTH_BETA_ALLOWED_EMAILS,
-    appUrl: env.NEXT_PUBLIC_APP_URL,
-    supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
-    productionSupabaseUrl: env.AUTH_PRODUCTION_SUPABASE_URL,
-    vercelEnvironment: env.VERCEL_ENV,
-    humanBetaApproved: env.AUTH_GOOGLE_BETA_APPROVED === "true",
-  });
+  const { policy, googlePilot } = parseAuthPreflightOptions(
+    process.argv.slice(2),
+    {
+      mode: env.AUTH_GOOGLE_MODE,
+      googleDomains: env.GOOGLE_AUTH_ALLOWED_DOMAINS,
+      betaEmails: env.AUTH_BETA_ALLOWED_EMAILS,
+      appUrl: env.NEXT_PUBLIC_APP_URL,
+      supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+      productionSupabaseUrl: env.AUTH_PRODUCTION_SUPABASE_URL,
+      vercelEnvironment: env.VERCEL_ENV,
+      humanBetaApproved: env.AUTH_GOOGLE_BETA_APPROVED === "true",
+    },
+    env.AUTH_BETA_EMAIL_ENABLED !== "false",
+  );
   const response = await fetch(
     `https://api.supabase.com/v1/projects/${env.SUPABASE_PROJECT_REF}/config/auth`,
     {
@@ -44,6 +50,7 @@ async function main() {
     appUrl: env.NEXT_PUBLIC_APP_URL,
     googleEnabled: policy.googleAuthMode !== "disabled",
     minimumEmailsPerHour: minimumEmails,
+    googlePilot,
   });
   const database = await fetch(
     `https://api.supabase.com/v1/projects/${env.SUPABASE_PROJECT_REF}/database/query`,
@@ -72,7 +79,9 @@ async function main() {
     process.exitCode = 1;
   } else
     console.log(
-      "PASS: hosted Auth policy, email templates, delivery configuration, and redirect settings match the release requirements. Real inbox/Google tests are still required.",
+      googlePilot
+        ? "PASS: isolated Google-only beta Auth policy, schema, and redirects match the pilot requirements. Email delivery is disabled; SMTP and mail templates were not validated. Real school Google and password tests are still required."
+        : "PASS: hosted Auth policy, email templates, delivery configuration, and redirect settings match the release requirements. Real inbox/Google tests are still required.",
     );
 }
 main().catch(() => {
