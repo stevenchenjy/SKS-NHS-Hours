@@ -59,14 +59,11 @@ export function ProgressSummary({
   compact?: boolean;
 }) {
   const {
-    actual,
     approved,
     approvedVisual,
     changesRequested,
-    changesRequestedPercentage,
     changesRequestedVisual,
     pending,
-    pendingPercentage,
     pendingVisual,
     summary,
     target,
@@ -75,15 +72,7 @@ export function ProgressSummary({
 
   return (
     <div className={compact ? "min-w-0 space-y-2" : "space-y-4"}>
-      {!compact && (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <p className="text-base font-medium">Service-hour progress</p>
-          <span className="text-base text-muted-foreground">
-            {hours(actual)}% approved · {hours(pendingPercentage)}% pending ·{" "}
-            {hours(changesRequestedPercentage)}% changes requested
-          </span>
-        </div>
-      )}
+      {!compact && <p className="text-base font-medium">Service-hour progress</p>}
       <div
         role="progressbar"
         aria-label="Approved service-hour progress"

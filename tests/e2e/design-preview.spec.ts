@@ -43,7 +43,7 @@ test("local design previews have no serious accessibility violations or horizont
   );
   await expect(
     page.getByText("41.43% approved · 9.29% pending · 4.29% changes requested", { exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(progress.locator('[data-progress-segment="approved"]')).toHaveAttribute(
     "style",
     /width:\s*41\.43%/,
