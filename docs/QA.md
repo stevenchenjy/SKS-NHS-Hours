@@ -374,3 +374,14 @@ exposure, not a demonstrated public runtime path. No dependency allowlist or aud
 gate was weakened: build runs before audit, and browser checks run independently
 so the advisory cannot hide functional regressions. Do not describe overall CI
 or the dependency audit as green while this advisory remains.
+
+## Braces dependency remediation — October 15, 2026
+
+The follow-up removes the shadcn CLI after preserving its complete licensed
+stylesheet locally, and replaces only Next's lint-directory glob dependency with
+tinyglobby plus a tested compatibility patch. The local audit now reports zero
+vulnerabilities and the resolved lockfile has no braces, micromatch, or fast-glob
+package. See `docs/DEPENDENCIES.md` for the dependency and maintenance contracts.
+The full application, native database, and authenticated browser suites remain
+release gates; final CI and production deployment receipts are recorded with the
+delivery result. The earlier advisory entry above describes the prior release.

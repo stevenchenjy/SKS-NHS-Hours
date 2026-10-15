@@ -1,0 +1,77 @@
+diff --git a/dist/utils/get-root-dirs.js b/dist/utils/get-root-dirs.js
+index 47108c943514a1d7e686c5eb18aad00a59963c83..e93e1a8f89043983cebd6f4541073f7e47ae5346 100644
+--- a/dist/utils/get-root-dirs.js
++++ b/dist/utils/get-root-dirs.js
+@@ -9,11 +9,70 @@ Object.defineProperty(exports, "getRootDirs", {
+     }
+ });
+ var _fastglob = require("fast-glob");
++var _fs = require("fs");
++var _path = require("path");
++/*
++ * Default pattern classification adapted from fast-glob 3.3.1:
++ * https://github.com/mrmlnc/fast-glob/blob/3.3.1/src/utils/pattern.ts
++ *
++ * The MIT License (MIT)
++ *
++ * Copyright (c) Denis Malinochkin
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to deal
++ * in the Software without restriction, including without limitation the rights
++ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++ * copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in all
++ * copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++ * SOFTWARE.
++ */
++var isDynamicRoot = function(pattern) {
++    // Paths have already had Windows separators normalized. Keep fast-glob's
++    // default syntax: plain parentheses and braces without separators are literal.
++    if (pattern === '') return false;
++    if (/[*?]|^!/.test(pattern) || /\[[^[]*]/.test(pattern) ||
++        /(?:^|[^!*+?@])\([^(]*\|[^|]*\)/.test(pattern) ||
++        /[!*+?@]\([^(]*\)/.test(pattern)) return true;
++    var openingBraceIndex = pattern.indexOf('{');
++    if (openingBraceIndex === -1) return false;
++    var closingBraceIndex = pattern.indexOf('}', openingBraceIndex + 1);
++    return closingBraceIndex !== -1 && /,|\.\./.test(pattern.slice(openingBraceIndex, closingBraceIndex));
++};
+ /**
+  * Process a Next.js root directory glob.
+  */ var processRootDir = function(rootDir) {
+-    return (0, _fastglob.globSync)(rootDir.replace(/\\/g, '/'), {
+-        onlyDirectories: true
++    var normalizedRoot = rootDir.replace(/\\/g, '/');
++    // Resolve literal directories exactly, without recursively
++    // expanding roots or rewriting their relative/trailing-slash spelling.
++    if (!isDynamicRoot(normalizedRoot)) {
++        try {
++            return _fs.statSync(normalizedRoot).isDirectory() ? [normalizedRoot] : [];
++        } catch (error) {
++            if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return [];
++            throw error;
++        }
++    }
++    // Unlike fast-glob, tinyglobby includes the base of a terminal globstar.
++    var pattern = normalizedRoot.replace(/(^|\/)\*\*\/?$/, '$1**/*');
++    var relativePrefix = (normalizedRoot.match(/^(?:\.\/)+/) || [''])[0];
++    return (0, _fastglob.globSync)(pattern, {
++        onlyDirectories: true,
++        expandDirectories: false,
++        absolute: _path.isAbsolute(normalizedRoot)
++    }).map(function(directory) {
++        var result = directory === _path.parse(directory).root ? directory : directory.replace(/\/$/, '');
++        return relativePrefix && !result.startsWith(relativePrefix) ? relativePrefix + result : result;
+     });
+ };
+ var getRootDirs = function(context) {
