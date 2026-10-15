@@ -58,9 +58,8 @@ jobs:
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Keep browser evidence available even when a tooling dependency advisory
-    # fails the separate application audit gate.
-    needs: [database]
+    # Browser verification follows the application/security and database gates.
+    needs: [application, database]
     env:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       ALLOWED_EMAIL_DOMAINS: example.edu

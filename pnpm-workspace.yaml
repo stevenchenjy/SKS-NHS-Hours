@@ -8,6 +8,8 @@ minimumReleaseAgeExclude:
   - sharp@0.35.5
   - "@modelcontextprotocol/sdk@1.31.0"
 overrides:
+  # Next only needs globSync; replace its vulnerable micromatch/braces chain.
+  "@next/eslint-plugin-next>fast-glob": npm:tinyglobby@0.2.17
   fast-uri@>=3.0.0 <3.1.8: 3.1.8
   # minimatch pins an affected release; keep its major while applying security fixes.
   brace-expansion@>=5.0.0 <5.0.12: 5.0.12
@@ -16,3 +18,5 @@ overrides:
   proxy-addr@>=1.1.0 <2.0.8: ^2.0.8
   sharp@<0.35.5: ^0.35.5
   source-map-js@>=1.0.0 <1.2.2: ^1.2.2
+patchedDependencies:
+  "@next/eslint-plugin-next@16.3.8": patches/@next__eslint-plugin-next@16.3.8.patch
