@@ -106,6 +106,26 @@ Review-capable users work in `/admin/requests`:
 
 The selected committee head, first approval, and final teacher reviewer are recorded separately. Teacher administrators act through a technical attribution anchor, but that anchor never makes them a member or gives them progress.
 
+Teachers can give final approval to a group from the Pending queue:
+
+1. Search or filter by category and committee head. The queue shows up to 50
+   requests per page, with the oldest waiting for teacher approval first.
+2. Expand Activity details or open Review to inspect the service facts. Select
+   individual requests or use Select this page. Requests missing committee-head
+   approval cannot be selected; an Admin must resolve their assignment.
+3. Check the selected count and total hours, choose Approve selected, and review
+   the confirmation list before giving final approval.
+4. Read the individual results. Approved requests leave every teacher's Pending
+   queue and appear in Archive. Requests another teacher already processed or
+   that changed since selection are reported separately.
+5. If the result cannot be confirmed because the connection failed, use Retry
+   approval to recover the same batch's recorded result. A retry does not add
+   another approval. Changing filters or pages clears the current selection;
+   refreshing never automatically selects newly arriving requests.
+
+Bulk approval is available only to Teachers. Committee-head review, requests for
+changes, and rejection retain their individual review controls and comments.
+
 ## Read progress correctly
 
 Only approved hours count toward the fixed 35-hour requirement. Pending hours are informational and do not reduce the approved-hours remainder.

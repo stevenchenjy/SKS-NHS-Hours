@@ -1,7 +1,14 @@
 import "server-only";
 
 import { cache } from "react";
+import { z } from "zod";
 
+import {
+  TEACHER_REVIEW_PAGE_SIZE,
+  teacherReviewPageFiltersSchema,
+  teacherReviewSearchTerm,
+  type TeacherReviewPageFilters,
+} from "@/lib/domain/bulk-approval";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   HourRequest,
@@ -303,6 +310,61 @@ export async function listPendingQueue(
     waiting_since: row.waiting_since ?? row.submitted_at ?? row.created_at,
     waiting_days: Number(row.days_pending ?? 0),
   }));
+}
+
+export interface TeacherReviewPage {
+  requests: PendingQueueItem[];
+  totalCount: number;
+  page: number;
+  pageSize: typeof TEACHER_REVIEW_PAGE_SIZE;
+}
+
+export async function listTeacherReviewPage(
+  schoolYearId: string,
+  filters: TeacherReviewPageFilters = {},
+): Promise<TeacherReviewPage> {
+  const yearId = z.uuid().parse(schoolYearId);
+  const options = teacherReviewPageFiltersSchema.parse(filters);
+  const search = teacherReviewSearchTerm(options.search);
+  const supabase = await createSupabaseServerClient();
+  let query = supabase
+    .from("pending_review_queue")
+    .select(
+      "id,member_membership_id,school_year_id,category_id,requested_approver_membership_id,actual_reviewer_membership_id,title,description,service_date,hours,status,revision,created_at,submitted_at,updated_at,decided_at,member_profile_id,member_name,member_email,category_name,requested_approver_name,assigned_to_current_user,days_pending,committee_head_reviewer_membership_id,committee_head_approved_at,approval_stage,waiting_since",
+      { count: "exact" },
+    )
+    .eq("school_year_id", yearId);
+  if (search) {
+    query = query.or(
+      `member_name.ilike.%${search}%,title.ilike.%${search}%,category_name.ilike.%${search}%`,
+    );
+  }
+  if (options.categoryId) query = query.eq("category_id", options.categoryId);
+  if (options.committeeHeadId) {
+    query = query.eq("requested_approver_membership_id", options.committeeHeadId);
+  }
+
+  const offset = (options.page - 1) * TEACHER_REVIEW_PAGE_SIZE;
+  // Filter and count in the database before limiting the response. RLS keeps
+  // attention rows with an ineligible head visible alongside final approvals.
+  const { data, error, count } = await query
+    .order("waiting_since", { ascending: true })
+    .order("id", { ascending: true })
+    .range(offset, offset + TEACHER_REVIEW_PAGE_SIZE - 1);
+  const rows = requireData(data, error, "Unable to load teacher review queue") as Array<
+    PendingQueueItem & { days_pending?: number }
+  >;
+  if (count === null) throw new Error("Unable to load teacher review queue: no count returned");
+  return {
+    requests: rows.map((row) => ({
+      ...row,
+      waiting_since: row.waiting_since ?? row.submitted_at ?? row.created_at,
+      waiting_days: Number(row.days_pending ?? 0),
+    })),
+    totalCount: count,
+    page: options.page,
+    pageSize: TEACHER_REVIEW_PAGE_SIZE,
+  };
 }
 
 export async function listAuditEvents(schoolYearId: string, limit = 100) {

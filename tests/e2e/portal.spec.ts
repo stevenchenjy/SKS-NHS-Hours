@@ -163,7 +163,7 @@ test("member login, dashboard, submission, approver selection, and pending total
   await expect(page.getByRole("heading", { name: "Your service progress" })).toBeVisible();
   await expectProgressSummary(
     page,
-    "12.5 of 35 approved · 3.25 pending · 22.5 approved hours remaining",
+    "12.5 of 35 approved · 3.25 pending · 1.5 changes requested · 22.5 approved hours remaining",
     35.71,
     (3.25 / 35) * 100,
   );
@@ -184,7 +184,7 @@ test("member login, dashboard, submission, approver selection, and pending total
   await page.goto("/dashboard");
   await expectProgressSummary(
     page,
-    "12.5 of 35 approved · 6.25 pending · 22.5 approved hours remaining",
+    "12.5 of 35 approved · 6.25 pending · 1.5 changes requested · 22.5 approved hours remaining",
     35.71,
     (6.25 / 35) * 100,
   );
@@ -228,12 +228,12 @@ test("selected committee head completes the first approval without approving hou
   await expect(page.getByRole("heading", { name: "Review request" })).toBeVisible();
   await page.getByRole("button", { name: "Approve and send to teachers" }).click();
   await page.waitForURL(/\/admin\/requests\/.+\?notice=decision-recorded/);
-  await expect(page.getByRole("status")).toContainText("The committee-head approval was recorded.");
+  await expect(page.getByRole("status")).toContainText("Your committee-head approval was saved.");
 
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
     page,
-    "12.5 of 35 approved · 6.25 pending · 22.5 approved hours remaining",
+    "12.5 of 35 approved · 6.25 pending · 1.5 changes requested · 22.5 approved hours remaining",
     35.71,
     (6.25 / 35) * 100,
   );
@@ -259,7 +259,7 @@ test("a teacher gives final approval from the shared teacher queue", async ({ pa
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
     page,
-    "15.5 of 35 approved · 3.25 pending · 19.5 approved hours remaining",
+    "15.5 of 35 approved · 3.25 pending · 1.5 changes requested · 19.5 approved hours remaining",
     44.29,
     (3.25 / 35) * 100,
   );
@@ -349,7 +349,7 @@ test("a committee head can approve their own hours before a teacher gives final 
   await expect(page.getByRole("button", { name: "Reject request", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Request changes", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Approve and send to teachers", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("The committee-head approval was recorded.");
+  await expect(page.getByRole("status")).toContainText("Your committee-head approval was saved.");
   await expect(page.getByText("Pending teacher approval", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Give final approval", exact: true })).toHaveCount(
     0,
@@ -384,11 +384,15 @@ test("president and vice president cannot open the review queue without committe
 test("president can read another member service log and activity details", async ({ page }) => {
   await login(page, syntheticAccounts.leaderMember.email);
   await page.goto("/admin/members/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003");
+  await expect(
+    page.getByRole("heading", { name: syntheticAccounts.member.fullName, exact: true }),
+  ).toBeVisible();
   const log = page.getByRole("region", { name: "Complete service log" });
+  await expect(log).toBeVisible();
   await expect(log.getByText("No service requests for this school year.")).toHaveCount(0);
   const activity = log.getByRole("row").filter({ hasText: "Community Cleanup" });
   await expect(activity).toBeVisible();
-  await activity.getByRole("link", { name: "View", exact: true }).click();
+  await activity.getByRole("button", { name: "View", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/requests\/40000000-0000-4000-8000-000000000002/);
   await expect(page.getByText("Collected litter in a supervised park cleanup.")).toBeVisible();
   await expect(
@@ -459,7 +463,7 @@ test("above-target member sees accurate totals while the stacked visual remains 
   await login(page, syntheticAccounts.leaderMember.email);
   await expectProgressSummary(
     page,
-    "36 of 35 approved · 1 pending · 1 approved hours over requirement",
+    "36 of 35 approved · 1 pending · 0 changes requested · 1 approved hours over requirement",
     100,
     0,
   );
@@ -537,7 +541,11 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
   await page.goto(eventPath);
   await page.getByRole("button", { name: "Join waitlist", exact: true }).click();
   await page.waitForURL(/notice=waitlisted/);
-  await expect(page.getByText("Waitlist #1", { exact: true })).toBeVisible();
+  const leaderWaitlistRow = page
+    .getByRole("region", { name: "Signup roster" })
+    .getByRole("row")
+    .filter({ hasText: syntheticAccounts.leaderMember.fullName });
+  await expect(leaderWaitlistRow.getByText("Waitlist #1", { exact: true })).toBeVisible();
 
   await login(page, syntheticAccounts.member.email);
   await page.goto(eventPath);
@@ -581,7 +589,8 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
 
   await login(page, syntheticAccounts.committeeHead.email);
   await page.goto(`${eventPath}/edit`);
-  await page.getByLabel("Signup deadline").fill("2026-08-01T12:00");
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  await page.getByLabel("Signup deadline").fill(`${yesterday}T12:00`);
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page.waitForURL(/notice=updated/);
   await login(page, syntheticAccounts.member.email);
@@ -740,15 +749,21 @@ test("platform owner creates a year and assigns the next leadership team", async
   await expect(createdYear.getByLabel("End date")).toHaveValue("2028-07-31");
 
   await page.goto("/admin/accounts?view=add");
-  const yearSwitcher = page
-    .locator("form")
-    .filter({ has: page.getByRole("button", { name: "View", exact: true }) });
+  const yearSwitcher = page.locator("form").filter({ has: page.locator("#accounts-year") });
   await yearSwitcher.getByLabel("School year").selectOption({ label: rolloverLabel });
   await yearSwitcher.getByRole("button", { name: "View", exact: true }).click();
 
   const existingAccount = page.getByRole("region", {
     name: "Add an existing account to a school year",
   });
+  // This client form owns its target independently of the page's year filter.
+  // Explicitly choose it instead of relying on an uncontrolled defaultValue.
+  const membershipYear = existingAccount.getByLabel("School year", { exact: true });
+  const nextYearId = new URL(page.url()).searchParams.get("year");
+  if (!nextYearId) throw new Error("The Accounts page did not retain the selected school year.");
+  expect(nextYearId).not.toBe(activeSchoolYearId);
+  await membershipYear.selectOption(nextYearId);
+  await expect(membershipYear).toHaveValue(nextYearId);
   await existingAccount.getByLabel("Existing account").selectOption({
     label: `${syntheticAccounts.expiredMember.fullName} · ${syntheticAccounts.expiredMember.email}`,
   });

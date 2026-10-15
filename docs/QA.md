@@ -325,3 +325,52 @@ Use an ISO timestamp and commit SHA in the private release record. Current evide
 | Accessibility + 4 viewports       | Partial, 2026-08-29                 | Static fixtures: Playwright axe/overflow passed as above; interactive Chrome covered all four screens at 390×844, 768×1024, 1440×900, and 1920×1080 with no overflow/current console issue. Authenticated Chromium workflows passed separately; 200% zoom, full keyboard order, other browser engines, and screen-reader review remain. |
 | Preview deployment smoke          | Not recorded                        | Requires hosted Supabase/Vercel credentials                                                                                                                                                                                                                                                                                             |
 | Production deployment smoke       | Not recorded                        | Required only after authorized production deployment                                                                                                                                                                                                                                                                                    |
+
+## Teacher bulk-approval release preflight — October 15, 2026
+
+The release is based on production `a2b8fdb`, isolated from the unmerged Google
+login beta and the original checkout's unfinished edits. Teachers can select up
+to 50 current-page requests, inspect details and confirmation totals, approve
+through one bounded RPC, and read individual outcomes. The private batch receipt
+and ordinary per-request approval history commit together. The teacher queue now
+filters/counts/pages in the database and displays first-stage assignment problems
+without making those rows selectable.
+
+Local evidence: the full unit suite passed 448 tests in 39 files; formatting,
+ESLint, TypeScript, and an optimized Node 24 production build passed. The complete
+migration chain, seed, and 82 bulk-approval database assertions passed an embedded
+PostgreSQL smoke check. This supplements native Supabase/pgTAP rather than
+replacing it. All four expanded design-preview browser tests passed against the
+optimized local production build, including teacher queue/detail accessibility
+and the inert mobile queue. Native database and authenticated approval/race/mobile
+checks remain release CI gates. Desktop 1440×1000 and phone 390×844 synthetic queue
+inspection showed no page overflow or console warnings/errors. The final
+confirmation/approval flow must be exercised with synthetic authenticated users.
+
+Release CI subsequently passed the 643-assertion native database suite and all
+three authenticated bulk-approval browser cases. The existing portal regression
+suite exposed an older leadership profile-access gap: request access was allowed,
+but the profile/membership policies still required review capability. A second
+additive migration restores active Presidents / Vice Presidents' same-year active
+service-member read access without approval authority. Its 50 new joined-read and
+deny-boundary assertions pass embedded PostgreSQL, and fail on the old policy.
+The browser test now positively checks the member heading and service-log region
+before inspecting an activity. Native database and full browser execution on the
+final commit remain release gates.
+
+The production migration dry run initially identified only
+`20261015010000_teacher_bulk_approval.sql`. The final release must also apply
+`20261015020000_leadership_member_profiles.sql`, with no seed or role deployment.
+This preflight does not claim that the migration or website has been deployed.
+Actual release commit, CI run, migration execution, and Vercel alias checks must
+be recorded with the delivery result.
+
+The dependency audit still reports the inherited high advisory
+[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
+for `braces <=3.0.3`; the registry and advisory list no published fix. Dependency
+tracing places it under ESLint and the shadcn CLI, with no app JavaScript import
+or match in the optimized server dependency traces/chunks. It remains a tooling
+exposure, not a demonstrated public runtime path. No dependency allowlist or audit
+gate was weakened: build runs before audit, and browser checks run independently
+so the advisory cannot hide functional regressions. Do not describe overall CI
+or the dependency audit as green while this advisory remains.

@@ -178,9 +178,9 @@ A placeholder build proves compilation only. It does not prove connectivity, Aut
 
 `.github/workflows/ci.yml` runs on pull requests and pushes to `main` with read-only repository permission and cancellation of obsolete runs:
 
-- **application:** install, format, lint, typecheck, unit, audit, and production build on Node 22;
+- **application:** install, format, lint, typecheck, unit, production build, and audit on Node 22;
 - **database:** start Supabase and run pgTAP; and
-- **browser:** wait for application/database jobs, start/reset the local Supabase stack, export local keys to job environment, prepare login-capable synthetic users through the local Auth admin API, install Chromium, and run Playwright. Failed runs retain synthetic Playwright artifacts for seven days.
+- **browser:** wait for the database job, start/reset the local Supabase stack, export local keys to job environment, prepare login-capable synthetic users through the local Auth admin API, install Chromium, and run the teacher bulk-approval spec. Reset and prepare fresh fixtures before running the existing portal and role-preview specs, whose school-year changes must not leak into the bulk tests. Successful bulk-approval screenshots and failed-run synthetic Playwright artifacts are retained for seven days. Browser verification and the production build remain observable when the separate dependency audit fails; its audit gate is retained.
 
 Require the relevant checks through branch protection. A workflow definition in Git is not a passing run; inspect job output from the exact commit. Do not print exported Supabase environment files or secret values.
 

@@ -6,6 +6,8 @@ const previewCases = [
   ["member dashboard", "/design-preview?screen=dashboard"],
   ["admin", "/design-preview?screen=admin"],
   ["teacher", "/design-preview?role=teacher_admin&section=member-progress"],
+  ["teacher review queue", "/design-preview?role=teacher_admin&section=review-requests"],
+  ["teacher review detail", "/design-preview?role=teacher_admin&section=review-request"],
   ["committee head", "/design-preview?screen=review&role=committee_head"],
   ["president / vice president", "/design-preview?screen=review&role=president_vice_president"],
   ["log hours", "/design-preview?screen=log"],
@@ -195,4 +197,17 @@ test("@mobile member dashboard and hour form previews remain usable without over
   await expect(page.getByLabel("Activity title")).toBeVisible();
   await expect(page.getByRole("button", { name: "Save draft" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Submit request" })).toBeVisible();
+});
+
+test("@mobile teacher queue preview remains inert and fits the viewport", async ({ page }) => {
+  test.skip(!previewEnabled, "The local-only design preview is disabled.");
+  await page.goto("/design-preview?role=teacher_admin&section=review-requests");
+  const queue = page.locator('section[aria-label="Teacher approval requests"]');
+  await expect(queue).toBeVisible();
+  await expect(queue.locator("button").filter({ hasText: "Approve selected" })).toBeDisabled();
+  await expect(page.locator("main [inert]")).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
 });

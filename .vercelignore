@@ -1,0 +1,23 @@
+# Build remotely from source; keep local credentials, outputs, and tooling state out.
+.env
+.env.*
+.envrc
+!.env.example
+!.env.*.example
+!.env.sample
+!.env.template
+node_modules/
+.next/
+out/
+build/
+coverage/
+playwright-report/
+test-results/
+output/playwright/
+.vercel/
+supabase/.temp/
+supabase/.branches/
+*.log
+*.pem
+tsconfig.tsbuildinfo
+.DS_Store

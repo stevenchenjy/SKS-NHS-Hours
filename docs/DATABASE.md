@@ -57,7 +57,7 @@ Normal writes go through these public RPCs; direct table writes are intentionall
 | Area                  | Functions                                                                                                                                   |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Member requests       | `create_hour_request_draft`, `save_hour_request_draft`, `submit_hour_request`, `withdraw_hour_request`                                      |
-| Review                | `review_hour_request`, `reassign_hour_request`                                                                                              |
+| Review                | `review_hour_request`, `reassign_hour_request`, `bulk_approve_teacher_requests`                                                             |
 | Approved corrections  | `correct_approved_request`                                                                                                                  |
 | School years          | `create_school_year`, `activate_school_year`, `close_school_year`; the legacy `set_school_year_target` contract accepts only 20             |
 | Memberships and roles | `renew_memberships` (destination access), `set_membership_status`, `set_profile_status`, `assign_membership_role`, `remove_membership_role` |
@@ -73,6 +73,24 @@ The invitation transport boundary is explicitly two phase. `prepare_invitation_s
 Target columns and the legacy target RPC signatures remain for migration compatibility, but triggers normalize every year to 20 and reject membership overrides. The application exposes no Target settings surface. Category RPC signatures likewise retain obsolete ordering/cap arguments for compatibility while storing neutral values (`0`/`null`).
 
 Function arguments are untrusted data, not proof of authority. Except for the first-admin bootstrap, security-definer functions derive the actor from `auth.uid()` and recheck current database eligibility.
+
+`bulk_approve_teacher_requests(uuid, uuid, jsonb)` accepts an active school year,
+a caller-generated batch UUID, and 1–50 unique request snapshots containing
+`requestId`, `expectedRevision`, and the original `expectedUpdatedAt` timestamp.
+Only the exact global Teacher grant permits the operation. It locks selected
+requests in UUID order, approves unchanged Pending requests with committee-head
+approval through the normal review function, and returns an outcome for every
+selection. Known conflicts do not prevent other eligible selections from being
+approved; an unexpected database error rolls back the entire transaction.
+
+The private `teacher_approval_batches` table stores the actor, input, and result
+in the same transaction as the approvals. Repeating the same actor/batch/payload
+returns the original result without adding review or audit records. Reusing a
+batch UUID for another payload is rejected. The table has no API-role grants.
+Each successful request retains its ordinary review history and audit event;
+one `hour_request.bulk_approved` event correlates the batch results. Apply
+`20261015010000_teacher_bulk_approval.sql` before deploying the compatible app;
+an application rollback can leave this additive migration in place.
 
 ## Reporting views
 
@@ -102,6 +120,15 @@ Activity details, review history, corrections, and reviewer names share
 can read all request statuses for their school year; Teachers, Admins, and the
 platform owner retain global read access. This does not grant approval rights.
 Ordinary members and committee heads retain their existing access limits.
+
+`20261015020000_leadership_member_profiles.sql` completes that read path through
+`private.can_view_profile` and `private.can_view_membership`. Active Presidents /
+Vice Presidents can load active service-member profiles, memberships, role
+assignments, and progress in their own school year. The added leadership branch
+excludes staff attribution memberships and preserves the existing expired-target
+restriction. It adds no grants or approval authority. Apply this additive
+migration alongside the bulk-approval migration; regression coverage exercises
+the actual page joins in `supabase/tests/026_leadership_member_profiles.sql`.
 
 ## Roles, grants, and RLS
 

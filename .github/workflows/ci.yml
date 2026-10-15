@@ -39,8 +39,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm audit --audit-level=high
       - run: pnpm build
+      - run: pnpm audit --audit-level=high
 
   database:
     runs-on: ubuntu-latest
@@ -58,7 +58,9 @@ jobs:
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [application, database]
+    # Keep browser evidence available even when a tooling dependency advisory
+    # fails the separate application audit gate.
+    needs: [database]
     env:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       ALLOWED_EMAIL_DOMAINS: example.edu
@@ -90,7 +92,22 @@ jobs:
           echo "SUPABASE_SECRET_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
       - run: pnpm test:e2e:prepare
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - name: Verify teacher bulk approval on fresh fixtures
+        run: pnpm exec playwright test tests/e2e/teacher-bulk-approval.spec.ts
+      - name: Preserve teacher approval screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: teacher-approval-screenshots-${{ github.run_id }}
+          path: test-results/**/teacher-bulk-approval*.png
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Reset fixtures before the existing portal workflows
+        run: |
+          supabase db reset --local
+          pnpm test:e2e:prepare
+      - name: Verify existing portal and role previews
+        run: pnpm exec playwright test tests/e2e/portal.spec.ts tests/e2e/design-preview.spec.ts
       - name: Upload Playwright failure artifacts
         if: failure()
         uses: actions/upload-artifact@v7

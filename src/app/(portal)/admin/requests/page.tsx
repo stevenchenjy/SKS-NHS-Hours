@@ -1,12 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { z } from "zod";
 
 import { RouteRefresh } from "@/components/portal/route-refresh";
+import { TeacherApprovalQueue } from "@/components/review/teacher-approval-queue";
 import { PageHeader } from "@/components/portal/page-header";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -20,12 +31,182 @@ import {
   listApprovedReviewArchive,
   listAwaitingTeacherReviews,
   listPendingQueue,
+  listTeacherReviewPage,
+  listCategories,
+  listActiveCommitteeHeads,
 } from "@/lib/dal/portal";
 
 export const metadata: Metadata = { title: "Review requests" };
 
 function value(input: string | string[] | undefined): string {
   return Array.isArray(input) ? (input[0] ?? "") : (input ?? "");
+}
+
+async function TeacherReviewPage({
+  schoolYearId,
+  schoolYearLabel,
+  params,
+}: {
+  schoolYearId: string;
+  schoolYearLabel: string;
+  params: Record<string, string | string[] | undefined>;
+}) {
+  const search = value(params.search).trim().slice(0, 120);
+  const categoryId = z.uuid().safeParse(value(params.categoryId)).data;
+  const committeeHeadId = z.uuid().safeParse(value(params.committeeHeadId)).data;
+  const requestedPage = Number(value(params.page) || 1);
+  const page =
+    Number.isSafeInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, 10_000) : 1;
+  const [loadedQueue, categories, heads] = await Promise.all([
+    listTeacherReviewPage(schoolYearId, { search, categoryId, committeeHeadId, page }),
+    listCategories(schoolYearId),
+    listActiveCommitteeHeads(schoolYearId),
+  ]);
+  const pages = Math.max(1, Math.ceil(loadedQueue.totalCount / loadedQueue.pageSize));
+  const queue =
+    loadedQueue.page > pages
+      ? await listTeacherReviewPage(schoolYearId, {
+          search,
+          categoryId,
+          committeeHeadId,
+          page: pages,
+        })
+      : loadedQueue;
+  const selectionScope = JSON.stringify([schoolYearId, search, categoryId, committeeHeadId, page]);
+  function pageHref(nextPage: number): string {
+    const query = new URLSearchParams();
+    if (search) query.set("search", search);
+    if (categoryId) query.set("categoryId", categoryId);
+    if (committeeHeadId) query.set("committeeHeadId", committeeHeadId);
+    query.set("page", String(nextPage));
+    return `/admin/requests?${query.toString()}`;
+  }
+
+  return (
+    <div className="page-container">
+      <RouteRefresh />
+      <PageHeader
+        eyebrow={schoolYearLabel}
+        title="Review requests"
+        description="Review committee-approved requests, select a group, and give final approval together. One teacher’s decision completes each request for all teachers."
+      />
+      <nav aria-label="Review request views" className="mb-6 flex flex-wrap gap-2">
+        <Button render={<Link href="/admin/requests" aria-current="page" />}>Pending</Button>
+        <Button variant="outline" render={<Link href="/admin/requests?view=archive" />}>
+          Archive
+        </Button>
+      </nav>
+      <form className="mb-5 flex flex-col gap-4 rounded-xl border p-4">
+        <FieldGroup className="grid gap-4 md:grid-cols-3">
+          <Field>
+            <FieldLabel htmlFor="search">Search requests</FieldLabel>
+            <Input
+              id="search"
+              name="search"
+              defaultValue={search}
+              placeholder="Member, activity, or category"
+              maxLength={120}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="category-filter">Category</FieldLabel>
+            <Select
+              name="categoryId"
+              defaultValue={categoryId || "all"}
+              items={{
+                all: "All categories",
+                ...Object.fromEntries(categories.map((category) => [category.id, category.name])),
+              }}
+            >
+              <SelectTrigger id="category-filter" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="committee-filter">Committee head</FieldLabel>
+            <Select
+              name="committeeHeadId"
+              defaultValue={committeeHeadId || "all"}
+              items={{
+                all: "All committee heads",
+                ...Object.fromEntries(heads.map((head) => [head.membershipId, head.fullName])),
+              }}
+            >
+              <SelectTrigger id="committee-filter" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All committee heads</SelectItem>
+                  {heads.map((head) => (
+                    <SelectItem key={head.membershipId} value={head.membershipId}>
+                      {head.fullName}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        </FieldGroup>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" variant="outline">
+            Apply filters
+          </Button>
+          {search || categoryId || committeeHeadId ? (
+            <Button variant="ghost" render={<Link href="/admin/requests" />}>
+              Reset filters
+            </Button>
+          ) : null}
+        </div>
+      </form>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm">
+        <p className="font-semibold">Teacher approval queue ({queue.totalCount})</p>
+        <p className="text-muted-foreground">
+          Oldest waiting for teacher first · {queue.requests.length} on this page
+        </p>
+      </div>
+      <TeacherApprovalQueue
+        key={selectionScope}
+        selectionScope={selectionScope}
+        requests={queue.requests}
+        schoolYearId={schoolYearId}
+      />
+      <nav aria-label="Review queue pages" className="mt-5 flex items-center justify-between gap-3">
+        {queue.page > 1 ? (
+          <Button variant="outline" render={<Link href={pageHref(queue.page - 1)} />}>
+            Previous page
+          </Button>
+        ) : (
+          <Button variant="outline" disabled>
+            Previous page
+          </Button>
+        )}
+        <p className="text-sm text-muted-foreground">
+          Page {queue.page} of {pages}
+        </p>
+        {queue.page < pages ? (
+          <Button variant="outline" render={<Link href={pageHref(queue.page + 1)} />}>
+            Next page
+          </Button>
+        ) : (
+          <Button variant="outline" disabled>
+            Next page
+          </Button>
+        )}
+      </nav>
+    </div>
+  );
 }
 
 export default async function ReviewQueuePage({
@@ -38,6 +219,13 @@ export default async function ReviewQueuePage({
   const search = value(params.search).trim().toLowerCase();
   const notice = value(params.notice);
   const archived = value(params.view) === "archive";
+  if (viewer.isTeacherAdmin && !archived) {
+    return await TeacherReviewPage({
+      schoolYearId: viewer.activeMembership.school_year_id,
+      schoolYearLabel: viewer.activeMembership.school_year.label,
+      params,
+    });
+  }
   const awaitingTeacher = !viewer.isTeacherAdmin && value(params.view) === "awaiting-teacher";
   const all = awaitingTeacher
     ? await listAwaitingTeacherReviews(
