@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/portal/page-header";
 import { ProgressSummary, formatHours } from "@/components/portal/progress-summary";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { ReviewDecisionPanel } from "@/components/review/review-decision-panel";
+import { TeacherApprovalQueue } from "@/components/review/teacher-approval-queue";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,6 +25,8 @@ import {
 import { requireAdmin } from "@/lib/dal/access";
 import type {
   HourRequestStatus,
+  HourApprovalStage,
+  PendingQueueItem,
   ProgressRecord,
   ReviewerOption,
   ServiceEvent,
@@ -546,6 +549,71 @@ function MemberProgressPreview() {
 }
 
 function ReviewRequestsPreview({ assignedOnly }: { assignedOnly: boolean }) {
+  if (!assignedOnly) {
+    const requests: PendingQueueItem[] = [
+      [
+        "Sofia Patel",
+        "Community garden shift",
+        "4",
+        "Prepared planting beds and helped organize produce for neighborhood distribution.",
+      ],
+      [
+        "Maya Chen",
+        "Freshman orientation guide",
+        "2",
+        "Welcomed incoming students and helped families find classrooms.",
+      ],
+      [
+        "Owen Brooks",
+        "Food pantry inventory",
+        "3.25",
+        "Sorted donated food and checked inventory with the pantry coordinator.",
+      ],
+    ].map(([memberName = "", title = "", hours = "0", description = ""], index) => ({
+      id: `50000000-0000-4000-8000-00000000000${index + 1}`,
+      member_membership_id: `20000000-0000-4000-8000-00000000000${index + 1}`,
+      school_year_id: "30000000-0000-4000-8000-000000000001",
+      category_id: categories[0]!.id,
+      requested_approver_membership_id: reviewers[0]!.membershipId,
+      committee_head_reviewer_membership_id: reviewers[0]!.membershipId,
+      committee_head_approved_at: "2026-10-14T15:00:00Z",
+      actual_reviewer_membership_id: null,
+      title,
+      description,
+      hours,
+      service_date: "2026-10-12",
+      status: "pending",
+      revision: 1,
+      created_at: "2026-10-12T15:00:00Z",
+      submitted_at: "2026-10-13T15:00:00Z",
+      updated_at: "2026-10-14T15:00:00Z",
+      decided_at: null,
+      member_profile_id: `10000000-0000-4000-8000-00000000000${index + 1}`,
+      member_name: memberName,
+      category_name: categories[0]!.name,
+      requested_approver_name: reviewers[0]!.fullName,
+      approval_stage: "teacher",
+      assigned_to_current_user: true,
+      waiting_since: "2026-10-14T15:00:00Z",
+      waiting_days: 1,
+    }));
+    return (
+      <div className="page-container">
+        <PageHeader
+          eyebrow="2026–2027"
+          title="Review requests"
+          description="Review committee-approved requests, select a group, and give final approval together. One teacher’s decision completes each request for all teachers."
+        />
+        <p className="mb-5 text-sm font-semibold">Teacher approval queue ({requests.length})</p>
+        <TeacherApprovalQueue
+          requests={requests}
+          schoolYearId={requests[0]!.school_year_id}
+          selectionScope="teacher-preview"
+          preview
+        />
+      </div>
+    );
+  }
   const requests = assignedOnly
     ? [["Maya Chen", "Freshman orientation guide", "2", "Assigned to you"]]
     : [
@@ -688,10 +756,10 @@ function AdministrationPreview({ section }: { section: "accounts" | "exports" | 
 
 function ReviewRequestPreview({
   canReview,
-  canReassign,
+  approvalStage,
 }: {
   canReview: boolean;
-  canReassign: boolean;
+  approvalStage: HourApprovalStage;
 }) {
   return (
     <div className="page-container">
@@ -709,7 +777,11 @@ function ReviewRequestPreview({
                 <p className="mt-1 text-sm text-muted-foreground">Submitted Aug 24, 2026</p>
               </div>
               <StatusBadge
-                status={canReassign ? "pending_teacher_approval" : "pending_committee_approval"}
+                status={
+                  approvalStage === "teacher"
+                    ? "pending_teacher_approval"
+                    : "pending_committee_approval"
+                }
               />
             </div>
             <div className="p-6">
@@ -799,7 +871,7 @@ function ReviewRequestPreview({
             <section className="rounded-xl border p-5 shadow-[0_1px_8px_rgba(11,23,54,0.05)]">
               <h2 className="mb-1 text-xl font-bold">Record a decision</h2>
               <p className="mb-5 text-sm leading-6 text-muted-foreground">
-                {canReassign
+                {approvalStage === "teacher"
                   ? "The committee head has approved this request. One teacher decision completes the review."
                   : "Your approval sends this request to all teachers for the final decision."}
               </p>
@@ -807,7 +879,7 @@ function ReviewRequestPreview({
                 requestId="50000000-0000-4000-8000-000000000001"
                 reviewers={reviewers}
                 currentReviewerMembershipId={reviewers[0]?.membershipId ?? null}
-                approvalStage={canReassign ? "teacher" : "committee_head"}
+                approvalStage={approvalStage}
                 canDecide
                 canReassign={false}
               />
@@ -1018,7 +1090,10 @@ export default async function DesignPreviewPage({
           previewContentNavigation={section === "events"}
         >
           {section === "review-request" ? (
-            <ReviewRequestPreview canReview={viewer.canReview} canReassign={viewer.isAdmin} />
+            <ReviewRequestPreview
+              canReview={viewer.canReview}
+              approvalStage={viewer.isTeacherAdmin ? "teacher" : "committee_head"}
+            />
           ) : section === "review-requests" ? (
             <ReviewRequestsPreview assignedOnly={role === "committee_head"} />
           ) : section === "member-progress" ? (
