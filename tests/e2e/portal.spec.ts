@@ -163,7 +163,7 @@ test("member login, dashboard, submission, approver selection, and pending total
   await expect(page.getByRole("heading", { name: "Your service progress" })).toBeVisible();
   await expectProgressSummary(
     page,
-    "12.5 of 35 approved · 3.25 pending · 22.5 approved hours remaining",
+    "12.5 of 35 approved · 3.25 pending · 1.5 changes requested · 22.5 approved hours remaining",
     35.71,
     (3.25 / 35) * 100,
   );
@@ -184,7 +184,7 @@ test("member login, dashboard, submission, approver selection, and pending total
   await page.goto("/dashboard");
   await expectProgressSummary(
     page,
-    "12.5 of 35 approved · 6.25 pending · 22.5 approved hours remaining",
+    "12.5 of 35 approved · 6.25 pending · 1.5 changes requested · 22.5 approved hours remaining",
     35.71,
     (6.25 / 35) * 100,
   );
@@ -233,7 +233,7 @@ test("selected committee head completes the first approval without approving hou
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
     page,
-    "12.5 of 35 approved · 6.25 pending · 22.5 approved hours remaining",
+    "12.5 of 35 approved · 6.25 pending · 1.5 changes requested · 22.5 approved hours remaining",
     35.71,
     (6.25 / 35) * 100,
   );
@@ -259,7 +259,7 @@ test("a teacher gives final approval from the shared teacher queue", async ({ pa
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
     page,
-    "15.5 of 35 approved · 3.25 pending · 19.5 approved hours remaining",
+    "15.5 of 35 approved · 3.25 pending · 1.5 changes requested · 19.5 approved hours remaining",
     44.29,
     (3.25 / 35) * 100,
   );
@@ -459,7 +459,7 @@ test("above-target member sees accurate totals while the stacked visual remains 
   await login(page, syntheticAccounts.leaderMember.email);
   await expectProgressSummary(
     page,
-    "36 of 35 approved · 1 pending · 1 approved hours over requirement",
+    "36 of 35 approved · 1 pending · 0 changes requested · 1 approved hours over requirement",
     100,
     0,
   );
@@ -581,7 +581,8 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
 
   await login(page, syntheticAccounts.committeeHead.email);
   await page.goto(`${eventPath}/edit`);
-  await page.getByLabel("Signup deadline").fill("2026-08-01T12:00");
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  await page.getByLabel("Signup deadline").fill(`${yesterday}T12:00`);
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page.waitForURL(/notice=updated/);
   await login(page, syntheticAccounts.member.email);
@@ -740,15 +741,20 @@ test("platform owner creates a year and assigns the next leadership team", async
   await expect(createdYear.getByLabel("End date")).toHaveValue("2028-07-31");
 
   await page.goto("/admin/accounts?view=add");
-  const yearSwitcher = page
-    .locator("form")
-    .filter({ has: page.getByRole("button", { name: "View", exact: true }) });
+  const yearSwitcher = page.locator("form").filter({ has: page.locator("#accounts-year") });
   await yearSwitcher.getByLabel("School year").selectOption({ label: rolloverLabel });
   await yearSwitcher.getByRole("button", { name: "View", exact: true }).click();
 
   const existingAccount = page.getByRole("region", {
     name: "Add an existing account to a school year",
   });
+  // This client form owns its target independently of the page's year filter.
+  // Explicitly choose it instead of relying on an uncontrolled defaultValue.
+  const membershipYear = existingAccount.getByLabel("School year", { exact: true });
+  await membershipYear.selectOption({ label: rolloverLabel });
+  const nextYearId = await membershipYear.inputValue();
+  expect(nextYearId).not.toBe(activeSchoolYearId);
+  expect(new URL(page.url()).searchParams.get("year")).toBe(nextYearId);
   await existingAccount.getByLabel("Existing account").selectOption({
     label: `${syntheticAccounts.expiredMember.fullName} · ${syntheticAccounts.expiredMember.email}`,
   });
