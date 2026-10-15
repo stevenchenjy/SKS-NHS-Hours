@@ -80,6 +80,45 @@ describe("school Google beta callback", () => {
     expect(response.headers.get("location")).toContain("google-not-configured");
     expect(mocks.exchange).not.toHaveBeenCalled();
   });
+  it("returns a cancelled consent request to login without claiming roster access", async () => {
+    const response = await GET(request("error=access_denied&next=/update-password"));
+    expect(response.headers.get("location")).toBe(
+      "https://beta.example.edu/login?error=google-cancelled",
+    );
+    expect(mocks.exchange).not.toHaveBeenCalled();
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(response.cookies.get("nhs-password-update-context")).toBeUndefined();
+  });
+  it("handles a missing OAuth code without exchanging or authorizing a password change", async () => {
+    const response = await GET(request("next=/update-password"));
+    expect(response.headers.get("location")).toBe(
+      "https://beta.example.edu/login?error=missing-code",
+    );
+    expect(mocks.exchange).not.toHaveBeenCalled();
+    expect(response.cookies.get("nhs-password-update-context")).toBeUndefined();
+  });
+  it("does not reuse a failed OAuth exchange as password proof", async () => {
+    mocks.exchange.mockResolvedValue({ error: { code: "bad_code_verifier" } });
+    const response = await GET(request("code=used-proof&next=/update-password"));
+    expect(response.headers.get("location")).toBe(
+      "https://beta.example.edu/login?error=callback-failed",
+    );
+    expect(mocks.getUser).not.toHaveBeenCalled();
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(response.cookies.get("nhs-password-update-context")).toBeUndefined();
+  });
+  it.each([
+    { user: null, error: null },
+    { user, error: { code: "unexpected_failure", status: 503 } },
+  ])("requires a verified current user after OAuth exchange: %j", async (result) => {
+    mocks.getUser.mockResolvedValue({ data: { user: result.user }, error: result.error });
+    const response = await GET(request("code=proof&next=/update-password"));
+    expect(response.headers.get("location")).toBe(
+      "https://beta.example.edu/login?error=callback-failed",
+    );
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(response.cookies.get("nhs-password-update-context")).toBeUndefined();
+  });
   it.each([
     {
       ...user,
@@ -96,6 +135,19 @@ describe("school Google beta callback", () => {
         { provider: "google", identity_data: { email: user.email, email_verified: false } },
       ],
     },
+    {
+      ...user,
+      identities: [
+        { provider: "email", identity_data: { email: user.email, email_verified: true } },
+      ],
+    },
+    {
+      ...user,
+      identities: [
+        { provider: "google", identity_data: { email: "other@sks.org", email_verified: true } },
+      ],
+    },
+    { ...user, identities: [] },
   ])("rejects an unapproved or unverified selected identity", async (rejected) => {
     mocks.getUser.mockResolvedValue({ data: { user: rejected }, error: null });
     const response = await GET(request());

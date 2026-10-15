@@ -295,14 +295,14 @@ export function AppShell({
                 ? "/admin/members"
                 : "/dashboard"
           }
-          className="flex items-center gap-3 font-bold tracking-tight"
+          className="flex min-w-0 items-center gap-3 font-bold tracking-tight"
         >
-          <span className="flex size-10 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
             NHS
           </span>
-          <span>NHS Service Hours</span>
+          <span className="truncate">NHS Service Hours</span>
         </Link>
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           {!preview ? <NotificationBell initialCount={unreadNotifications} /> : null}
           <Link
             href={preview ? previewHref(preview, "/profile") : "/profile"}
@@ -323,6 +323,32 @@ export function AppShell({
               </AvatarFallback>
             </Avatar>
           </Link>
+          <div className="lg:hidden">
+            {preview ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-lg"
+                aria-label="Sign out"
+                title="Sign out"
+                disabled
+              >
+                <LogOut aria-hidden="true" />
+              </Button>
+            ) : (
+              <form action={signOutAction}>
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="icon-lg"
+                  aria-label="Sign out"
+                  title="Sign out"
+                >
+                  <LogOut aria-hidden="true" />
+                </Button>
+              </form>
+            )}
+          </div>
         </div>
       </header>
 

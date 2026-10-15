@@ -1,7 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ directory: vi.fn(), years: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  directory: vi.fn(),
+  years: vi.fn(),
+  emailDeliveryEnabled: true,
+}));
+vi.mock("@/lib/env", () => ({
+  getServerEnvironment: () => ({ emailDeliveryEnabled: mocks.emailDeliveryEnabled }),
+}));
 vi.mock("@/components/admin/account-recovery-menu", () => ({
   AccountRecoveryMenu: ({ recoveryTarget }: { recoveryTarget?: { profileId: string } }) =>
     recoveryTarget ? <span data-recovery-target={recoveryTarget.profileId} /> : null,
@@ -21,6 +28,7 @@ vi.mock("@/lib/dal/portal", () => ({
 import AccountsPage from "./page";
 
 beforeEach(() => {
+  mocks.emailDeliveryEnabled = true;
   mocks.years.mockResolvedValue([]);
   mocks.directory.mockResolvedValue([]);
 });
@@ -55,6 +63,17 @@ describe("teacher recovery eligibility", () => {
 });
 
 describe("account invitation notices", () => {
+  it("explains the beta email restriction without claiming delivery", async () => {
+    mocks.emailDeliveryEnabled = false;
+    const page = await AccountsPage({
+      searchParams: Promise.resolve({ view: "invitations", notice: "beta-email-unavailable" }),
+    });
+    const html = renderToStaticMarkup(page);
+    expect(html).toContain("Email invitations and roster imports are unavailable in this beta.");
+    expect(html).toContain("No email was sent by this request.");
+    expect(html).not.toContain("Invitation email sent.");
+  });
+
   it("renders delivery failure as an actionable error alert", async () => {
     const page = await AccountsPage({
       searchParams: Promise.resolve({ view: "invitations", notice: "resend-email-failed" }),
