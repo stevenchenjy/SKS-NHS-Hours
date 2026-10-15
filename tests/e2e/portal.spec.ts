@@ -228,7 +228,7 @@ test("selected committee head completes the first approval without approving hou
   await expect(page.getByRole("heading", { name: "Review request" })).toBeVisible();
   await page.getByRole("button", { name: "Approve and send to teachers" }).click();
   await page.waitForURL(/\/admin\/requests\/.+\?notice=decision-recorded/);
-  await expect(page.getByRole("status")).toContainText("The committee-head approval was recorded.");
+  await expect(page.getByRole("status")).toContainText("Your committee-head approval was saved.");
 
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
@@ -349,7 +349,7 @@ test("a committee head can approve their own hours before a teacher gives final 
   await expect(page.getByRole("button", { name: "Reject request", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Request changes", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Approve and send to teachers", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("The committee-head approval was recorded.");
+  await expect(page.getByRole("status")).toContainText("Your committee-head approval was saved.");
   await expect(page.getByText("Pending teacher approval", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Give final approval", exact: true })).toHaveCount(
     0,
@@ -388,7 +388,7 @@ test("president can read another member service log and activity details", async
   await expect(log.getByText("No service requests for this school year.")).toHaveCount(0);
   const activity = log.getByRole("row").filter({ hasText: "Community Cleanup" });
   await expect(activity).toBeVisible();
-  await activity.getByRole("link", { name: "View", exact: true }).click();
+  await activity.getByRole("button", { name: "View", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/requests\/40000000-0000-4000-8000-000000000002/);
   await expect(page.getByText("Collected litter in a supervised park cleanup.")).toBeVisible();
   await expect(
@@ -751,10 +751,11 @@ test("platform owner creates a year and assigns the next leadership team", async
   // This client form owns its target independently of the page's year filter.
   // Explicitly choose it instead of relying on an uncontrolled defaultValue.
   const membershipYear = existingAccount.getByLabel("School year", { exact: true });
-  await membershipYear.selectOption({ label: rolloverLabel });
-  const nextYearId = await membershipYear.inputValue();
+  const nextYearId = new URL(page.url()).searchParams.get("year");
+  if (!nextYearId) throw new Error("The Accounts page did not retain the selected school year.");
   expect(nextYearId).not.toBe(activeSchoolYearId);
-  expect(new URL(page.url()).searchParams.get("year")).toBe(nextYearId);
+  await membershipYear.selectOption(nextYearId);
+  await expect(membershipYear).toHaveValue(nextYearId);
   await existingAccount.getByLabel("Existing account").selectOption({
     label: `${syntheticAccounts.expiredMember.fullName} · ${syntheticAccounts.expiredMember.email}`,
   });
