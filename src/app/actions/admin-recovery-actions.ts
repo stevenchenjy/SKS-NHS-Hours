@@ -18,16 +18,16 @@ const reservationSchema = z.object({
   recipient_email: z.email(),
 });
 
-const unavailableMessage = "The reset link could not be generated. Try again later.";
+const unavailableMessage = "Reset link unavailable. Try again later.";
 
 function reservationErrorMessage(error: { code?: string; message?: string }): string {
   if (error.code === "22023") return "This account is not eligible for a reset link.";
   if (error.code === "P0001") {
     if (error.message?.includes("Wait 15 minutes")) {
-      return "A reset link was requested recently. Wait 15 minutes before generating another.";
+      return "Wait 15 minutes before requesting another reset link.";
     }
     if (error.message?.includes("hourly reset-link limit")) {
-      return "The hourly reset-link limit was reached. Try again later.";
+      return "Hourly reset-link limit reached. Try again later.";
     }
   }
   return unavailableMessage;
@@ -39,7 +39,7 @@ export async function generateMemberRecoveryLinkAction(
 ): Promise<RecoveryLinkFormState> {
   await requireAdmin();
   const profileId = z.uuid().safeParse(formData.get("profile_id"));
-  if (!profileId.success) return { error: "This account could not be identified." };
+  if (!profileId.success) return { error: "Account not found. Refresh the account list." };
   const expectedEmail = z.email().safeParse(formData.get("expected_email"));
   if (!expectedEmail.success) return { error: "Refresh the account list and try again." };
 
@@ -68,8 +68,7 @@ export async function generateMemberRecoveryLinkAction(
   let link: string | undefined;
   let failureMessage = unavailableMessage;
   if (expectedEmail.data.toLowerCase() !== parsed.data.recipient_email.toLowerCase()) {
-    failureMessage =
-      "The account email changed. Refresh the account list before generating a link.";
+    failureMessage = "The account email changed. Refresh the account list.";
   } else {
     try {
       const environment = getServerEnvironment();

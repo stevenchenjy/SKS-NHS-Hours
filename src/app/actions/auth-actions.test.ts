@@ -139,7 +139,7 @@ describe("password setup and retry", () => {
     const result = await updatePasswordAction({}, passwordForm("abcdef"));
     expect(result.requiresPasswordVerification).toBe(true);
     expect(result.requiresNewPasswordLink).toBeUndefined();
-    expect(result.message).toContain("sent a verification code");
+    expect(result.message).toBe("Verification code sent. Enter the latest code below.");
     expect(reauthenticate).toHaveBeenCalledOnce();
     expect(cookieStore.delete).not.toHaveBeenCalled();
     expect(signOut).not.toHaveBeenCalled();
@@ -169,7 +169,9 @@ describe("password setup and retry", () => {
     const form = passwordForm("abcdef");
     form.set("verificationCode", "654321");
     const result = await updatePasswordAction({ requiresPasswordVerification: true }, form);
-    expect(result.fieldErrors?.verificationCode?.[0]).toContain("invalid or expired");
+    expect(result.fieldErrors?.verificationCode?.[0]).toBe(
+      "Enter the latest code or select Resend verification code.",
+    );
     expect(result.requiresPasswordVerification).toBe(true);
     expect(result.requiresNewPasswordLink).toBeUndefined();
     expect(cookieStore.delete).not.toHaveBeenCalled();
@@ -180,7 +182,7 @@ describe("password setup and retry", () => {
     const form = passwordForm("abcdef");
     form.set("intent", "resend-verification-code");
     const result = await updatePasswordAction({ requiresPasswordVerification: true }, form);
-    expect(result.message).toContain("sent a verification code");
+    expect(result.message).toBe("Verification code sent. Enter the latest code below.");
     expect(reauthenticate).toHaveBeenCalledOnce();
     expect(updateUser).not.toHaveBeenCalled();
     expect(cookieStore.delete).not.toHaveBeenCalled();
@@ -310,7 +312,7 @@ describe("password reset delivery", () => {
     const result = await forgotPasswordAction({}, emailForm("member@example.edu"));
     expect(result.message).toBeUndefined();
     expect(result.error).toContain("temporarily limited");
-    expect(result.error).toContain("portal admin");
+    expect(result.error).toContain("NHS support");
   });
 
   it.each([

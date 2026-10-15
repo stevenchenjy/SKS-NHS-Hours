@@ -96,12 +96,12 @@ export default async function NotificationsPage({
           role="status"
           className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
         >
-          Marked as read and moved to Archive.
+          Notifications marked as read and archived.
         </p>
       ) : null}
       {params.notice === "read-failed" ? (
         <p role="alert" className="mb-6 text-sm text-destructive">
-          Notifications could not be marked as read. Please try again.
+          Notifications not marked as read. Try again.
         </p>
       ) : null}
       {notifications.length ? (

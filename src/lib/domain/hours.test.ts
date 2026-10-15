@@ -1,7 +1,7 @@
-import { wholeRequestHoursSchema } from "./hours";
 import { describe, expect, it } from "vitest";
 
 import {
+  halfHourRequestHoursSchema,
   MAX_DATABASE_HOURS,
   minutesToQuarterHourUnits,
   normalizeHours,
@@ -97,11 +97,38 @@ describe("request and target limits", () => {
   });
 });
 
-describe("whole-hour entry validation", () => {
-  it.each([1, "2", 24, "24.00"])("accepts whole hours %p", (value) => {
-    expect(wholeRequestHoursSchema.parse(value)).toBe(Number(value));
+describe("half-hour entry validation", () => {
+  it.each([0.5, ".5", "0.5", 1, "1.5", "2", "23.5", 24, "24.00"])(
+    "accepts half-hour steps %p",
+    (value) => {
+      expect(halfHourRequestHoursSchema.parse(value)).toBe(Number(value));
+    },
+  );
+
+  it.each([
+    0,
+    "0.25",
+    "1.25",
+    "1.75",
+    "1.001",
+    "24.5",
+    25,
+    -0.5,
+    "",
+    " ",
+    null,
+    undefined,
+    "invalid",
+    "NaN",
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+  ])("rejects invalid entry %p", (value) => {
+    expect(halfHourRequestHoursSchema.safeParse(value).success).toBe(false);
   });
-  it.each([0, "0.25", "1.5", "1.75", "1.001", 25, ""])("rejects invalid entry %p", (value) => {
-    expect(wholeRequestHoursSchema.safeParse(value).success).toBe(false);
+
+  it("keeps existing quarter-hour values readable without allowing new quarter-hour entries", () => {
+    expect(halfHourRequestHoursSchema.safeParse("1.25").success).toBe(false);
+    expect(parseRequestHours("1.25")).toBe(5);
+    expect(quarterHourUnitsToHours(sumQuarterHourUnits([5, 2, 7]))).toBe(3.5);
   });
 });

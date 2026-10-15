@@ -15,7 +15,7 @@ If you are visiting from my [personal website](https://stevenchenjy.github.io/),
 
 Members can also browse service events and sign up before the deadline. Available places are confirmed; once an event is full, new signups enter a first-in, first-out waitlist. Event-management and notification features support changes, cancellations, and sign-up rosters.
 
-New entries, edits, and corrections use **whole hours from 1 to 24** for a single service date. Historical quarter-hour records remain readable and are included in exact progress calculations. Only approved hours count toward the requirement; pending hours are shown separately.
+New entries, edits, and corrections use **0.5-hour increments from 0.5 to 24** for a single service date. Historical quarter-hour records remain readable and are included in exact progress calculations. Only approved hours count toward the requirement; pending hours are shown separately.
 
 ## Capabilities
 
@@ -23,7 +23,7 @@ New entries, edits, and corrections use **whole hours from 1 to 24** for a singl
 - Annual member access with `member`, `committee_head`, and combined `president_vice_president` roles; global `teacher_admin` and single `platform_owner` access are separate
 - Draft, submit, withdraw, changes-requested, resubmit, approve, reject, and reassign workflow
 - Committee-head self-approval with required final teacher approval, concurrent-decision protection, immutable review history, and traceable corrections
-- Whole-hour entry validation, exact accounting for historical quarter-hour records, a fixed 35-approved-hour requirement, and a stacked approved/pending progress bar
+- Half-hour entry validation, exact accounting for historical quarter-hour records, a fixed 35-approved-hour requirement, and a stacked approved/pending progress bar
 - Service events with capacity/deadline checks, signups, waitlists, authorized rosters, updates, and notifications
 - Leader queues and member history; consolidated account/invitation/role administration; school-year, category, audit, CSV, and read-only role-preview workflows
 - Responsive, keyboard-accessible interface with textual status/progress equivalents

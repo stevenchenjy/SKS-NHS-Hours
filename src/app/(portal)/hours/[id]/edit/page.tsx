@@ -68,9 +68,7 @@ export default async function EditHourRequestPage({
           role="status"
           className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
         >
-          {notice === "changes-saved"
-            ? "Changes saved. Resubmit when the request is ready for review."
-            : "Draft saved. You can keep editing until you submit it."}
+          {notice === "changes-saved" ? "Changes saved." : "Draft saved."}
         </p>
       ) : null}
       {request.status === "changes_requested" && latestChangeRequest?.comment ? (

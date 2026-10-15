@@ -128,12 +128,12 @@ export default async function HourRequestPage({
           }
         >
           {notice === "submitted"
-            ? "Request submitted. Your selected committee head must approve it first; then any teacher can give the final approval."
+            ? "Request submitted."
             : notice === "withdrawn"
-              ? "The pending request was withdrawn and remains in your history."
+              ? "Request withdrawn."
               : notice === "withdraw-failed"
-                ? "The request could not be withdrawn. It may have already been reviewed. Refresh this page to check its status."
-                : "The request status was updated."}
+                ? "Request not withdrawn. Refresh the page to check its status."
+                : "Request status updated."}
         </p>
       ) : null}
 

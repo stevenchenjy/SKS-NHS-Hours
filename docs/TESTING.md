@@ -51,7 +51,7 @@ pnpm test
 
 The current unit suite under `src/lib/domain` covers:
 
-- exact quarter-hour parsing/validation and request/target boundaries;
+- half-hour entry validation, exact historical quarter-hour parsing, and request/target boundaries;
 - real ISO school-year dates and active-year/membership eligibility;
 - role and review-capability rules;
 - allowed/forbidden request workflow transitions, self-review, and actual-reviewer invariants;
@@ -65,7 +65,7 @@ The current repository unit run contains 14 files and 209 tests, including domai
 
 ## Database and RLS tests
 
-The pgTAP files are:
+The pgTAP files include:
 
 - `supabase/tests/001_schema_contract.sql` — tables/views/functions, RLS/forced-RLS, grants, constraints, indexes, and policy-helper privilege contract;
 - `supabase/tests/002_workflows_and_rls.sql` — request lifecycle, eligibility, reviews, self-review, progress, invitations, audits, and direct caller behavior;
@@ -81,8 +81,9 @@ The pgTAP files are:
 - `supabase/tests/011_two_stage_hour_approval.sql` — committee approval followed by the shared teacher queue and final approval.
 - `supabase/tests/012_event_management_notifications.sql` — event changes, signup deadlines, lifecycle controls, and private notifications.
 - `supabase/tests/013_committee_head_self_approval.sql` — self-assignment and first-stage approval, required teacher review, role and assignment enforcement, returned-request resubmission, audit history, and approved totals.
+- `supabase/tests/015_half_hour_entries.sql` — half-hour draft, edit, submission, resubmission, and correction boundaries; rejection before numeric rounding; exact historical quarter-hour totals and correction history.
 
-They currently declare 410 assertions across 13 files. Run them only after a clean reset:
+Run the suite after a clean reset and record the actual assertion and file counts from the release commit:
 
 ```bash
 supabase db reset --local

@@ -167,13 +167,12 @@ export function HourRequestForm({
             <FieldLabel htmlFor="hours">Hours</FieldLabel>
             <Input
               id="hours"
-              aria-describedby="hours-hint"
               name="hours"
               type="number"
-              min="1"
+              min="0.5"
               max="24"
-              step="1"
-              inputMode="numeric"
+              step="0.5"
+              inputMode="decimal"
               required
               value={values.hours}
               onChange={(event) =>
@@ -181,9 +180,6 @@ export function HourRequestForm({
               }
               className="h-11 max-w-44"
             />
-            <p id="hours-hint" className="text-sm text-muted-foreground">
-              Whole hours only, from 1 to 24.
-            </p>
             <FieldError>{state.fieldErrors?.hours?.[0]}</FieldError>
           </Field>
         </FieldGroup>
@@ -249,8 +245,7 @@ export function HourRequestForm({
           role="alert"
           className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
         >
-          Nothing was submitted. Your entries are still shown below—correct the highlighted fields
-          and try again.
+          Check the highlighted fields.
         </p>
       ) : null}
 

@@ -66,28 +66,76 @@ beforeEach(() => {
   });
 });
 
-describe("whole-hour entry", () => {
+describe("half-hour entry", () => {
   it.each(["save_draft", "submit", "save_changes"])(
-    "rejects fractions for %s before calling the database",
+    "rejects quarter-hour steps for %s before calling the database",
     async (intent) => {
       const data = hours();
       data.set("intent", intent);
       data.set("hours", "1.25");
       const result = await saveHourRequestAction({}, data);
-      expect(result.fieldErrors?.hours?.[0]).toContain("whole hours");
+      expect(result.fieldErrors?.hours?.[0]).toBe("Use 0.5-hour increments.");
       expect(rpc).not.toHaveBeenCalled();
     },
   );
 
-  it("rejects fractional teacher corrections", async () => {
+  it.each([
+    ["save_draft", ".5"],
+    ["submit", "0.5"],
+    ["save_changes", "1.5"],
+  ])("accepts %s with %s hours and no description", async (intent, value) => {
+    rpc.mockResolvedValue({ data: { id: ID, revision: 2 }, error: null });
+    const data = hours();
+    data.set("intent", intent);
+    data.set("hours", value);
+    if (intent === "save_changes") {
+      data.set("request_id", ID);
+      data.set("revision", "1");
+    }
+
+    await expect(saveHourRequestAction({}, data)).rejects.toThrow("REDIRECT:");
+
+    expect(rpc).toHaveBeenNthCalledWith(
+      1,
+      intent === "save_changes" ? "save_hour_request_draft" : "create_hour_request_draft",
+      expect.objectContaining({ p_hours: Number(value), p_description: null }),
+    );
+    if (intent === "submit") {
+      expect(rpc).toHaveBeenNthCalledWith(2, "submit_hour_request", {
+        p_request_id: ID,
+        p_expected_revision: 2,
+      });
+    }
+  });
+
+  it("rejects quarter-hour admin corrections", async () => {
     const data = hours();
     data.set("request_id", ID);
     data.set("reason", "Correct the recorded hours.");
-    data.set("hours", "1.5");
+    data.set("hours", "1.25");
     const result = await correctApprovedRequestAction({}, data);
-    expect(result.fieldErrors?.hours?.[0]).toContain("whole hours");
+    expect(result.fieldErrors?.hours?.[0]).toBe("Use 0.5-hour increments.");
     expect(rpc).not.toHaveBeenCalled();
   });
+
+  it.each(["0.5", "1.5", "23.5", "24"])(
+    "accepts %s-hour admin corrections without a description",
+    async (value) => {
+      rpc.mockResolvedValue({ error: null });
+      const data = hours();
+      data.set("request_id", ID);
+      data.set("reason", "Correct the recorded hours.");
+      data.set("hours", value);
+
+      const result = await correctApprovedRequestAction({}, data);
+
+      expect(result.error).toBeUndefined();
+      expect(rpc).toHaveBeenCalledWith(
+        "correct_approved_request",
+        expect.objectContaining({ p_hours: Number(value), p_description: "" }),
+      );
+    },
+  );
 });
 
 describe("hour submission partial failures", () => {
@@ -97,7 +145,7 @@ describe("hour submission partial failures", () => {
       .mockResolvedValueOnce({ error: { message: "Requested approver is not active" } });
     const first = await saveHourRequestAction({}, hours());
     expect(first.savedRequest).toEqual({ id: ID, revision: 2 });
-    expect(first.error).toContain("Your draft was saved, but it was not submitted.");
+    expect(first.error).toContain("Draft saved. Submission failed.");
     const retry = hours();
     retry.set("request_id", first.savedRequest!.id);
     retry.set("revision", String(first.savedRequest!.revision));

@@ -21,17 +21,16 @@ export interface ServiceEventFormState {
 
 function eventRpcError(error: { message: string; code?: string } | null): string {
   const message = error?.message ?? "";
-  if (error?.code === "40001")
-    return "This event changed while you were editing. Reload the page to see the latest version before saving.";
+  if (error?.code === "40001") return "This event has changed. Refresh the page before saving.";
   if (message.includes("confirmed signup count"))
-    return "People needed cannot be less than the number of confirmed volunteers.";
-  if (message.includes("deadline"))
-    return "The signup deadline must be at or before the event starts.";
-  if (message.includes("Past events")) return "This event has ended and can no longer be edited.";
-  if (message.includes("future")) return "The event must end in the future.";
-  if (message.includes("school year")) return "Keep the event inside the selected school year.";
-  if (error?.code === "42501") return "You do not have permission to change this event.";
-  return "The event could not be saved. Review the details and try again.";
+    return "People needed cannot be fewer than confirmed volunteers.";
+  if (message.includes("deadline")) return "Signup must close by the event start time.";
+  if (message.includes("Past events")) return "This event has ended. Editing is closed.";
+  if (message.includes("future")) return "Choose a future end time.";
+  if (message.includes("school year"))
+    return "Event dates must be within the selected school year.";
+  if (error?.code === "42501") return "You cannot change this event.";
+  return "Event not saved. Try again.";
 }
 
 function returnedId(data: unknown): string | null {
@@ -82,10 +81,10 @@ async function saveServiceEvent(
   let eventId: string | null = null;
   if (editing) {
     const id = z.uuid().safeParse(formData.get("event_id"));
-    if (!id.success) return { values, error: "That event could not be found." };
+    if (!id.success) return { values, error: "Event not found." };
     const event = await getServiceEvent(id.data);
     if (!event?.can_manage || event.school_year_id !== parsed.data.school_year_id) {
-      return { values, error: "You do not have permission to edit this event." };
+      return { values, error: "You cannot edit this event." };
     }
     if (!z.iso.datetime({ offset: true }).safeParse(values.updated_at).success) {
       return { values, error: "Reload the event before editing." };
@@ -95,11 +94,11 @@ async function saveServiceEvent(
     if (!canPublishServiceEvents(viewer)) {
       return {
         values,
-        error: "Only committee heads and teacher administrators can publish events.",
+        error: "A committee head or teacher administrator must publish this event.",
       };
     }
     if (parsed.data.school_year_id !== viewer.activeMembership.school_year_id) {
-      return { values, error: "Publish events only for your current school year." };
+      return { values, error: "Choose your current school year." };
     }
   }
 
@@ -125,8 +124,7 @@ async function saveServiceEvent(
   if (error) return { values, error: eventRpcError(error) };
 
   eventId = returnedId(data);
-  if (!eventId)
-    return { error: "The event was saved but could not be opened. Return to Events to check it." };
+  if (!eventId) return { error: "Event saved. Open Events to check it." };
   revalidatePath("/events");
   revalidatePath(`/events/${eventId}`);
   revalidatePath("/notifications");

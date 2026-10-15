@@ -70,7 +70,7 @@ Review every finding in context. A clean command is not a penetration test, and 
 
 | Area               | Required cases                                                                                                                                                    |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Exact hours        | Accept whole hours from 1 to 24; reject fractions, zero, negative values, non-finite input, and more than 24 hours for one request                                |
+| Exact hours        | Accept 0.5-hour increments from 0.5 to 24; reject quarter-hour steps, zero, negative values, non-finite input, and more than 24 hours for one request             |
 | Progress           | Below/exact/above fixed 35-hour target; approved then pending stacked/capped visually; approved/pending/remaining/over-goal text; decimal summation without drift |
 | School year        | Valid/invalid labels and calendar dates, inclusive boundaries, future service date rejection, closed/submission-disabled year                                     |
 | Membership         | Active, inactive profile, suspended, expired, archived, expiration boundary, school-year boundary, stale leader                                                   |
@@ -104,7 +104,7 @@ Required database behaviors:
 
 1. One profile per Auth UUID; one membership per user/year; one role assignment per membership/role.
 2. Five unique initial categories; alphabetical/cap-free policy; case-insensitive active-name uniqueness; referenced categories cannot be hard-deleted.
-3. Whole-number request values from 1 to 24 and a fixed 35-hour target with null membership overrides.
+3. New request values in 0.5-hour increments from 0.5 to 24, historical quarter-hour values preserved exactly, and a fixed 35-hour target with null membership overrides.
 4. The member-selected first approver belongs to the same school year and has an active committee-head role; teachers never appear in that picker.
 5. Committee-head approval keeps the request pending and exposes it to all teachers; only a teacher approval grants hour credit.
 6. Review RPC locks/rechecks the pending request; two concurrent final decisions yield exactly one success and one safe stale-state failure.

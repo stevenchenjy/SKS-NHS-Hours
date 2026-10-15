@@ -192,7 +192,7 @@ Every procedure below requires an active global `admin` or `platform_owner` gran
 
 ### Manage categories
 
-Open `/admin/settings/categories` to add, rename, describe, activate/deactivate, and set per-year availability. Categories are alphabetical and have no configurable order, per-request category maximum, or per-member approved-hours cap. The universal request sanity limit remains 24 hours in whole-hour increments. Deactivate or make unavailable instead of deleting a referenced category.
+Open `/admin/settings/categories` to add, rename, describe, activate/deactivate, and set per-year availability. Categories are alphabetical and have no configurable order, per-request category maximum, or per-member approved-hours cap. The universal request sanity limit remains 24 hours, with 0.5-hour increments and a 0.5-hour minimum. Deactivate or make unavailable instead of deleting a referenced category.
 
 ### Process and correct service requests
 

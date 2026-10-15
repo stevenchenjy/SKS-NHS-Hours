@@ -137,7 +137,7 @@ export default async function ReviewRequestPage({
           role="status"
           className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
         >
-          The requested approver was changed and the reassignment was recorded.
+          Approver updated.
         </p>
       ) : null}
       {notice === "decision-recorded" ? (
@@ -146,10 +146,10 @@ export default async function ReviewRequestPage({
           className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
         >
           {request.status === "pending" && request.committee_head_approved_at
-            ? "Your committee-head approval was saved. You can track this request in Awaiting teacher until a teacher gives final approval."
+            ? "Approval saved. Awaiting teacher approval."
             : request.status === "approved"
-              ? "Approved and archived. This request has left every teacher’s pending queue; no further approval is needed."
-              : "Your decision was recorded. The immutable request history is shown below."}
+              ? "Request approved."
+              : "Decision saved."}
         </p>
       ) : null}
 

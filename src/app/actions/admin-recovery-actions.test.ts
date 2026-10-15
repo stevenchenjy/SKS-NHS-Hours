@@ -86,7 +86,7 @@ describe("admin recovery link generation", () => {
 
   it("does not generate a link for an invalid or ineligible profile", async () => {
     expect(await generateMemberRecoveryLinkAction({}, form("invalid"))).toEqual({
-      error: "This account could not be identified.",
+      error: "Account not found. Refresh the account list.",
     });
     mocks.reserve.mockResolvedValueOnce({
       data: null,
@@ -104,7 +104,7 @@ describe("admin recovery link generation", () => {
       error: { code: "P0001", message: "Wait 15 minutes before generating another." },
     });
     expect(await generateMemberRecoveryLinkAction({}, form())).toEqual({
-      error: "A reset link was requested recently. Wait 15 minutes before generating another.",
+      error: "Wait 15 minutes before requesting another reset link.",
     });
     expect(mocks.generateLink).not.toHaveBeenCalled();
   });
@@ -112,7 +112,7 @@ describe("admin recovery link generation", () => {
   it("does not generate a link when the school email changed since the account list loaded", async () => {
     const result = await generateMemberRecoveryLinkAction({}, form(profileId, "old@example.edu"));
     expect(result).toEqual({
-      error: "The account email changed. Refresh the account list before generating a link.",
+      error: "The account email changed. Refresh the account list.",
     });
     expect(mocks.generateLink).not.toHaveBeenCalled();
     expect(mocks.complete).toHaveBeenCalledExactlyOnceWith("complete_member_recovery_link", {
@@ -134,7 +134,7 @@ describe("admin recovery link generation", () => {
 
     const result = await generateMemberRecoveryLinkAction({}, form());
 
-    expect(result).toEqual({ error: "The reset link could not be generated. Try again later." });
+    expect(result).toEqual({ error: "Reset link unavailable. Try again later." });
     expect(mocks.complete).toHaveBeenCalledExactlyOnceWith("complete_member_recovery_link", {
       p_attempt_id: 42,
       p_succeeded: false,
@@ -148,7 +148,7 @@ describe("admin recovery link generation", () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     mocks.complete.mockResolvedValueOnce({ error: { code: "PGRST500" } });
     const result = await generateMemberRecoveryLinkAction({}, form());
-    expect(result).toEqual({ error: "The reset link could not be generated. Try again later." });
+    expect(result).toEqual({ error: "Reset link unavailable. Try again later." });
     log.mockRestore();
   });
 
@@ -161,7 +161,7 @@ describe("admin recovery link generation", () => {
       error: null,
     });
     expect(await generateMemberRecoveryLinkAction({}, form())).toEqual({
-      error: "The reset link could not be generated. Try again later.",
+      error: "Reset link unavailable. Try again later.",
     });
     expect(mocks.complete).toHaveBeenCalledWith("complete_member_recovery_link", {
       p_attempt_id: 42,

@@ -1,26 +1,22 @@
 const notices: Record<string, string> = {
-  created:
-    "The event is live and visible to everyone in the portal. Use Copy signup link to share it in your volunteer email.",
-  updated: "Event changes saved. Affected volunteers have been notified.",
-  ended: "The event has ended and moved to Past. Volunteers have been notified.",
-  deleted: "The event was deleted and its signups cancelled. Volunteers have been notified.",
-  "signup-closed": "The signup deadline has passed. New signups and waitlist entries are closed.",
-  "event-changed":
-    "This event changed since you opened it. Review the latest details and try again.",
-  "event-ended": "This event has ended and can no longer be edited.",
-  "manage-failed": "The event could not be changed. Refresh the page and try again.",
-  "manager-required": "Only the organizer or a teacher administrator can manage this event.",
-  confirmed: "You’re confirmed. Your spot has been added to the event roster.",
-  waitlisted: "The event is full, so you’ve been added to the waitlist.",
-  dropped: "You’ve left this event. Any waiting volunteer can now take the open spot.",
-  "signup-unconfirmed":
-    "The signup response could not be confirmed. Refresh the event to check your status before trying again.",
-  "signup-failed": "Your signup could not be completed. The event may have just ended.",
-  "drop-failed": "Your signup could not be changed. Refresh the page and try again.",
-  "invalid-event": "That event could not be found.",
-  "not-authorized": "An active NHS member role is required to sign up.",
-  "publisher-required":
-    "Only committee heads and teacher administrators can publish service events.",
+  created: "Event published.",
+  updated: "Event updated. Volunteers notified.",
+  ended: "Event ended. Volunteers notified.",
+  deleted: "Event deleted. Volunteers notified.",
+  "signup-closed": "Signups are closed.",
+  "event-changed": "This event has changed. Refresh the page and try again.",
+  "event-ended": "This event has ended.",
+  "manage-failed": "Event not changed. Refresh the page and try again.",
+  "manager-required": "The organizer or a teacher administrator must make this change.",
+  confirmed: "Signup confirmed.",
+  waitlisted: "Added to the waitlist.",
+  dropped: "You’ve left this event.",
+  "signup-unconfirmed": "Signup unconfirmed. Refresh the page to check your status.",
+  "signup-failed": "Signup not completed. Check that the event is still open.",
+  "drop-failed": "Signup not changed. Refresh the page and try again.",
+  "invalid-event": "Event not found.",
+  "not-authorized": "Active NHS membership is required to sign up.",
+  "publisher-required": "A committee head or teacher administrator must publish this event.",
 };
 
 export function EventNotice({ notice }: { notice?: string }) {

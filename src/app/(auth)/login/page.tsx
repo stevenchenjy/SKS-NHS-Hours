@@ -16,27 +16,24 @@ function safeNext(value: string | string[] | undefined): string {
 }
 
 const authenticationErrors: Record<string, string> = {
-  "google-not-configured": "School Google sign-in is not configured.",
+  "google-not-configured": "School Google sign-in is unavailable.",
   "invalid-invitation-link":
-    "This invitation link is malformed. Ask the portal admin to resend it.",
+    "This invitation link is incomplete. Ask the portal admin to resend it.",
   "invitation-link-expired":
-    "This invitation link has expired or was already used. If the password form is still open in this browser, return there and finish. If you already saved your password, sign in below. Otherwise, ask the portal admin for a fresh link.",
-  "invitation-claim-failed":
-    "The invitation could not be matched to an active portal account. Contact the portal admin.",
-  "password-context-required":
-    "Password setup requires a verified link in this browser and must be completed within 48 hours. Ask the portal admin for a fresh link or use Forgot your password below.",
-  "password-context-failed":
-    "The password link could not be secured. Contact the portal admin or request a new reset link.",
+    "This link expired or was used. Use your open password form or request a new link.",
+  "invitation-claim-failed": "Your portal access is not ready. Contact NHS support.",
+  "password-context-required": "Verify your account to set a password. Request a reset link.",
+  "password-context-failed": "Password setup could not start. Request a new reset link.",
   "password-link-expired":
-    "This reset link has expired, was already used, or was replaced by a newer link. If the password form is still open in this browser, return there and retry. If you already saved your password, sign in below. Otherwise, ask the portal admin for one fresh link and use only the latest one.",
+    "This link expired or was used. Use your open password form or request a new link.",
   "invalid-password-link":
-    "This reset link is incomplete or invalid. Copy the entire latest link sent to you. If it still fails, ask the portal admin for a fresh link.",
+    "This reset link is incomplete. Copy the full link or request a new one.",
   "password-verification-failed":
-    "We could not verify your link because the authentication service is unavailable. Try opening the same link again in a few minutes. If this continues, contact the portal admin.",
+    "Link verification is unavailable. Try the same link again later.",
 };
 
 const authenticationNotices: Record<string, string> = {
-  "password-updated": "Your password was updated. Sign in with the new password.",
+  "password-updated": "Password updated. Sign in with your new password.",
 };
 
 export default async function LoginPage({
@@ -66,8 +63,7 @@ export default async function LoginPage({
             role="alert"
             className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
           >
-            {(error && authenticationErrors[error]) ??
-              "Authentication could not be completed. Try again or contact the portal admin."}
+            {(error && authenticationErrors[error]) ?? "Sign-in could not be completed. Try again."}
           </p>
         ) : null}
         {notice && authenticationNotices[notice] ? (
