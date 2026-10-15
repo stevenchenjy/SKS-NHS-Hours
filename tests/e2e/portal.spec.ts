@@ -384,7 +384,11 @@ test("president and vice president cannot open the review queue without committe
 test("president can read another member service log and activity details", async ({ page }) => {
   await login(page, syntheticAccounts.leaderMember.email);
   await page.goto("/admin/members/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003");
+  await expect(
+    page.getByRole("heading", { name: syntheticAccounts.member.fullName, exact: true }),
+  ).toBeVisible();
   const log = page.getByRole("region", { name: "Complete service log" });
+  await expect(log).toBeVisible();
   await expect(log.getByText("No service requests for this school year.")).toHaveCount(0);
   const activity = log.getByRole("row").filter({ hasText: "Community Cleanup" });
   await expect(activity).toBeVisible();

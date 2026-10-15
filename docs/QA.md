@@ -338,7 +338,7 @@ without making those rows selectable.
 
 Local evidence: the full unit suite passed 448 tests in 39 files; formatting,
 ESLint, TypeScript, and an optimized Node 24 production build passed. The complete
-migration chain, seed, and 82 new database assertions passed an embedded
+migration chain, seed, and 82 bulk-approval database assertions passed an embedded
 PostgreSQL smoke check. This supplements native Supabase/pgTAP rather than
 replacing it. All four expanded design-preview browser tests passed against the
 optimized local production build, including teacher queue/detail accessibility
@@ -347,8 +347,20 @@ checks remain release CI gates. Desktop 1440×1000 and phone 390×844 synthetic 
 inspection showed no page overflow or console warnings/errors. The final
 confirmation/approval flow must be exercised with synthetic authenticated users.
 
-The production migration dry run identified only
-`20261015010000_teacher_bulk_approval.sql`, with no seed or role deployment.
+Release CI subsequently passed the 643-assertion native database suite and all
+three authenticated bulk-approval browser cases. The existing portal regression
+suite exposed an older leadership profile-access gap: request access was allowed,
+but the profile/membership policies still required review capability. A second
+additive migration restores active Presidents / Vice Presidents' same-year active
+service-member read access without approval authority. Its 50 new joined-read and
+deny-boundary assertions pass embedded PostgreSQL, and fail on the old policy.
+The browser test now positively checks the member heading and service-log region
+before inspecting an activity. Native database and full browser execution on the
+final commit remain release gates.
+
+The production migration dry run initially identified only
+`20261015010000_teacher_bulk_approval.sql`. The final release must also apply
+`20261015020000_leadership_member_profiles.sql`, with no seed or role deployment.
 This preflight does not claim that the migration or website has been deployed.
 Actual release commit, CI run, migration execution, and Vercel alias checks must
 be recorded with the delivery result.

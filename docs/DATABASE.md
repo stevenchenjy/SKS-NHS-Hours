@@ -121,6 +121,15 @@ can read all request statuses for their school year; Teachers, Admins, and the
 platform owner retain global read access. This does not grant approval rights.
 Ordinary members and committee heads retain their existing access limits.
 
+`20261015020000_leadership_member_profiles.sql` completes that read path through
+`private.can_view_profile` and `private.can_view_membership`. Active Presidents /
+Vice Presidents can load active service-member profiles, memberships, role
+assignments, and progress in their own school year. The added leadership branch
+excludes staff attribution memberships and preserves the existing expired-target
+restriction. It adds no grants or approval authority. Apply this additive
+migration alongside the bulk-approval migration; regression coverage exercises
+the actual page joins in `supabase/tests/026_leadership_member_profiles.sql`.
+
 ## Roles, grants, and RLS
 
 - `anon` has no application-table/view/function privileges.
