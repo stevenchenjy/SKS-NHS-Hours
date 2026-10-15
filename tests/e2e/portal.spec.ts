@@ -541,7 +541,11 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
   await page.goto(eventPath);
   await page.getByRole("button", { name: "Join waitlist", exact: true }).click();
   await page.waitForURL(/notice=waitlisted/);
-  await expect(page.getByText("Waitlist #1", { exact: true })).toBeVisible();
+  const leaderWaitlistRow = page
+    .getByRole("region", { name: "Signup roster" })
+    .getByRole("row")
+    .filter({ hasText: syntheticAccounts.leaderMember.fullName });
+  await expect(leaderWaitlistRow.getByText("Waitlist #1", { exact: true })).toBeVisible();
 
   await login(page, syntheticAccounts.member.email);
   await page.goto(eventPath);
