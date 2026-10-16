@@ -24,7 +24,7 @@ export interface AuthFormState {
 
 const loginSchema = z.object({
   email: z
-    .email("Enter a valid school email address.")
+    .email("Enter your school email address.")
     .transform((value) => value.trim().toLowerCase()),
   password: z.string().min(1, "Enter your password."),
 });
@@ -53,8 +53,8 @@ export async function loginAction(
     return {
       error:
         error.status === 400
-          ? "The email or password is incorrect, or the invitation has not been accepted."
-          : "We could not sign you in. Please try again.",
+          ? "Email or password is incorrect. Try again or use Forgot your password."
+          : "Sign-in could not be completed. Try again.",
     };
   }
 
@@ -85,7 +85,7 @@ export async function forgotPasswordAction(
 ): Promise<AuthFormState> {
   const parsed = z
     .object({
-      email: z.string().trim().toLowerCase().pipe(z.email("Enter a valid school email address.")),
+      email: z.string().trim().toLowerCase().pipe(z.email("Enter your school email address.")),
     })
     .safeParse({ email: formData.get("email") });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
@@ -95,7 +95,7 @@ export async function forgotPasswordAction(
     assertAllowedEmail(parsed.data.email, environment.allowedEmailDomains);
   } catch {
     // Return the same response to avoid account and domain enumeration.
-    return { message: "If an invited account exists, password reset instructions are on the way." };
+    return { message: "If your account is invited, check your email for reset instructions." };
   }
 
   try {
@@ -109,18 +109,17 @@ export async function forgotPasswordAction(
       return {
         error:
           error.status === 429
-            ? "Password reset requests are temporarily limited. Wait a few minutes and try again. If this continues, contact the portal admin."
-            : "We could not send reset instructions. Please try again later or contact the portal admin for help accessing your account.",
+            ? "Password reset requests are temporarily limited. Try again later or contact NHS support."
+            : "We could not send reset instructions. Try again later.",
       };
     }
   } catch {
     console.error("Password reset request failed", { code: "request_failed" });
     return {
-      error:
-        "We could not send reset instructions. Please try again later or contact the portal admin for help accessing your account.",
+      error: "We could not send reset instructions. Try again later.",
     };
   }
-  return { message: "If an invited account exists, password reset instructions are on the way." };
+  return { message: "If your account is invited, check your email for reset instructions." };
 }
 
 export async function updatePasswordAction(
@@ -156,8 +155,7 @@ export async function updatePasswordAction(
   if (userError && (userError.status === undefined || userError.status >= 500)) {
     return {
       ...verificationState,
-      error:
-        "We could not verify your session because the password service is unavailable. Retry on this form in a few minutes. Keep this page open; do not reopen the original link.",
+      error: "Password service unavailable. Retry on this form later. Keep this page open.",
     };
   }
   const cookieStore = await cookies();
@@ -170,8 +168,7 @@ export async function updatePasswordAction(
     : null;
   if (!user || !context) {
     return {
-      error:
-        "Your password setup session is missing or has expired. Request a fresh reset link from the portal admin or use Forgot your password.",
+      error: "Verify your account to set a password. Request a fresh reset link.",
       requiresNewPasswordLink: true,
     };
   }
@@ -188,21 +185,19 @@ export async function updatePasswordAction(
           requiresPasswordVerification: true,
           error:
             error.status === 429
-              ? "Verification emails are temporarily limited. Wait a few minutes, then select Resend verification code. If this continues, ask the portal admin for a fresh reset link."
-              : "We could not send a verification code. Try Resend verification code later, or ask the portal admin for a fresh reset link. Your password has not been changed.",
+              ? "Verification emails are temporarily limited. Try Resend verification code later."
+              : "We could not send a code. Try Resend verification code later.",
         };
       }
       return {
         requiresPasswordVerification: true,
-        message:
-          "Your sign-in is more than 24 hours old. We sent a verification code to your account email. Enter the latest code below and update your password on this form.",
+        message: "Verification code sent. Enter the latest code below.",
       };
     } catch {
       console.error("Password verification request failed", { code: "request_failed" });
       return {
         requiresPasswordVerification: true,
-        error:
-          "We could not reach the verification service. Check your connection, then select Resend verification code. Your password has not been changed.",
+        error: "Check your connection, then select Resend verification code.",
       };
     }
   }
@@ -227,9 +222,7 @@ export async function updatePasswordAction(
         return {
           requiresPasswordVerification: true,
           fieldErrors: {
-            verificationCode: [
-              "This verification code is invalid or expired. Enter the latest code, or select Resend verification code.",
-            ],
+            verificationCode: ["Enter the latest code or select Resend verification code."],
           },
         };
       }
@@ -237,9 +230,7 @@ export async function updatePasswordAction(
         return {
           ...verificationState,
           fieldErrors: {
-            password: [
-              "Choose a different password from your current one, or sign in with your existing password.",
-            ],
+            password: ["Choose a different password."],
           },
         };
       }
@@ -247,9 +238,7 @@ export async function updatePasswordAction(
         return {
           ...verificationState,
           fieldErrors: {
-            password: [
-              "This password was rejected by the account's password policy. Choose a different password and retry here. If a password of at least 6 characters is still rejected, contact the portal admin.",
-            ],
+            password: ["Choose another password of at least 6 characters."],
           },
         };
       }
@@ -263,36 +252,32 @@ export async function updatePasswordAction(
         ].includes(error.code ?? "")
       ) {
         return {
-          error:
-            "Your sign-in session is no longer valid for changing a password. Request a fresh reset link from the portal admin or use Forgot your password.",
+          error: "Your session has expired. Request a fresh reset link.",
           requiresNewPasswordLink: true,
         };
       }
       if (error.code === "user_banned" || error.code === "user_not_found") {
         return {
           ...verificationState,
-          error: "This account is unavailable. Contact the portal admin for help.",
+          error: "This account is unavailable. Contact NHS support.",
         };
       }
       if (error.status === 429) {
         return {
           ...verificationState,
-          error:
-            "Too many attempts. Wait a few minutes, then retry on this form. Keep this page open; do not reopen the original link.",
+          error: "Too many attempts. Retry on this form later. Keep this page open.",
         };
       }
       return {
         ...verificationState,
-        error:
-          "The password service is temporarily unavailable. Retry on this form. Keep this page open; do not reopen the original link.",
+        error: "Password service unavailable. Retry on this form later. Keep this page open.",
       };
     }
   } catch {
     console.error("Password update failed", { code: "request_failed" });
     return {
       ...verificationState,
-      error:
-        "We could not reach the password service. Check your connection and retry on this form. Keep this page open; do not reopen the original link.",
+      error: "Check your connection and retry on this form. Keep this page open.",
     };
   }
   cookieStore.delete({ name: PASSWORD_UPDATE_CONTEXT_COOKIE, path: "/update-password" });

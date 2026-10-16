@@ -77,13 +77,13 @@ describe("event management actions", () => {
   });
   it("rejects editing another organizer's event before calling the mutation", async () => {
     getEvent.mockResolvedValue({ id, can_manage: false, school_year_id: year });
-    expect((await updateServiceEventAction({}, form())).error).toMatch(/permission/);
+    expect((await updateServiceEventAction({}, form())).error).toBe("You cannot edit this event.");
     expect(rpc).not.toHaveBeenCalled();
   });
   it("retains user input and explains a stale edit", async () => {
     rpc.mockResolvedValue({ error: { code: "40001", message: "changed" } });
     const result = await updateServiceEventAction({}, form());
-    expect(result.error).toMatch(/Reload/);
+    expect(result.error).toBe("This event has changed. Refresh the page before saving.");
     expect(result.values?.title).toBe("Library helpers");
     expect(rpc).toHaveBeenCalledWith(
       "update_service_event",

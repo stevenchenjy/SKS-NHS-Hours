@@ -228,7 +228,9 @@ test("selected committee head completes the first approval without approving hou
   await expect(page.getByRole("heading", { name: "Review request" })).toBeVisible();
   await page.getByRole("button", { name: "Approve and send to teachers" }).click();
   await page.waitForURL(/\/admin\/requests\/.+\?notice=decision-recorded/);
-  await expect(page.getByRole("status")).toContainText("Your committee-head approval was saved.");
+  await expect(page.getByRole("status")).toContainText(
+    "Approval saved. Awaiting teacher approval.",
+  );
 
   await login(page, syntheticAccounts.member.email);
   await expectProgressSummary(
@@ -349,7 +351,9 @@ test("a committee head can approve their own hours before a teacher gives final 
   await expect(page.getByRole("button", { name: "Reject request", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Request changes", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Approve and send to teachers", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Your committee-head approval was saved.");
+  await expect(page.getByRole("status")).toContainText(
+    "Approval saved. Awaiting teacher approval.",
+  );
   await expect(page.getByText("Pending teacher approval", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Give final approval", exact: true })).toHaveCount(
     0,
@@ -413,15 +417,11 @@ test("changes-requested activity returns to the member for editing and resubmiss
   await page
     .getByLabel("Description (optional)")
     .fill("Sorted pantry donations after school under the supervision of Community Pantry staff.");
-  // Legacy requests can contain fractional hours; edits must use whole hours.
+  // Half-hour entries remain editable without rounding them to whole hours.
   await expect(page.getByLabel("Hours")).toHaveValue("1.5");
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(
-    page.getByText("Enter whole hours only (for example, 1, 2, or 3).", { exact: true }),
-  ).toBeVisible();
-  await page.getByLabel("Hours").fill("2");
-  await page.getByRole("button", { name: "Save changes" }).click();
   await page.waitForURL(/notice=changes-saved/);
+  await expect(page.getByLabel("Hours")).toHaveValue("1.5");
   await expect(page.getByRole("status")).toContainText("Changes saved");
   await expect(page.getByText("Please add the supervising organization.")).toBeVisible();
   await expect(page.getByLabel("Description (optional)")).toHaveValue(
@@ -579,7 +579,9 @@ test("committee head publishes an event and the FIFO waitlist promotes after a d
   await expect(eventUpdate).toContainText("Before: School library");
   await expect(eventUpdate).toContainText("Now: Main gym");
   await eventUpdate.getByRole("button", { name: "Mark as read & archive", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Marked as read and moved to Archive.");
+  await expect(page.getByRole("status")).toContainText(
+    "Notifications marked as read and archived.",
+  );
   await expect(eventUpdate).toHaveCount(0);
   await page.goto("/notifications?view=archive");
   await expect(eventUpdate).toContainText("Archived · Read");

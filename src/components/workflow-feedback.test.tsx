@@ -19,6 +19,43 @@ beforeEach(() => {
 });
 
 describe("workflow feedback", () => {
+  it("accepts half-hour steps without adding an hours description", () => {
+    const forms = [
+      <HourRequestForm
+        key="entry"
+        schoolYearId="year"
+        schoolYearLabel="2026-2027"
+        categories={[]}
+        reviewers={[]}
+        submissionKey="key"
+      />,
+      <CorrectionForm key="correction" request={{ id: "id" } as HourRequest} categories={[]} />,
+    ];
+    for (const form of forms) {
+      const html = renderToStaticMarkup(form);
+      expect(html).toMatch(
+        /<input[^>]*inputMode="decimal"[^>]*min="0.5"[^>]*step="0.5"|<input[^>]*min="0.5"[^>]*step="0.5"[^>]*inputMode="decimal"/,
+      );
+      expect(html).not.toContain("hours-hint");
+      expect(html).not.toContain("Whole hours only");
+    }
+  });
+
+  it("keeps the hour-entry validation summary brief", () => {
+    state.current = { fieldErrors: { hours: ["Enter hours in 0.5-hour steps."] } };
+    const html = renderToStaticMarkup(
+      <HourRequestForm
+        schoolYearId="year"
+        schoolYearLabel="2026-2027"
+        categories={[]}
+        reviewers={[]}
+        submissionKey="key"
+      />,
+    );
+    expect(html).toContain("Check the highlighted fields.");
+    expect(html).not.toContain("Nothing was submitted");
+  });
+
   it("explains that choosing yourself still requires teacher approval", () => {
     const html = renderToStaticMarkup(
       <HourRequestForm

@@ -26,9 +26,9 @@ This log records decisions that materially affect security, data integrity, oper
 
 **Reason:** Student participation and leadership must expire/reassign annually, while staff administration must remain available across years without making staff members or giving them a service requirement. A single owner enables safe IT oversight and succession without database impersonation.
 
-## D-005 — Use whole-hour entry with exact numeric storage
+## D-005 — Use half-hour entry with exact numeric storage
 
-**Decision:** Store hours as exact numeric values, require positive whole-hour increments with a universal 24-hour maximum per request, and fix every annual member requirement at 35 approved hours.
+**Decision:** Store hours as exact numeric values, require 0.5-hour increments from 0.5 to a universal 24-hour maximum per request while preserving historical quarter-hour records, and fix every annual member requirement at 35 approved hours.
 
 **Reason:** Exact numeric arithmetic avoids floating-point accumulation errors. A fixed target removes inconsistent exceptions and duplicate configuration workflows.
 

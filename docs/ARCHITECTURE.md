@@ -62,7 +62,7 @@ The visual and interaction contract is defined in `docs/DESIGN_SYSTEM.md`. In pa
 
 Pure TypeScript domain functions own deterministic behavior that does not require identity or I/O:
 
-- exact quarter-hour validation and decimal-safe progress calculations;
+- half-hour entry validation, exact historical quarter-hour parsing, and decimal-safe progress calculations;
 - school-year and membership date eligibility;
 - role combination and review-capability checks;
 - hour-request state transitions;
@@ -136,7 +136,7 @@ Resending uses the same pending invitation and a fresh Auth Invite User message.
 1. The member opens the form; the server returns active categories plus a deliberately minimal committee-head directory from `list_eligible_reviewers`. The directory requires the caller's active same-year membership, excludes the caller and all teachers, returns only eligible committee-head membership/profile IDs, full name, and role keys, and exposes no email.
 2. Draft input is validated. The member ID comes from the session, and protected columns such as status and reviewer identity are not accepted from arbitrary client input.
 3. Draft save is limited to the owner and an eligible school year and must include the revision the member actually viewed.
-4. Submission validates the expected revision, category activity, service date, whole-number hours from 1 to 24, active committee-head eligibility, and school-year acceptance.
+4. Submission validates the expected revision, category activity, service date, hours in 0.5-hour increments from 0.5 to 24, active committee-head eligibility, and school-year acceptance.
 5. One database transaction changes the request to `pending`, records submission time and the selected first approver, clears any prior approval stages on resubmission, and appends an audit event.
 
 ### Two-stage review, changes, rejection, and reassignment

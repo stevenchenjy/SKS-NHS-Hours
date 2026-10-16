@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { wholeRequestHoursSchema } from "@/lib/domain/hours";
+import { halfHourRequestHoursSchema } from "@/lib/domain/hours";
 import { requireActiveViewer } from "@/lib/dal/access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -23,11 +23,18 @@ const commonHourRequestSchema = z.object({
 });
 
 const categorySchema = z.uuid("Choose a service category.");
-const reviewerSchema = z.uuid("Choose a committee head for the first approval.");
-const titleSchema = z.string().trim().min(1, "Enter an activity title.").max(120);
-const descriptionSchema = z.string().trim().max(2_000);
-const serviceDateSchema = z.iso.date("Enter a valid service date.");
-const hoursSchema = wholeRequestHoursSchema;
+const reviewerSchema = z.uuid("Choose a committee head.");
+const titleSchema = z
+  .string()
+  .trim()
+  .min(1, "Enter an activity title.")
+  .max(120, "Activity title must be 120 characters or fewer.");
+const descriptionSchema = z
+  .string()
+  .trim()
+  .max(2_000, "Description must be 2,000 characters or fewer.");
+const serviceDateSchema = z.iso.date("Enter a service date.");
+const hoursSchema = halfHourRequestHoursSchema;
 
 function blankToUndefined(value: unknown): unknown {
   return value == null || (typeof value === "string" && value.trim() === "") ? undefined : value;
@@ -64,16 +71,16 @@ const hourRequestSchema = z.discriminatedUnion("intent", [
 ]);
 
 function rpcError(error: { message: string; code?: string } | null): string {
-  if (!error) return "The request could not be saved.";
-  if (error.message.includes("future")) return "The service date cannot be in the future.";
+  if (!error) return "Could not save the request. Try again.";
+  if (error.message.includes("future")) return "Service date cannot be in the future.";
   if (error.message.includes("approver") || error.message.includes("committee head")) {
     return "Choose an active committee head for this school year.";
   }
   if (error.message.includes("category")) return "This service category is not available.";
   if (error.message.includes("revision") || error.message.includes("concurrent")) {
-    return "This request changed in another session. Reload it before saving again.";
+    return "This request has changed. Reload and try again.";
   }
-  return "The request could not be saved. Review the fields and try again.";
+  return "Could not save the request. Try again.";
 }
 
 function returnedRequest(
@@ -97,7 +104,7 @@ export async function saveHourRequestAction(
   if (!viewer.roles.includes("member")) {
     return {
       savedRequest: previous.savedRequest,
-      error: "An active member role is required to submit personal service hours.",
+      error: "You need active member access to submit hours.",
     };
   }
 
@@ -121,13 +128,13 @@ export async function saveHourRequestAction(
   if (parsed.data.service_date && parsed.data.service_date > today) {
     return {
       savedRequest: previous.savedRequest,
-      fieldErrors: { service_date: ["The service date cannot be in the future."] },
+      fieldErrors: { service_date: ["Service date cannot be in the future."] },
     };
   }
   if (parsed.data.school_year_id !== viewer.activeMembership.school_year_id) {
     return {
       savedRequest: previous.savedRequest,
-      error: "You may submit hours only for your active school year.",
+      error: "Choose your active school year.",
     };
   }
 
@@ -158,8 +165,7 @@ export async function saveHourRequestAction(
   if (!savedRequest) {
     return {
       savedRequest: previous.savedRequest,
-      error:
-        "The request was saved but its revision could not be confirmed. Reload your dashboard before trying again.",
+      error: "Request saved. Reload your dashboard before trying again.",
     };
   }
 
@@ -173,7 +179,7 @@ export async function saveHourRequestAction(
       revalidatePath(`/hours/${savedRequest.id}`);
       return {
         savedRequest,
-        error: `Your draft was saved, but it was not submitted. ${rpcError(error)}`,
+        error: `Draft saved. Submission failed. ${rpcError(error)}`,
       };
     }
   }

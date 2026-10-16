@@ -261,7 +261,7 @@ export default async function ReviewQueuePage({
           role="status"
           className="mb-6 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"
         >
-          The review decision was recorded in immutable history.
+          Decision saved.
         </p>
       ) : null}
 

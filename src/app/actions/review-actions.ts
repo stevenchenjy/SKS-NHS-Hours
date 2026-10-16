@@ -29,25 +29,25 @@ const reviewSchema = z
       context.addIssue({
         code: "custom",
         path: ["comment"],
-        message: "A specific reviewer comment is required for this decision.",
+        message: "Enter a reviewer comment.",
       });
     }
   });
 
 function decisionError(message: string): string {
   if (message.includes("own") || message.includes("self")) {
-    return "You can approve your own request only as its selected committee head. A teacher must give final approval.";
+    return "Only the selected committee head can approve their own request. A teacher gives final approval.";
   }
   if (message.includes("pending") || message.includes("concurrent")) {
-    return "This request is no longer pending. Another reviewer may have processed it.";
+    return "This request is no longer pending. Refresh the page.";
   }
   if (message.includes("committee head") || message.includes("teacher administrator")) {
-    return "This request is waiting for a different approval stage or approver.";
+    return "This request needs a different approver.";
   }
   if (message.includes("active") || message.includes("permission")) {
-    return "Your active school-year role does not permit this review.";
+    return "Your role cannot review this request.";
   }
-  return "The decision could not be recorded. Reload the request and try again.";
+  return "Decision not saved. Refresh the page and try again.";
 }
 
 export async function reviewHourRequestAction(

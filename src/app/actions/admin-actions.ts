@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { ANNUAL_REQUIRED_HOURS, wholeRequestHoursSchema } from "@/lib/domain/hours";
+import { ANNUAL_REQUIRED_HOURS, halfHourRequestHoursSchema } from "@/lib/domain/hours";
 import { parseSchoolYearDateRange, validateInvitation } from "@/lib/domain";
 import {
   coordinateInvitationDelivery,
@@ -62,7 +62,7 @@ function accountsUrl(input: {
 function messageForDatabaseError(message: string): string {
   const normalized = message.toLowerCase();
   if (normalized.includes("use a separate account")) {
-    return "Teacher administrators must use a separate account that has never been a member.";
+    return "Use a separate teacher account with no member history.";
   }
   if (normalized.includes("transfer platform ownership")) {
     return "Transfer platform ownership before changing this account.";
@@ -71,7 +71,7 @@ function messageForDatabaseError(message: string): string {
     normalized.includes("historical or expired school-year access") ||
     normalized.includes("historical or expired school-year roles")
   ) {
-    return "Historical access is read-only. Assign the account to an open school year instead.";
+    return "Historical access is read-only. Choose an open school year.";
   }
   if (normalized.includes("platform owner")) {
     return "Only the platform owner can make this change.";
@@ -83,7 +83,7 @@ function messageForDatabaseError(message: string): string {
     return "This change would remove the final active teacher administrator.";
   }
   if (normalized.includes("an account already exists for this email")) {
-    return "This person already has an account. Use Add accounts to give their existing account access to the school year.";
+    return "This account exists. Use Add accounts to assign school-year access.";
   }
   if (
     normalized.includes("duplicate") ||
@@ -95,7 +95,7 @@ function messageForDatabaseError(message: string): string {
   if (normalized.includes("permission") || normalized.includes("teacher_admin")) {
     return "Admin access is required.";
   }
-  return "The administrative change could not be completed. Review the values and try again.";
+  return "Changes not saved. Try again.";
 }
 
 function rowId(data: unknown): string | null {
@@ -211,9 +211,9 @@ export async function inviteAccountAction(
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { error: error.issues[0]?.message ?? "The invitation details are invalid." };
+      return { error: error.issues[0]?.message ?? "Check the invitation details." };
     }
-    return { error: "The invitation details are invalid." };
+    return { error: "Check the invitation details." };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -226,7 +226,7 @@ export async function inviteAccountAction(
   });
   if (error) return { error: messageForDatabaseError(error.message) };
   const invitationId = rowId(data);
-  if (!invitationId) return { error: "The invitation record did not return an identifier." };
+  if (!invitationId) return { error: "Invitation status unavailable. Refresh the account list." };
 
   const delivery = await sendPreparedInvitation(supabase, { invitationId, expiresAt });
   if (delivery !== "sent" && delivery !== "recovery-sent") {
@@ -234,10 +234,10 @@ export async function inviteAccountAction(
     return {
       error:
         delivery === "record-failed"
-          ? "Supabase Auth accepted the email, but its send receipt could not be recorded. Check the audit trail before retrying."
+          ? "Email accepted, but the send was not recorded. Check the audit trail before retrying."
           : delivery === "not-sendable"
-            ? "The invitation was created but became ineligible before delivery. Review its school year and status."
-            : "The invitation was created, but Supabase Auth did not accept the email. Check the server key and SMTP settings, then use Resend.",
+            ? "Invitation created but not sent. Check its school year and status."
+            : "Invitation created. Email not sent. Try Resend later.",
     };
   }
 
@@ -245,7 +245,7 @@ export async function inviteAccountAction(
   return {
     message:
       delivery === "recovery-sent"
-        ? `This email already has an account. A password setup/recovery link was sent to ${invitation.email} to finish accepting the invitation.`
+        ? `Password reset email sent to ${invitation.email}.`
         : `Invitation sent to ${invitation.email}.`,
   };
 }
@@ -469,9 +469,7 @@ export async function createSchoolYearAction(
   } catch (error) {
     return {
       error:
-        error instanceof z.ZodError
-          ? error.issues[0]?.message
-          : "The school-year dates are invalid.",
+        error instanceof z.ZodError ? error.issues[0]?.message : "Check the school-year dates.",
     };
   }
   const supabase = await createSupabaseServerClient();
@@ -484,7 +482,7 @@ export async function createSchoolYearAction(
   if (error) return { error: messageForDatabaseError(error.message) };
   revalidatePath("/admin/settings/school-years");
   return {
-    message: `Draft school year created with the fixed ${ANNUAL_REQUIRED_HOURS}-hour member requirement.`,
+    message: `Draft school year created.`,
   };
 }
 
@@ -542,11 +540,11 @@ export async function updateSchoolYearDatesAction(
       error: normalized.includes("after its start date")
         ? "The end date must be after the start date."
         : normalized.includes("match the years in its label")
-          ? "The dates must stay within the two years shown in the school-year label."
+          ? "Dates must match the years in the school-year label."
           : normalized.includes("archived school-year")
             ? "Archived school-year dates are read-only."
             : normalized.includes("school year not found")
-              ? "The school-year record could not be found."
+              ? "School year not found."
               : messageForDatabaseError(error.message),
     };
   }
@@ -587,7 +585,7 @@ export async function addExistingAccountToSchoolYearAction(
   if (error) return { error: messageForDatabaseError(error.message) };
   revalidatePath("/admin/accounts");
   revalidatePath("/admin/members");
-  return { message: "The existing account now has access to the selected school year." };
+  return { message: "School-year access added." };
 }
 
 const categorySchema = z.object({
@@ -651,7 +649,7 @@ export async function setSchoolYearCategoryAction(
   });
   if (error) return { error: messageForDatabaseError(error.message) };
   revalidatePath("/admin/settings/categories");
-  return { message: "School-year category settings updated." };
+  return { message: "Category settings updated." };
 }
 
 export async function correctApprovedRequestAction(
@@ -666,7 +664,7 @@ export async function correctApprovedRequestAction(
       description: z.string().trim().max(4000),
       category_id: z.uuid(),
       service_date: z.iso.date(),
-      hours: wholeRequestHoursSchema,
+      hours: halfHourRequestHoursSchema,
       reason: z.string().trim().min(8, "Provide a specific correction reason.").max(2000),
     })
     .safeParse({
@@ -692,7 +690,7 @@ export async function correctApprovedRequestAction(
   if (error) return { error: messageForDatabaseError(error.message) };
   revalidatePath(`/admin/requests/${parsed.data.request_id}`);
   revalidatePath("/admin/members");
-  return { message: "Approved record corrected with immutable before/after history." };
+  return { message: "Approved record corrected." };
 }
 
 function parseCsv(text: string): string[][] {
@@ -741,7 +739,7 @@ export async function importRosterAction(
     file.size > 1_000_000 ||
     !schoolYearId.success
   ) {
-    return { error: "Choose a CSV file under 1 MB and a valid school year." };
+    return { error: "Choose a CSV under 1 MB and a school year." };
   }
   let rows;
   try {
@@ -763,8 +761,7 @@ export async function importRosterAction(
   const rolesIndex = header.indexOf("roles");
   if (emailIndex < 0 || nameIndex < 0) {
     return {
-      error:
-        "CSV headers must include email and full_name. The optional roles column accepts one school-year access value.",
+      error: "CSV headers must include email and full_name.",
     };
   }
 

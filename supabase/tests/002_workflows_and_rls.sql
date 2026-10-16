@@ -190,8 +190,8 @@ select extensions.throws_ok(
     )
   $$,
   '22023',
-  'Hours must be a whole number from 1 to 24',
-  'fractional hour values are rejected'
+  'Use 0.5-hour increments from 0.5 to 24.',
+  'non-half-hour values are rejected'
 );
 select extensions.throws_ok(
   $$

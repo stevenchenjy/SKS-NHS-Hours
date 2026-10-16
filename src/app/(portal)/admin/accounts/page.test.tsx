@@ -62,8 +62,8 @@ describe("account invitation notices", () => {
     const html = renderToStaticMarkup(page);
     expect(html).toContain('role="alert"');
     expect(html).toContain("text-destructive");
-    expect(html).toContain("The email service could not send the invitation.");
-    expect(html).toContain("The send count and expiration have not changed.");
+    expect(html).toContain("Invitation email not sent.");
+    expect(html).toContain("Check the authentication logs before retrying.");
   });
 
   it("explains recovery delivery as a successful send", async () => {
@@ -73,6 +73,6 @@ describe("account invitation notices", () => {
     const html = renderToStaticMarkup(page);
     expect(html).toContain('role="status"');
     expect(html).not.toContain('role="alert"');
-    expect(html).toContain("A password setup/recovery email was sent");
+    expect(html).toContain("Password reset email sent to the existing account.");
   });
 });

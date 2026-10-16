@@ -166,19 +166,23 @@ export default async function AccountsPage({
     "platform-owner-transferred",
   ].includes(notice);
   const invitationNotices: Record<string, string> = {
-    "invitation-resent":
-      "Invitation email sent. Ask the recipient to check their inbox and spam folder.",
-    "invitation-recovery-sent":
-      "This email already has an account. A password setup/recovery email was sent so the recipient can finish accepting the invitation.",
+    "invitation-resent": "Invitation email sent.",
+    "invitation-recovery-sent": "Password reset email sent to the existing account.",
     "resend-email-failed":
-      "The email service could not send the invitation. The send count and expiration have not changed. Check the authentication logs before retrying.",
-    "resend-not-sendable":
-      "This invitation can no longer be resent. Refresh the page and check its status and school year.",
+      "Invitation email not sent. Check the authentication logs before retrying.",
+    "resend-not-sendable": "Invitation cannot be resent. Check its status and school year.",
     "resend-receipt-failed":
-      "The email service accepted the email, but its send receipt could not be saved. Check the audit trail before sending again.",
-    "invalid-invitation": "The invitation could not be identified. Refresh the page and try again.",
-    "revoke-failed": "The invitation could not be revoked. Refresh the page and try again.",
+      "Email accepted, but the send was not recorded. Check the audit trail before retrying.",
+    "invalid-invitation": "Invitation not found. Refresh the page.",
+    "revoke-failed": "Invitation not revoked. Refresh the page and try again.",
     "invitation-revoked": "Invitation revoked.",
+    "account-status-updated": "Account status updated.",
+    "membership-status-updated": "Membership status updated.",
+    "role-assigned": "Role assigned.",
+    "role-removed": "Role removed.",
+    "teacher-admin-granted": "Teacher admin access granted.",
+    "teacher-admin-revoked": "Teacher admin access removed.",
+    "platform-owner-transferred": "Platform ownership transferred.",
   };
   const defaultProfileId = param(params.profile);
   const confirmTransferProfileId = param(params.confirm_transfer);
